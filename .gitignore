@@ -1,0 +1,9 @@
+# Xcode
+.DS_Store
+**/xcuserdata/
+**/UserInterfaceState.xcuserstate
+
+# Secrets
+Secrets.plist
+deep_app/Secrets.plist
+deep_app/deep_app/Config.xcconfig 

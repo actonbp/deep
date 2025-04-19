@@ -10,9 +10,11 @@ This file tracks the planned features and improvements for the AI-powered deep w
 
 ### AI Integration
 - [ ] Chat-based interface
-- [ ] Natural Language Processing (NLP) to identify tasks from chat input
+- [ ] Natural Language Processing (NLP) to identify tasks from chat input (using commands currently)
+- [ ] Explore OpenAI Function Calling for smarter task extraction
 - [ ] AI-powered task prioritization suggestions
 - [ ] AI assistance in breaking down large tasks
+- [ ] Explore on-device model (Core ML) integration
 
 ### Focus & Productivity Features
 - [ ] Integration with Deep Work principles (e.g., timers, focus sessions)
