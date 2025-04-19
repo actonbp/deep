@@ -1,4 +1,34 @@
-# Bryan's Brain (iOS App)
+# Bryan's Brain (deep_app)
+
+An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o-mini`) with a functional to-do list. The assistant can understand natural language requests and automatically add tasks to the list using function calling.
+
+## Current Features
+
+*   **iOS Application:** Built natively using SwiftUI.
+*   **Tabbed Interface:** Separate views for Chat and To-Do List management.
+*   **AI Chat:**
+    *   Connects to OpenAI's `gpt-4o-mini` model via the Chat Completions API.
+    *   Conversation starter prompts provide usage examples.
+*   **To-Do List:**
+    *   Add, toggle completion status, and delete tasks.
+    *   Data is persisted locally using `UserDefaults`.
+*   **AI-Powered Task Management:**
+    *   Function calling (`addTaskToList`) allows the AI assistant to automatically add tasks derived from the chat conversation.
+    *   Proactive task adding: AI is prompted to add tasks immediately rather than asking excessive clarifying questions.
+    *   Confirmation: AI confirms task additions in the chat after successful tool execution.
+*   **Secure API Key Handling (Debug):** Uses `Secrets.plist` for the OpenAI API key during debug builds, correctly excluded from Git via `.gitignore`.
+
+## Planned Features / Roadmap
+
+*   **Release Build API Key Security:** Implement a secure method for providing the API key in release builds (e.g., server fetch, build configurations).
+*   **AI Enhancement:**
+    *   Refine system prompts for improved task understanding, error handling, and conversational flow.
+    *   Explore additional tool functions (e.g., re-prioritizing tasks, summarizing lists, brainstorming).
+*   **UI/UX Improvements:** Enhance the visual design and user experience of both chat and to-do list views.
+*   **Platform:**
+    *   Address warning regarding required interface orientations.
+    *   Investigate and resolve any remaining build warnings (e.g., `Codable` warning on `TodoItem.id` if applicable).
+*   **Exploration:** Potentially evaluate other AI models (like `gpt-4o`) or migrate to the OpenAI Assistants API for different state management capabilities.
 
 ## Vision: Your Conversational Productivity Partner
 
