@@ -1,77 +1,64 @@
 # Bryan's Brain (deep_app)
 
-An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o-mini`) with a functional to-do list. The assistant can understand natural language requests and automatically add tasks to the list using function calling.
+An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o-mini`) with a functional to-do list and Google Calendar integration. The core motivation is to provide a **fluid, conversational interface for task management and planning**, specifically designed to reduce friction for users with ADHD.
+
+## Core Concept: Conversational & Agentic Productivity
+
+The app goes beyond a simple chatbot. It leverages an **agentic AI architecture** where the AI assistant can:
+
+1.  **Understand** user requests in natural language.
+2.  **Reason** about the user's goals and the current context (tasks, conversation history).
+3.  **Plan** sequences of actions.
+4.  **Utilize Tools** autonomously (via OpenAI function calling / tool use) to interact with the app's features, such as:
+    *   Managing the To-Do List (`addTaskToList`, `listCurrentTasks`, `updateTaskPriorities`, etc.)
+    *   Managing Calendar Events (`createCalendarEvent`, reading events)
+    *   Updating Task Metadata (`updateTaskEstimatedDuration`)
+
+This allows for a seamless experience where task capture, planning, and calendar integration happen within a single conversational flow.
+
+**Future Vision: Multi-Agent Collaboration:** The ultimate goal is to evolve towards a system potentially involving multiple specialized AI agents working in parallel. These agents could proactively analyze the chat, to-do list, and calendar to offer suggestions, identify conflicts, assist with time blocking (aligning with methodologies like Cal Newport's), and maintain alignment across the user's productivity landscape.
+
+## Benefits for ADHD
+
+*   **Low-Friction Capture:** Simply talking or typing to the AI assistant removes the barrier of opening specific apps, navigating menus, and manually entering task details.
+*   **Reduced Cognitive Load:** The AI handles organizing, prioritizing (with guidance), and potentially scheduling tasks, freeing up mental energy.
+*   **Externalized Structure:** Time blocking suggestions and calendar integration provide the external structure that can be highly beneficial for managing time blindness and transitions.
+*   **Action-Oriented:** The AI is designed to gently guide towards the next actionable step.
 
 ## Current Features
 
 *   **iOS Application:** Built natively using SwiftUI.
-*   **Tabbed Interface:** Separate views for Chat and To-Do List management.
+*   **Tabbed Interface:** Separate views for Chat, To-Do List, and Today's Calendar.
 *   **AI Chat:**
-    *   Connects to OpenAI's `gpt-4o-mini` model via the Chat Completions API.
-    *   Conversation starter prompts provide usage examples.
+    *   Connects to OpenAI's `gpt-4o-mini` model.
+    *   Conversation starter prompts.
 *   **To-Do List:**
-    *   Add, toggle completion status, and delete tasks.
-    *   Data is persisted locally using `UserDefaults`.
-*   **AI-Powered Task Management:**
-    *   Function calling (`addTaskToList`) allows the AI assistant to automatically add tasks derived from the chat conversation.
-    *   Proactive task adding: AI is prompted to add tasks immediately rather than asking excessive clarifying questions.
-    *   Confirmation: AI confirms task additions in the chat after successful tool execution.
-*   **Secure API Key Handling (Debug):** Uses `Secrets.plist` for the OpenAI API key during debug builds, correctly excluded from Git via `.gitignore`.
+    *   Add, toggle completion, delete, prioritize, drag-reorder items.
+    *   Display estimated task durations.
+    *   Persisted locally.
+*   **Google Calendar Integration:**
+    *   Secure Google Sign-In authentication.
+    *   View today's calendar events in a dedicated tab.
+*   **Agentic AI Capabilities:**
+    *   Uses tools (`addTaskToList`, `listCurrentTasks`, `removeTaskFromList`, `updateTaskPriorities`, `updateTaskEstimatedDuration`, `createCalendarEvent`) triggered by conversation.
+    *   AI can estimate task durations.
+    *   AI can assist with time blocking suggestions (asking user for calendar constraints).
+    *   AI can create events in the user's primary Google Calendar upon request.
+*   **Secure API Key Handling (Debug):** Uses `Secrets.plist`.
 
 ## Planned Features / Roadmap
 
-*   **Release Build API Key Security:** Implement a secure method for providing the API key in release builds (e.g., server fetch, build configurations).
-*   **AI Enhancement:**
-    *   Refine system prompts for improved task understanding, error handling, and conversational flow.
-    *   Explore additional tool functions (e.g., re-prioritizing tasks, summarizing lists, brainstorming).
-*   **UI/UX Improvements:** Enhance the visual design and user experience of both chat and to-do list views.
-*   **Platform:**
-    *   Address warning regarding required interface orientations.
-    *   Investigate and resolve any remaining build warnings (e.g., `Codable` warning on `TodoItem.id` if applicable).
-*   **Exploration:** Potentially evaluate other AI models (like `gpt-4o`) or migrate to the OpenAI Assistants API for different state management capabilities.
+*   **Calendar Creation Enhancement:** Allow AI to create events based on time blocking suggestions.
+*   **UI/UX:** Improve Dark Mode support, general UI polish.
+*   **Task Metadata:** Add Deep/Shallow work categorization.
+*   **AI Enhancement:** Refine prompts, explore multi-agent concepts more deeply.
+*   **Release Build Security:** Secure API key handling for release.
 
-## Vision: Your Conversational Productivity Partner
-
-**Bryan's Brain** is conceived as a **real-time, conversational ADHD productivity assistant**. It's designed to be an ambient support system that listens, logs, prioritizes, and plans *with* you, eliminating the friction of context switching and complex interfaces.
-
-The core idea is a **chat-first experience** where task management is seamlessly integrated into an ongoing conversation with an AI assistant.
-
-## Core Philosophy
-
-*   **Chat-First UX:** Your primary interaction is conversing with the AI assistant.
-*   **Frictionless Capture:** Simply tell the AI what's on your mind (tasks, ideas, reminders), and it handles the logging and organizing.
-*   **Always-There Assistant:** Like texting your most supportive and organized colleague.
-*   **ADHD-Aware:** Designed to help you stay on track without judgment, offering gentle guidance and encouragement.
-*   **Minimal & Powerful:** Simple interface, but deeply capable through AI integration.
-
-## Core Components
-
-1.  **AI Chat Assistant (Main Interface):** Your thinking partner and task butler. Handles requests like adding tasks, planning your day, breaking down goals, and finding focus.
-2.  **Smart To-Do List (Assistant-Driven):** A live, structured task list populated and updated *by* the AI based on your conversation. Tasks can potentially be tagged, prioritized, and marked with context.
-
-## Current State
-
-The app is in the very early stages. It currently includes:
-
-*   A basic SwiftUI view for a to-do list (add, delete, mark done).
-*   Persistence for the list items.
-*   This README and a `TODO.md` tracking future goals.
-
-## Next Steps & Future Goals
-
-*   Implement the `TabView` structure (Chat / List).
-*   Build the basic Chat UI.
-*   Integrate with an AI API (like OpenAI's GPT) for the chat assistant.
-*   Develop the logic for the AI to parse commands and update the list.
-*   Refine the task data model (tags, priorities, etc.).
-*   Potential Google Calendar integration.
-*   Explore notification reminders and cross-device sync.
-
-See `TODO.md` for more details.
+See `TODO.md` for more granular items.
 
 ## Development
 
 *   Language: Swift
 *   UI Framework: SwiftUI
 *   Platform: iOS
-*   IDE: Xcode (with VS Code for editing) 
+*   IDE: Xcode 

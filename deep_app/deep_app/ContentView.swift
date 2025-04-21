@@ -12,10 +12,18 @@ struct TodoItem: Identifiable, Codable {
     let id = UUID() // Use let for stable identifier
     var text: String
     var isDone: Bool = false // Status flag
+    var priority: Int? = nil // Added priority field (optional integer)
+    var estimatedDuration: String? = nil // Added estimated duration (optional string)
 }
 
 // Main View hosting the TabView
 struct ContentView: View {
+    let sciFiFont = "Orbitron" // <<-- CHANGE FONT NAME HERE if needed
+    let sciFiFontSize: CGFloat = 16 // Adjust size as needed
+    
+    // Create the shared AuthenticationService instance here
+    @StateObject private var authService = AuthenticationService()
+    
     var body: some View {
         TabView {
             ChatView()
@@ -27,179 +35,17 @@ struct ContentView: View {
                 .tabItem {
                     Label("To-Do List", systemImage: "list.bullet.clipboard.fill")
                 }
-        }
-    }
-}
-
-// Placeholder for the Chat Interface View
-struct ChatView: View {
-    @StateObject private var viewModel = ChatViewModel()
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // --- Model Selection Placeholder UI --- 
-                HStack(spacing: 15) {
-                    Text("Model:")
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("OpenAI GPT-4o mini") // Update model name display
-                        .font(.caption.weight(.semibold))
-                    
-                    Spacer() // Push other options away
-                        
-                    Text("Claude 3.5 Sonnet") // Placeholder
-                        .font(.caption)
-                        .foregroundColor(.gray.opacity(0.5))
-                    Text("On-Device") // Placeholder
-                        .font(.caption)
-                        .foregroundColor(.gray.opacity(0.5))
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 6)
-                Divider() // Add a visual separator
-                // -------------------------------------
-                
-                // Chat messages list
-                ScrollViewReader { scrollView in
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            // Filter out system messages (instructions to the AI) from display
-                            ForEach(viewModel.messages.filter { $0.role != .system }) { message in
-                                MessageBubble(message: message)
-                            }
-                            
-                            // Loading indicator when waiting for API response
-                            if viewModel.isLoading {
-                                HStack(spacing: 8) {
-                                    ProgressView()
-                                        .tint(.gray)
-                                    Text("...")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
-                                }
-                                .padding(10)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .id("loading")
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                    }
-                    .onTapGesture { // Add tap gesture to dismiss keyboard
-                        hideKeyboard()
-                    }
-                    .onChange(of: viewModel.messages.count) { oldCount, newCount in
-                        // Scroll to bottom when messages change
-                        withAnimation {
-                            if let lastMsg = viewModel.messages.last {
-                                scrollView.scrollTo(lastMsg.id, anchor: .bottom)
-                            } else if viewModel.isLoading {
-                                scrollView.scrollTo("loading", anchor: .bottom)
-                            }
-                        }
-                    }
-                }
-                
-                // --- Suggested Prompts --- 
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
-                        ForEach(viewModel.suggestedPrompts, id: \.self) { prompt in
-                            Text(prompt)
-                                .font(.caption)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(Color(.systemGray5))
-                                .clipShape(Capsule())
-                                .foregroundColor(.primary)
-                                .lineLimit(1) // Prevent wrapping
-                                .onTapGesture {
-                                    viewModel.newMessageText = prompt
-                                }
-                        }
-                    }
-                    .padding(.horizontal) // Padding for the HStack
-                    .padding(.bottom, 6) // Space below prompts
-                }
-                // -------------------------
-                
-                // Input area at bottom
-                HStack {
-                    // Message input field
-                    TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
-                        .padding(10)
-                        .background(Color(.systemGray6))
-                        .cornerRadius(20)
-                        .textFieldStyle(.plain)
-                        .padding(.leading)
-                    
-                    // Send button
-                    Button {
-                        Task {
-                            // Call the new processing function
-                            await viewModel.processUserInput() 
-                        }
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(.blue)
-                    }
-                    .disabled(viewModel.newMessageText.isEmpty || viewModel.isLoading)
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 8)
-                .background(Color.white)
-            }
-            .navigationTitle("Bryan's Brain")
-        }
-    }
-}
-
-// Helper function to dismiss keyboard
-private func hideKeyboard() {
-    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-}
-
-// Message bubble component for chat
-struct MessageBubble: View {
-    let message: ChatViewModel.ChatMessageItem
-    
-    var body: some View {
-        HStack {
-            // User message on the right, assistant message on the left
-            if message.role == .user {
-                Spacer(minLength: 60)
-            }
             
-            VStack(alignment: message.role == .user ? .trailing : .leading) {
-                // Message content - Use nil-coalescing for optional content
-                Text(message.content ?? "") // Provide default empty string
-                    .padding(12)
-                    .background(message.role == .user ? Color.blue : Color(.systemGray5))
-                    .foregroundColor(message.role == .user ? .white : .black)
-                    .cornerRadius(16)
-                
-                // Timestamp
-                Text(formattedTime)
-                    .font(.caption2)
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 4)
-            }
-            
-            if message.role == .assistant {
-                Spacer(minLength: 60)
-            }
+            // --- NEW Calendar Tab --- 
+            TodayCalendarView()
+                .tabItem {
+                    Label("Calendar", systemImage: "calendar")
+                }
+            // ------------------------
         }
-        .id(message.id) // For ScrollViewReader to find
-    }
-    
-    // Format timestamp to show only time
-    private var formattedTime: String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        return formatter.string(from: message.timestamp)
+        // .font(.custom(sciFiFont, size: sciFiFontSize)) // <-- REMOVE Global Font
+        .accentColor(Color.theme.accent) // Set global accent color (for tab items, etc.)
+        .environmentObject(authService) // <-- Inject the service into the environment
     }
 }
 
@@ -211,6 +57,8 @@ struct TodoListView: View {
     
     // State for the text field input within this view
     @State private var newItemText: String = ""
+    let sciFiFont = "Orbitron"
+    let titleFontSize: CGFloat = 22 // Match ChatView title size
 
     var body: some View {
         NavigationView { 
@@ -225,32 +73,102 @@ struct TodoListView: View {
                         newItemText = "" // Clear local input field
                     }
                     .disabled(newItemText.isEmpty)
+                    .foregroundColor(Color.theme.accent)
                 }
                 .padding()
 
                 List { // Display the list of items from the store
-                    ForEach(todoListStore.items) { item in // Iterate over items from the store
+                    // Sort items by priority (nil is lowest), then alphabetically
+                    ForEach(todoListStore.items.sorted { 
+                        // Handle nil priorities: non-nil priority comes before nil
+                        guard let p1 = $0.priority else { return false } // item 1 has nil priority, sort it last
+                        guard let p2 = $1.priority else { return true }  // item 2 has nil priority, sort item 1 first
+                        // Both have non-nil priority, sort numerically
+                        return p1 < p2 
+                    }) { item in // Iterate over sorted items
                         HStack {
-                            Text(item.text)
-                                .strikethrough(item.isDone, color: .gray) 
-                                .foregroundColor(item.isDone ? .gray : .primary)
-                            Spacer() 
+                            VStack(alignment: .leading, spacing: 2) { // Use VStack for Text + Duration
+                                // Display priority if available
+                                if let priority = item.priority {
+                                    Text("(\(priority))")
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(Color.theme.accent) // Use theme accent
+                                }
+                                Text(item.text)
+                                    .strikethrough(item.isDone, color: .gray) 
+                                    .foregroundColor(item.isDone ? Color.theme.secondaryText : Color.theme.text) // Theme colors
+                                
+                                // Display duration if available
+                                if let duration = item.estimatedDuration, !duration.isEmpty {
+                                    Text(duration)
+                                        .font(.caption2)
+                                        .foregroundColor(Color.theme.secondaryText)
+                                        .padding(.leading, item.priority == nil ? 0 : 5) // Indent slightly if priority is shown
+                                }
+                            } // End VStack
+                            Spacer()
                         }
-                        .contentShape(Rectangle()) 
-                        .onTapGesture { // Call the store's toggle method
+                        .contentShape(Rectangle()) // Makes the whole row tappable
+                        .onTapGesture { // Keep tap-to-toggle for accessibility/alternative
                             todoListStore.toggleDone(item: item)
                         }
+                        .swipeActions(edge: .leading) { // Swipe from left (leading edge)
+                            Button {
+                                todoListStore.toggleDone(item: item)
+                            } label: {
+                                Label(item.isDone ? "Mark Undone" : "Mark Done", systemImage: item.isDone ? "arrow.uturn.backward.circle.fill" : "checkmark.circle.fill")
+                            }
+                            .tint(item.isDone ? Color.theme.secondaryText : Color.theme.done)
+                        }
+                        .swipeActions(edge: .trailing) { // Swipe from right (trailing edge)
+                            Button(role: .destructive) {
+                                todoListStore.deleteItem(item: item) // Use new single item delete
+                            } label: {
+                                Label("Delete", systemImage: "trash.fill")
+                            }
+                        }
                     }
-                    .onDelete(perform: todoListStore.deleteItems) // Call the store's delete method
+                    .onMove(perform: moveItems) // Keep .onMove for drag-reorder
                 }
                 .listStyle(PlainListStyle())
+                .background(Color.theme.background)
+                .foregroundColor(Color.theme.text)
             }
-            .navigationTitle("To-Do List")
+            .background(Color.theme.background.ignoresSafeArea())
+            .foregroundColor(Color.theme.text)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar) // Hint status bar
             .toolbar { 
-                EditButton()
+                ToolbarItem(placement: .principal) {
+                    Text("Objectives")
+                        .font(.custom(sciFiFont, size: titleFontSize))
+                        .fontWeight(.bold)
+                        .foregroundColor(Color.theme.titleText)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    EditButton().foregroundColor(Color.theme.accent)
+                }
             }
         }
     }
+    
+    // --- ADDED: Function to handle moving items in the list --- 
+    private func moveItems(from source: IndexSet, to destination: Int) {
+        // 1. Get the current sorted list as displayed
+        var orderedItems = todoListStore.items.sorted { 
+            guard let p1 = $0.priority else { return false } 
+            guard let p2 = $1.priority else { return true }  
+            return p1 < p2 
+        }
+        
+        // 2. Perform the move on this mutable copy
+        orderedItems.move(fromOffsets: source, toOffset: destination)
+        
+        // 3. Pass the newly ordered list to the store to update persistent priorities
+        todoListStore.updateOrder(itemsInNewOrder: orderedItems)
+    }
+    // -----------------------------------------------------------
 }
 
 #Preview {

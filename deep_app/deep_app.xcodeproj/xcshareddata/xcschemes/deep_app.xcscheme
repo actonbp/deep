@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "24DE0D8B2DAEF13900F569D0"
-               BuildableName = "deep_app.app"
+               BuildableName = "Bryans_Brain.app"
                BlueprintName = "deep_app"
                ReferencedContainer = "container:deep_app.xcodeproj">
             </BuildableReference>
@@ -69,7 +69,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "24DE0D8B2DAEF13900F569D0"
-            BuildableName = "deep_app.app"
+            BuildableName = "Bryans_Brain.app"
             BlueprintName = "deep_app"
             ReferencedContainer = "container:deep_app.xcodeproj">
          </BuildableReference>
@@ -86,7 +86,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "24DE0D8B2DAEF13900F569D0"
-            BuildableName = "deep_app.app"
+            BuildableName = "Bryans_Brain.app"
             BlueprintName = "deep_app"
             ReferencedContainer = "container:deep_app.xcodeproj">
          </BuildableReference>

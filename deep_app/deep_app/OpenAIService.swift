@@ -32,7 +32,9 @@ class OpenAIService {
                 return nil
             }
             
-            print("DEBUG: Loaded API Key directly from Secrets.plist found in Bundle (DEBUG build)")
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [OpenAIService]: Loaded API Key directly from Secrets.plist (DEBUG build)")
+            }
             // print("DEBUG: Key starts with \(String(apiKey.prefix(4))), ends with \(String(apiKey.suffix(4)))")
             return apiKey // apiKey is now in scope here
             
@@ -53,12 +55,42 @@ class OpenAIService {
     
     // MARK: - Data Structures for OpenAI API
 
+    // --- Explicit Encodable Structs for Tool Definition ---
+    struct Tool: Encodable {
+        let type: String = "function"
+        let function: FunctionDefinition
+    }
+
+    struct FunctionDefinition: Encodable {
+        let name: String
+        let description: String
+        let parameters: ParametersDefinition
+    }
+
+    struct ParametersDefinition: Encodable {
+        let type: String = "object"
+        let properties: [String: PropertyDefinition]
+        let required: [String]? // Optional for functions with no required params
+    }
+
+    struct PropertyDefinition: Encodable {
+        let type: String
+        let description: String
+        let items: ItemsDefinition? // Optional for non-array types
+    }
+    
+    struct ItemsDefinition: Encodable { // Used for array items
+        let type: String
+    }
+    // ----------------------------------------------------
+    
     // Represents a single message in the chat conversation
     struct ChatMessage: Codable {
         let role: String // "user", "assistant", "system", or "tool"
         let content: String?
         let tool_calls: [ToolCall]? // Optional: AI requests tool usage
         let tool_call_id: String? // Optional: ID for tool response message
+        let name: String? // Added: Name of the function for tool role messages
         
         // Initializer for simple text messages
         init(role: String, content: String) {
@@ -66,14 +98,16 @@ class OpenAIService {
             self.content = content
             self.tool_calls = nil
             self.tool_call_id = nil
+            self.name = nil // Ensure name is nil for non-tool messages
         }
         
-        // Initializer for tool response messages
-        init(tool_call_id: String, content: String?) {
+        // Initializer for tool response messages (now includes name)
+        init(tool_call_id: String, name: String, content: String?) {
             self.role = "tool"
             self.content = content
             self.tool_calls = nil
             self.tool_call_id = tool_call_id
+            self.name = name // Set the function name
         }
 
         // ** NEW ** Initializer for assistant messages requesting tool calls
@@ -82,6 +116,7 @@ class OpenAIService {
             self.content = content
             self.tool_calls = tool_calls
             self.tool_call_id = nil
+            self.name = nil // Ensure name is nil
         }
     }
 
@@ -103,36 +138,154 @@ class OpenAIService {
         let taskDescription: String
     }
 
-    // Tool definition to be sent to OpenAI (Now an array containing one tool dictionary)
-    private let addTaskTool: [[String: Any]] = [ // Explicit type [[String: Any]]
-        [ // Start of the single tool dictionary in the array
-            "type": "function",
-            "function": [
-                "name": "addTaskToList",
-                "description": "Adds a task to the user's to-do list.",
-                "parameters": [
-                    "type": "object",
-                    "properties": [
-                        "taskDescription": [
-                            "type": "string",
-                            "description": "A description of the task to be added."
-                        ]
-                    ],
-                    "required": ["taskDescription"]
-                ]
-            ]
-        ] // End of the single tool dictionary in the array
-    ]
+    // Arguments for createCalendarEvent function
+    struct CreateCalendarEventArguments: Decodable { // Needs to be Decodable only
+        let summary: String
+        let startTimeToday: String // e.g., "9:00 AM", "14:30"
+        let endTimeToday: String   // e.g., "10:30 AM", "15:00"
+        let description: String? // Optional
+    }
+
+    // --- Tool Definitions using Explicit Structs ---
     
+    // addTaskTool remains an array because the API expects an array of tools,
+    // even if we often conceptualize it as a single tool definition here.
+    // We'll construct the single Tool object within the array.
+    private let addTaskToolDefinition = FunctionDefinition(
+        name: "addTaskToList",
+        description: "Adds a task to the user's to-do list.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "A description of the task to be added.", items: nil)
+            ],
+            required: ["taskDescription"]
+        )
+    )
+
+    private let listTasksToolDefinition = FunctionDefinition(
+        name: "listCurrentTasks",
+        description: "Gets the current list of tasks from the user's to-do list.",
+        parameters: .init(properties: [:], required: nil) // No properties or required fields
+    )
+    
+    private let removeTaskToolDefinition = FunctionDefinition(
+        name: "removeTaskFromList",
+        description: "Removes a specific task from the user's to-do list based on its description.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "The exact description of the task to remove.", items: nil)
+            ],
+            required: ["taskDescription"]
+        )
+    )
+    
+    private let updateDurationToolDefinition = FunctionDefinition(
+        name: "updateTaskEstimatedDuration",
+        description: "Updates the estimated duration for a specific task on the to-do list.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "The description of the task whose duration needs to be updated.", items: nil),
+                "estimatedDuration": .init(type: "string", description: "The estimated duration for the task (e.g., '~15 mins', '1 hour', 'quick').", items: nil)
+            ],
+            required: ["taskDescription", "estimatedDuration"]
+        )
+    )
+    
+    private let updatePrioritiesToolDefinition = FunctionDefinition(
+        name: "updateTaskPriorities",
+        description: "Updates the priority order of tasks in the to-do list.",
+        parameters: .init(
+            properties: [
+                "orderedTaskDescriptions": .init(
+                    type: "array",
+                    description: "An array of task description strings, ordered from highest priority (index 0) to lowest.",
+                    items: .init(type: "string") // Specify item type for array
+                )
+            ],
+            required: ["orderedTaskDescriptions"]
+        )
+    )
+    
+    private let createEventToolDefinition = FunctionDefinition(
+        name: "createCalendarEvent",
+        description: "Creates a new event on the user's primary Google Calendar for today.",
+        parameters: .init(
+            properties: [
+                "summary": .init(type: "string", description: "The title or summary of the event.", items: nil),
+                "startTimeToday": .init(type: "string", description: "The start time for today's event (e.g., '9:00 AM', '14:30').", items: nil),
+                "endTimeToday": .init(type: "string", description: "The end time for today's event (e.g., '10:30 AM', '15:00').", items: nil),
+                "description": .init(type: "string", description: "An optional longer description for the event.", items: nil)
+            ],
+            required: ["summary", "startTimeToday", "endTimeToday"]
+        )
+    )
+    
+    private let getEventsToolDefinition = FunctionDefinition(
+        name: "getTodaysCalendarEvents",
+        description: "Gets the list of events scheduled on the user's primary Google Calendar for today.",
+        parameters: .init(properties: [:], required: nil) // No properties or required fields
+    )
+    
+    // --- ADDED: getCurrentDateTime Tool Definition ---
+    private let getCurrentDateTimeToolDefinition = FunctionDefinition(
+        name: "getCurrentDateTime",
+        description: "Gets the current date and time.",
+        parameters: .init(properties: [:], required: nil) // No parameters needed
+    )
+    // ---------------------------------------------
+    
+    // --- ADDED: deleteCalendarEvent Tool Definition ---
+    private let deleteCalendarEventToolDefinition = FunctionDefinition(
+        name: "deleteCalendarEvent",
+        description: "Deletes a specific event from the user's primary Google Calendar for today, identified by its summary and start time.",
+        parameters: .init(
+            properties: [
+                "summary": .init(type: "string", description: "The title or summary of the event to delete.", items: nil),
+                "startTimeToday": .init(type: "string", description: "The original start time of the event to delete (e.g., '9:00 AM', '14:30').", items: nil)
+            ],
+            required: ["summary", "startTimeToday"]
+        )
+    )
+    // -----------------------------------------------
+
+    // --- ADDED: updateCalendarEventTime Tool Definition ---
+    private let updateCalendarEventTimeToolDefinition = FunctionDefinition(
+        name: "updateCalendarEventTime",
+        description: "Updates the start and/or end time of a specific event on the user's primary Google Calendar for today.",
+        parameters: .init(
+            properties: [
+                "summary": .init(type: "string", description: "The title or summary of the event to update.", items: nil),
+                "originalStartTimeToday": .init(type: "string", description: "The original start time of the event being updated (e.g., '9:00 AM', '14:30').", items: nil),
+                "newStartTimeToday": .init(type: "string", description: "The new start time for the event (e.g., '10:00 AM', '15:30').", items: nil),
+                "newEndTimeToday": .init(type: "string", description: "The new end time for the event (e.g., '11:00 AM', '16:00').", items: nil)
+            ],
+            required: ["summary", "originalStartTimeToday", "newStartTimeToday", "newEndTimeToday"]
+        )
+    )
+    // ----------------------------------------------------
+    
+    // Combined list of all available tools (now as Tool structs)
+    private var allTools: [Tool] { 
+        return [
+            .init(function: addTaskToolDefinition),
+            .init(function: listTasksToolDefinition),
+            .init(function: removeTaskToolDefinition),
+            .init(function: updatePrioritiesToolDefinition),
+            .init(function: updateDurationToolDefinition),
+            .init(function: createEventToolDefinition),
+            .init(function: getEventsToolDefinition),
+            .init(function: getCurrentDateTimeToolDefinition),
+            .init(function: deleteCalendarEventToolDefinition), // <-- Added delete tool
+            .init(function: updateCalendarEventTimeToolDefinition) // <-- Added update tool
+        ]
+    }
+
     // Structure for the request body sent to OpenAI (Only needs to be Encodable)
     private struct ChatRequest: Encodable { // Changed from Codable to Encodable
         let model: String
         let messages: [ChatMessage]
-        let tools: [[String: AnyEncodable]]? // Correct type for encoded tools
+        let tools: [Tool]? // <-- Now uses the explicit Tool struct
         let tool_choice: String? // e.g., "auto"
-        
-        // Note: No custom CodingKeys or encode(to:) needed if default implementation works.
-        // We might need it if AnyEncodable causes issues, but let's try without first.
     }
 
     // Structure to decode the response from OpenAI
@@ -149,37 +302,12 @@ class OpenAIService {
         let choices: [Choice]
     }
 
-    // Custom struct to help encode nested dictionaries/arrays with Any
-    struct AnyEncodable: Encodable {
-        let value: Any
-
-        func encode(to encoder: Encoder) throws {
-            var container = encoder.singleValueContainer()
-            switch value {
-            case let value as String: try container.encode(value)
-            case let value as Int: try container.encode(value)
-            case let value as Double: try container.encode(value)
-            case let value as Bool: try container.encode(value)
-            // Correctly handle encoding dictionary: recursively wrap values
-            case let value as [String: Any]: try container.encode(value.mapValues { AnyEncodable(value: $0) })
-            // Correctly handle encoding array: recursively wrap elements
-            case let value as [Any]: try container.encode(value.map { AnyEncodable(value: $0) })
-            // Handle case where value might already be AnyEncodable (though less likely with [[String: Any]])
-            case let value as AnyEncodable: try container.encode(value)
-            default:
-                // Simpler debug description string interpolation
-                let context = EncodingError.Context(codingPath: container.codingPath, debugDescription: "AnyEncodable value '\(value)' is not encodable.")
-                throw EncodingError.invalidValue(value, context)
-            }
-        }
-    }
-
     // MARK: - API Call Function
     
     // Define possible outcomes of the API call
     enum APIResult {
         case success(text: String)
-        case toolCall(id: String, functionName: String, arguments: String)
+        case toolCall(toolCalls: [ToolCall])
         case failure(error: Error?)
     }
     
@@ -195,19 +323,10 @@ class OpenAIService {
             return .failure(error: nil)
         }
         
-        // Prepare tools for encoding by recursively wrapping values
-        func encodeTools(_ tools: [[String: Any]]) -> [[String: AnyEncodable]] {
-            return tools.map { toolDict in
-                toolDict.mapValues { AnyEncodable(value: $0) }
-            }
-        }
-
-        let encodableTools = encodeTools(addTaskTool) // Use helper func
-        
         let requestBody = ChatRequest(model: "gpt-4o-mini",
                                       messages: messages,
-                                      tools: encodableTools, // Send tool definition
-                                      tool_choice: "auto") // Let AI decide when to use tool
+                                      tools: allTools, // <-- Pass the [Tool] array directly
+                                      tool_choice: "auto")
         
         // Use default JSONEncoder if no special strategies are needed
         let encoder = JSONEncoder()
@@ -222,10 +341,12 @@ class OpenAIService {
         
         // Debug print the request body JSON string
         #if DEBUG
-        if let jsonString = String(data: encodedBody, encoding: .utf8) {
-            print("--- OpenAI Request Body ---")
-            print(jsonString)
-            print("--------------------------")
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+            if let jsonString = String(data: encodedBody, encoding: .utf8) {
+                print("--- OpenAI Request Body ---")
+                print(jsonString)
+                print("--------------------------")
+            }
         }
         #endif
 
@@ -253,15 +374,18 @@ class OpenAIService {
             }
             
             // Check if the AI requested a tool call
-            if let toolCalls = choice.message.tool_calls, let firstToolCall = toolCalls.first {
-                print("DEBUG: AI requested tool call: \(firstToolCall.function.name)")
-                return .toolCall(id: firstToolCall.id,
-                                 functionName: firstToolCall.function.name,
-                                 arguments: firstToolCall.function.arguments)
+            if let toolCalls = choice.message.tool_calls, !toolCalls.isEmpty {
+                if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                    print("DEBUG [OpenAIService]: AI requested tool call(s): \(toolCalls.map { $0.function.name })")
+                }
+                // Pass the whole toolCalls array back
+                return .toolCall(toolCalls: toolCalls)
             }
             // Otherwise, return the regular text response
             else if let content = choice.message.content {
-                print("DEBUG: AI returned text response.")
+                if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                    print("DEBUG [OpenAIService]: AI returned text response.")
+                }
                 return .success(text: content)
             } else {
                 print("Error: No content or tool call in AI response")
