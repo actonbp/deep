@@ -29,6 +29,7 @@ This file tracks the planned features and improvements for the AI-powered deep w
 - [ ] Refactor persistence (Consider Core Data or SwiftData for more complex data)
 - [ ] Error handling and robustness
 - [ ] Unit and UI tests 
+- [ ] Refactor `ChatViewModel.swift`: Consolidate repetitive time parsing logic in calendar tool handlers (`handleCreateCalendarEventToolCall`, `handleDeleteCalendarEventToolCall`, `handleUpdateCalendarEventTimeToolCall`) into a shared helper function to improve maintainability.
 
 ## Performance & Responsiveness
 
@@ -67,3 +68,14 @@ Integrate with Google Calendar to allow the AI to schedule tasks as events.
 - [ ] Add the tool to `allTools` list in `OpenAIService`.
 - [ ] Add handler in `ChatViewModel` for the new tool call, parsing arguments and calling `GoogleCalendarService.addEventToCalendar`.
 - [ ] Update system prompt to instruct AI on using the `scheduleTaskOnCalendar` tool. 
+
+## macOS Companion App (Future Goal - Lower Priority)
+
+Explore creating a native macOS version leveraging the shared SwiftUI codebase.
+
+- [ ] **Project Setup:** Add a new macOS target to the existing Xcode project.
+- [ ] **Code Sharing:** Configure existing shared files (Services, Models, some Views) to be included in the macOS target.
+- [ ] **Authentication:** Investigate and implement a macOS-compatible Google Sign-In solution (e.g., web-based OAuth flow).
+- [ ] **UI/UX Adaptation:** Adapt SwiftUI views for macOS conventions (windowing, layout, sidebars, toolbars, menu bar integration).
+- [ ] **Platform-Specific APIs:** Address any other iOS-specific APIs or dependencies.
+- [ ] **Testing:** Thoroughly test the macOS application. 

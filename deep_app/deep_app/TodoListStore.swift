@@ -23,11 +23,21 @@ class TodoListStore: ObservableObject {
     
     // Load items from AppStorage
     private func loadItems() {
-        guard let decodedItems = try? JSONDecoder().decode([TodoItem].self, from: itemsData) else {
+        do {
+            let decodedItems = try JSONDecoder().decode([TodoItem].self, from: itemsData)
+            self.items = decodedItems
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) && !items.isEmpty {
+                print("DEBUG [Store]: Successfully loaded \(items.count) items.")
+            }
+        } catch {
+            // Log the specific decoding error
+            print("ERROR [Store]: Failed to decode items from AppStorage: \(error)")
+            print("ERROR [Store]: Resetting items to empty list.")
+            // It might be useful to log the raw data that failed to decode, if possible
+            // print("ERROR [Store]: Raw data that failed: \(itemsData.map { String(format: "%02x", $0) }.joined())")
             self.items = [] // Initialize with empty array if decoding fails
-            return
+            // Optionally, you could try backing up the corrupted itemsData here
         }
-        self.items = decodedItems
     }
     
     // Save items back to AppStorage asynchronously
@@ -208,4 +218,38 @@ class TodoListStore: ObservableObject {
             }
         }
     }
+    
+    // --- ADDED: Method to mark a task complete by description ---
+    @discardableResult
+    func markTaskComplete(description: String) async -> Bool {
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Use await MainActor.run to ensure modification happens on the main thread
+        let updated = await MainActor.run { () -> Bool in
+            if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
+                // Only mark as done if it's not already done
+                if !items[index].isDone {
+                    items[index].isDone = true
+                    if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                        print("DEBUG [Store]: Marked task '\(trimmedDescription)' as complete.")
+                    }
+                    // Trigger save since we modified the items array
+                    saveItems()
+                    return true // Task found and marked done
+                } else {
+                    if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                        print("DEBUG [Store]: Task '\(trimmedDescription)' was already marked as complete.")
+                    }
+                    return true // Task found, but already done (still considered success in finding it)
+                }
+            } else {
+                if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                    print("DEBUG [Store]: Task '\(trimmedDescription)' not found to mark as complete.")
+                }
+                return false // Task not found
+            }
+        }
+        return updated
+    }
+    // -----------------------------------------------------------
 } 

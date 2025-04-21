@@ -24,11 +24,12 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     
     // Add suggested prompts
     let suggestedPrompts: [String] = [
-        "Remind me to call Mom this week",
-        "I need to buy groceries",
-        "What are my top priorities?", // Placeholder for future feature
-        "Help me brainstorm ideas for project X", // Placeholder
-        "Schedule workout for tomorrow morning"
+        "What's on my calendar today?",
+        "Plan my day",
+        "Add 'Writing Time' 2 PM to 3 PM today",
+        "Estimate task times",
+        "Make 'Finish slides' the top priority",
+        "Remove 'Dentist appointment' at 10 AM"
     ]
     
     // A representation of a chat message in the UI
@@ -131,10 +132,10 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             let systemMessage = ChatMessageItem(
                 content: """
                     You are Bryan's Brain, a supportive, optimistic, and action-oriented ADHD productivity coach. Your primary goal is to help the user capture thoughts, structure their day, prioritize tasks, and maintain momentum by focusing on the **next small step**. 
-                    Tools: 'addTaskToList', 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'createCalendarEvent'(summary: string, startTimeToday: string, endTimeToday: string, description: string?), 'getTodaysCalendarEvents', 'getCurrentDateTime', 'deleteCalendarEvent', 'updateCalendarEventTime'. 
+                    Tools: 'addTaskToList', 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'createCalendarEvent'(summary: string, startTimeToday: string, endTimeToday: string, description: string?), 'getTodaysCalendarEvents', 'getCurrentDateTime', 'deleteCalendarEvent', 'updateCalendarEventTime', 'markTaskComplete'. 
                     Instructions: 
                     1. **Capture & Structure:** Use tools proactively. If a task seems large, suggest breaking it down first. *Proactively ask* if the user wants to add a newly mentioned task to the list OR block time for it on their calendar using 'createCalendarEvent'. 
-                    2. **Confirm Actions:** Clearly confirm task additions/removals/updates, calendar event creations/deletions/updates. 
+                    2. **Confirm Actions:** Clearly confirm task additions/removals/updates, task completions, calendar event creations/deletions/updates. 
                     3. **Prioritize:** Handle general prioritization and specific item-to-top requests using listCurrentTasks and updateTaskPriorities, then confirm. 
                     4. **Action Focus:** Gently guide towards the **next small action**. Acknowledge feelings if expressed, but pivot back to the immediate next step. 
                     5. **Time Estimation:** If asked about specific task durations, use 'updateTaskEstimatedDuration' to save a *concise* estimate and confirm to the user. 
@@ -148,6 +149,8 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
                     9. **Current Time/Date:** If the user asks for the current time or date, use the 'getCurrentDateTime' tool.
                     10. **Delete Event:** If the user asks to delete a calendar event, use 'deleteCalendarEvent', providing the event's `summary` (title) and its `startTimeToday` string (e.g., '9:00 AM').
                     11. **Update Event Time:** If the user asks to change the time of a calendar event, use 'updateCalendarEventTime', providing the event's `summary` (title), its `originalStartTimeToday` string, the `newStartTimeToday` string, and the `newEndTimeToday` string.
+                    12. **Mark Task Done:** If the user asks to mark a task as done, complete, or finished, use the 'markTaskComplete' tool, providing the exact `taskDescription`. Do NOT use 'removeTaskFromList' for this purpose.
+                    13. **Remove Task:** Only use 'removeTaskFromList' if the user explicitly asks to *remove* or *delete* a task. Confirm removal.
                     """, 
                 role: .system
             )
@@ -291,6 +294,8 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
                     responseItem = await handleDeleteCalendarEventToolCall(id: id, functionName: functionName, arguments: arguments)
                 case "updateCalendarEventTime":
                     responseItem = await handleUpdateCalendarEventTimeToolCall(id: id, functionName: functionName, arguments: arguments)
+                case "markTaskComplete":
+                    responseItem = await handleMarkTaskCompleteToolCall(id: id, functionName: functionName, arguments: arguments)
                 default:
                     // Handle unknown tool call
                     print("Warning: Received unknown tool call: \(functionName)")
@@ -682,4 +687,28 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         }.value
     }
     // -----------------------------------------------------------
+    
+    // --- ADDED: Handler for markTaskComplete ---
+    private func handleMarkTaskCompleteToolCall(id: String, functionName: String = "markTaskComplete", arguments: String) async -> ChatMessageItem {
+        struct MarkCompleteArgs: Decodable { let taskDescription: String }
+        
+        guard let argsData = arguments.data(using: .utf8), 
+              let decodedArgs = try? JSONDecoder().decode(MarkCompleteArgs.self, from: argsData) else {
+            print("Error: Failed to decode arguments for markTaskComplete: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for markTaskComplete\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        let taskDescription = decodedArgs.taskDescription
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
+            print("DEBUG [ViewModel]: Marking task '\(taskDescription)' as complete via function call.") 
+        }
+
+        // Call the store function (to be implemented)
+        let success = await todoListStore.markTaskComplete(description: taskDescription)
+        
+        let responseContent = success ? "Task '\(taskDescription)' marked as complete." : "Task '\(taskDescription)' not found."
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -------------------------------------------
 } 

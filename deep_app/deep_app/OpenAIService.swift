@@ -264,6 +264,19 @@ class OpenAIService {
     )
     // ----------------------------------------------------
     
+    // --- ADDED: markTaskComplete Tool Definition ---
+    private let markTaskCompleteToolDefinition = FunctionDefinition(
+        name: "markTaskComplete",
+        description: "Marks a specific task as complete on the user's to-do list based on its description. Does NOT remove the task.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "The exact description of the task to mark as complete.", items: nil)
+            ],
+            required: ["taskDescription"]
+        )
+    )
+    // ---------------------------------------------
+
     // Combined list of all available tools (now as Tool structs)
     private var allTools: [Tool] { 
         return [
@@ -276,7 +289,8 @@ class OpenAIService {
             .init(function: getEventsToolDefinition),
             .init(function: getCurrentDateTimeToolDefinition),
             .init(function: deleteCalendarEventToolDefinition), // <-- Added delete tool
-            .init(function: updateCalendarEventTimeToolDefinition) // <-- Added update tool
+            .init(function: updateCalendarEventTimeToolDefinition), // <-- Added update tool
+            .init(function: markTaskCompleteToolDefinition) // <-- Added markTaskComplete tool
         ]
     }
 

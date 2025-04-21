@@ -12,6 +12,7 @@ import GoogleSignInSwift // Needed for SettingsView presentation if that code is
 struct ChatView: View {
     @StateObject private var viewModel = ChatViewModel()
     @State private var showingSettingsSheet = false // State to control settings sheet
+    @State private var showScrollToBottomButton = false // <-- State for button visibility
     // let sciFiFont = "Orbitron" // Font only used for title now
     // let bodyFontSize: CGFloat = 15 // No longer needed
     
@@ -22,52 +23,88 @@ struct ChatView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Chat messages list
-                ScrollViewReader { scrollView in
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            // Filter out system messages AND tool messages from display
-                            ForEach(viewModel.messages.filter { $0.role != .system && $0.role != .tool }) { message in
-                                MessageBubble(message: message) // Pass message here
-                            }
-                            
-                            // Loading indicator when waiting for API response
-                            if viewModel.isLoading {
-                                HStack(spacing: 8) {
-                                    ProgressView()
-                                        .tint(.gray)
-                                    Text("...")
-                                        .font(.caption)
-                                        .foregroundColor(.gray)
+                // --- Wrap ScrollViewReader content in ZStack for overlay ---
+                ZStack(alignment: .bottomTrailing) { // Align overlay to bottom trailing
+                    ScrollViewReader { scrollView in
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                // Filter out system, tool messages, AND assistant messages that ONLY contain tool calls w/o content
+                                ForEach(viewModel.messages.filter { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) }) { message in
+                                    MessageBubble(message: message)
+                                        // --- Track visibility of the LAST message --- 
+                                        .if(message.id == viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id) { view in
+                                            view.onAppear { showScrollToBottomButton = false }
+                                               .onDisappear { showScrollToBottomButton = true }
+                                        }
+                                        // ---------------------------------------------
                                 }
-                                .padding(10)
-                                .background(Color(.systemGray6))
-                                .cornerRadius(16)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .id("loading")
+                                
+                                // Loading indicator when waiting for API response
+                                if viewModel.isLoading {
+                                    HStack(spacing: 8) {
+                                        ProgressView()
+                                            .tint(.gray)
+                                        Text("...")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    }
+                                    .padding(10)
+                                    .background(Color(.systemGray6))
+                                    .cornerRadius(16)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .id("loading")
+                                }
+                            }
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.top, 4)
+                        .onTapGesture { // Add tap gesture to dismiss keyboard
+                            hideKeyboard()
+                        }
+                        .onChange(of: viewModel.messages.count) { oldCount, newCount in
+                            // Scroll to bottom when messages change
+                            // Get the ID of the actual last message to display
+                            let lastVisibleMessageId = viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id
+
+                            withAnimation {
+                                if let lastId = lastVisibleMessageId {
+                                    scrollView.scrollTo(lastId, anchor: .bottom)
+                                    showScrollToBottomButton = false // Hide button when auto-scrolling
+                                } else if viewModel.isLoading {
+                                    scrollView.scrollTo("loading", anchor: .bottom)
+                                    showScrollToBottomButton = false // Hide button when auto-scrolling
+                                }
                             }
                         }
-                        .padding(.horizontal)
-                        .padding(.top, 8)
-                    }
-                    .background(Color.white) // Was .regularMaterial
-                    .clipShape(RoundedRectangle(cornerRadius: 10)) // Optional: round corners
-                    .padding(.horizontal, 6) // Add padding around the chat area
-                    .padding(.top, 4)
-                    .onTapGesture { // Add tap gesture to dismiss keyboard
-                        hideKeyboard()
-                    }
-                    .onChange(of: viewModel.messages.count) { oldCount, newCount in
-                        // Scroll to bottom when messages change
-                        withAnimation {
-                            if let lastMsg = viewModel.messages.last { // Filter shouldn't affect last item logic
-                                scrollView.scrollTo(lastMsg.id, anchor: .bottom)
-                            } else if viewModel.isLoading {
-                                scrollView.scrollTo("loading", anchor: .bottom)
+                        
+                        // --- Scroll To Bottom Button (Moved INSIDE ScrollViewReader) --- 
+                        if showScrollToBottomButton {
+                            Button {
+                                // Get the ID of the actual last message to display
+                                let lastVisibleMessageId = viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id
+                                if let lastId = lastVisibleMessageId {
+                                    withAnimation {
+                                        scrollView.scrollTo(lastId, anchor: .bottom)
+                                    }
+                                }
+                            } label: {
+                                Image(systemName: "arrow.down.circle.fill")
+                                    .font(.title)
+                                    .padding(12)
+                                    .background(.thinMaterial) // Use material background
+                                    .clipShape(Circle())
+                                    .shadow(radius: 3)
                             }
+                            .padding(.trailing) // Padding from edge
+                            .padding(.bottom, 10) // Padding from input bar
+                            .transition(.scale.combined(with: .opacity)) // Nice transition
                         }
-                    }
+                        // -------------------------------------------------------------
+                    } // <-- End ScrollViewReader
                 }
+                // --- End ZStack ---
                 
                 // --- Suggested Prompts --- 
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -116,7 +153,9 @@ struct ChatView: View {
                     .padding(.horizontal)
                 }
                 .padding(.vertical, 8)
-                .background(.ultraThinMaterial)
+                .background(Color(UIColor.systemBackground)) // Use system background (adapts light/dark)
+                // Optional: Add a subtle top border
+                .overlay(Rectangle().frame(height: 0.5).foregroundColor(Color(UIColor.systemGray4)), alignment: .top)
             }
             // Title and toolbar setup
             .navigationBarTitleDisplayMode(.inline)
@@ -206,4 +245,15 @@ struct MessageBubble: View {
         .environmentObject(ChatViewModel()) // Provide dummy ViewModel
         .environmentObject(AuthenticationService()) // Provide dummy Auth Service
 }
-*/ 
+*/
+
+// Helper view modifier for conditional modifiers
+extension View {
+    @ViewBuilder func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
+        } else {
+            self
+        }
+    }
+} 

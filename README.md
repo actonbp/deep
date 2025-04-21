@@ -53,6 +53,7 @@ This allows for a seamless experience where task capture, planning, and calendar
 *   **Task Metadata:** Add Deep/Shallow work categorization.
 *   **AI Enhancement:** Refine prompts, explore multi-agent concepts more deeply.
 *   **Release Build Security:** Secure API key handling for release.
+*   **macOS Companion App:** Explore creating a companion app for macOS leveraging the shared SwiftUI codebase (lower priority currently).
 
 See `TODO.md` for more granular items.
 

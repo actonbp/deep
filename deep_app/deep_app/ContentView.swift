@@ -63,19 +63,32 @@ struct TodoListView: View {
     var body: some View {
         NavigationView { 
             VStack {
+                // --- Input Bar --- 
                 HStack {
-                    TextField("Enter new item", text: $newItemText) // Use local state for input
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
+                    TextField("Enter new item", text: $newItemText)
+                        .textFieldStyle(.plain) // Use plain style
+                        .padding(.vertical, 8) // Add some vertical padding
                     
-                    Button("Add") {
-                        // Call the store's add method
+                    Spacer() // Push button to the right
+
+                    Button {
                         todoListStore.addItem(text: newItemText)
-                        newItemText = "" // Clear local input field
+                        newItemText = "" 
+                    } label: {
+                        Image(systemName: "plus.circle.fill") // Use an icon button
+                            .font(.title2)
                     }
                     .disabled(newItemText.isEmpty)
                     .foregroundColor(Color.theme.accent)
+                    .buttonStyle(.borderless) // Use borderless style
                 }
-                .padding()
+                .padding(.horizontal)
+                .padding(.vertical, 5) // Less vertical padding for the bar itself
+                .background(Color(UIColor.systemGray6)) // Subtle background
+                .cornerRadius(10)
+                .padding(.horizontal) // Padding around the bar
+                .padding(.top, 5) // Padding from the top edge / title
+                // ---------------
 
                 List { // Display the list of items from the store
                     // Sort items by priority (nil is lowest), then alphabetically
@@ -86,7 +99,17 @@ struct TodoListView: View {
                         // Both have non-nil priority, sort numerically
                         return p1 < p2 
                     }) { item in // Iterate over sorted items
-                        HStack {
+                        HStack(spacing: 15) { // Added spacing
+                            // --- Tappable Done/Undone Icon --- 
+                            Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                                .resizable()
+                                .frame(width: 24, height: 24) // Explicit frame
+                                .foregroundColor(item.isDone ? Color.theme.accent : Color.theme.secondaryText)
+                                .onTapGesture {
+                                    todoListStore.toggleDone(item: item)
+                                }
+                            // --------------------------------
+                            
                             VStack(alignment: .leading, spacing: 2) { // Use VStack for Text + Duration
                                 // Display priority if available
                                 if let priority = item.priority {
@@ -109,10 +132,8 @@ struct TodoListView: View {
                             } // End VStack
                             Spacer()
                         }
-                        .contentShape(Rectangle()) // Makes the whole row tappable
-                        .onTapGesture { // Keep tap-to-toggle for accessibility/alternative
-                            todoListStore.toggleDone(item: item)
-                        }
+                        .padding(.vertical, 4) // Add some vertical padding to the row
+                        .listRowSeparator(.hidden) // Hide default separators
                         .swipeActions(edge: .leading) { // Swipe from left (leading edge)
                             Button {
                                 todoListStore.toggleDone(item: item)

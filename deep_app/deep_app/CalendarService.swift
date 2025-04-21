@@ -308,6 +308,22 @@ class CalendarService {
                 isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds] // Match Google's precision
                 let targetStartTimeString = isoFormatter.string(from: startTime)
                 
+                // --- Debug Logging ---
+                if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                    print("DEBUG [CalendarService Delete]: Searching for event with Summary: \"\(summary)\" and ISO Start Time: \(targetStartTimeString)")
+                    print("DEBUG [CalendarService Delete]: Fetched events within window:")
+                    if events.isEmpty {
+                        print("    (No events found in the fetched time window)")
+                    } else {
+                        for event in events {
+                            let fetchedSummary = event.summary ?? "(Nil Summary)"
+                            let fetchedStartTime = event.start?.dateTime ?? "(Nil Start DateTime)"
+                            print("    - Summary: \"\(fetchedSummary)\", Start: \(fetchedStartTime)")
+                        }
+                    }
+                }
+                // --- End Debug Logging ---
+                
                 guard let eventToDelete = events.first(where: { 
                           $0.summary == summary && 
                           $0.start?.dateTime == targetStartTimeString 
