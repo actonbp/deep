@@ -332,6 +332,31 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         }
     }
 
+    // MARK: - Time Parsing Helpers (NEW)
+    /// Parses a time string such as "9:00 AM" or "14:30" and returns the corresponding `Date` **for today**.
+    /// Returns `nil` if the string cannot be parsed.
+    private func dateForToday(from timeString: String) -> Date? {
+        // Accept both 12-hour and 24-hour formats.
+        let formatter12 = DateFormatter()
+        formatter12.locale = Locale(identifier: "en_US_POSIX")
+        formatter12.dateFormat = "h:mm a"
+
+        let formatter24 = DateFormatter()
+        formatter24.locale = Locale(identifier: "en_US_POSIX")
+        formatter24.dateFormat = "HH:mm"
+
+        guard let timeDate = formatter12.date(from: timeString) ?? formatter24.date(from: timeString) else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+        var todayComponents = calendar.dateComponents([.year, .month, .day], from: Date())
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: timeDate)
+        todayComponents.hour = timeComponents.hour
+        todayComponents.minute = timeComponents.minute
+        return calendar.date(from: todayComponents)
+    }
+
     // --- MODIFY Tool Handlers to RETURN ChatMessageItem --- 
     
     // Specific handler for the addTaskToList tool
@@ -406,51 +431,20 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     
     // Modify createCalendarEvent handler
     private func handleCreateCalendarEventToolCall(id: String, functionName: String = "createCalendarEvent", arguments: String) async -> ChatMessageItem { // <-- Return Item
-        guard let argsData = arguments.data(using: .utf8), let decodedArgs = try? JSONDecoder().decode(OpenAIService.CreateCalendarEventArguments.self, from: argsData) else {
+        // Decode arguments
+        guard let argsData = arguments.data(using: .utf8),
+              let decodedArgs = try? JSONDecoder().decode(OpenAIService.CreateCalendarEventArguments.self, from: argsData) else {
             print("Error: Failed to decode arguments for createCalendarEvent: \(arguments)")
             return ChatMessageItem(content: "{\"error\": \"Invalid arguments format for createCalendarEvent\"}", role: .tool, toolCallId: id, functionName: functionName)
         }
-        
-        // 2. Parse Time Strings and Combine with Today's Date
-        let timeFormatter = DateFormatter()
-        timeFormatter.locale = Locale(identifier: "en_US_POSIX") // Use fixed locale for parsing
-        // Allow parsing both "h:mm a" (9:00 AM) and "HH:mm" (14:30)
-        timeFormatter.dateFormat = "h:mm a"
-        let timeFormatter24 = DateFormatter()
-        timeFormatter24.locale = Locale(identifier: "en_US_POSIX")
-        timeFormatter24.dateFormat = "HH:mm"
-        
-        guard let startTimeParsed = timeFormatter.date(from: decodedArgs.startTimeToday) ?? timeFormatter24.date(from: decodedArgs.startTimeToday),
-              let endTimeParsed = timeFormatter.date(from: decodedArgs.endTimeToday) ?? timeFormatter24.date(from: decodedArgs.endTimeToday) else {
+        // Parse start/end times using helper
+        guard let startTime = dateForToday(from: decodedArgs.startTimeToday),
+              let endTime = dateForToday(from: decodedArgs.endTimeToday) else {
             print("Error: Failed to parse time strings: '\(decodedArgs.startTimeToday)' or '\(decodedArgs.endTimeToday)'")
             let errorContent = "{\"error\": \"Invalid time format. Expected formats like '9:00 AM' or '14:30'. Provided start: '\(decodedArgs.startTimeToday)', end: '\(decodedArgs.endTimeToday)'.\"}"
             return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
         }
-        
-        // Get components (hour, minute) from parsed times
-        let calendar = Calendar.current
-        let startComponents = calendar.dateComponents([.hour, .minute], from: startTimeParsed)
-        let endComponents = calendar.dateComponents([.hour, .minute], from: endTimeParsed)
-        
-        // Get today's date components (year, month, day)
-        let todayComponents = calendar.dateComponents([.year, .month, .day], from: Date())
-        
-        // Combine today's date with parsed times
-        var combinedStartComponents = todayComponents
-        combinedStartComponents.hour = startComponents.hour
-        combinedStartComponents.minute = startComponents.minute
-        
-        var combinedEndComponents = todayComponents
-        combinedEndComponents.hour = endComponents.hour
-        combinedEndComponents.minute = endComponents.minute
-        
-        guard let startTime = calendar.date(from: combinedStartComponents),
-              let endTime = calendar.date(from: combinedEndComponents) else {
-            print("Error: Failed to combine date and time components.")
-             return ChatMessageItem(content: "{\"error\": \"Internal error combining date and time.\"}", role: .tool, toolCallId: id, functionName: functionName)
-        }
-        
-        // Ensure end time is after start time (using combined dates)
+        // Ensure end > start
         guard endTime > startTime else {
             print("Error: End time ('\(decodedArgs.endTimeToday)') must be after start time ('\(decodedArgs.startTimeToday)') on the same day.")
             let errorContent = "{\"error\": \"End time ('\(decodedArgs.endTimeToday)') must be after start time ('\(decodedArgs.startTimeToday)') on the same day.\"}"
@@ -531,40 +525,20 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             let startTimeToday: String // e.g., "9:00 AM", "14:30"
         }
         
-        guard let argsData = arguments.data(using: .utf8), 
+        guard let argsData = arguments.data(using: .utf8),
               let decodedArgs = try? JSONDecoder().decode(DeleteEventArgs.self, from: argsData) else {
             print("Error: Failed to decode arguments for deleteCalendarEvent: \(arguments)")
             let errorContent = "{\"error\": \"Invalid arguments format for deleteCalendarEvent\"}"
             return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
         }
         
-        // 2. Parse Time String
-        let timeFormatter = DateFormatter()
-        timeFormatter.locale = Locale(identifier: "en_US_POSIX") // Fixed locale
-        timeFormatter.dateFormat = "h:mm a" // AM/PM
-        let timeFormatter24 = DateFormatter()
-        timeFormatter24.locale = Locale(identifier: "en_US_POSIX")
-        timeFormatter24.dateFormat = "HH:mm" // 24-hour
-        
-        guard let startTimeParsed = timeFormatter.date(from: decodedArgs.startTimeToday) ?? timeFormatter24.date(from: decodedArgs.startTimeToday) else {
+        // Parse start time using helper
+        guard let startTime = dateForToday(from: decodedArgs.startTimeToday) else {
             print("Error: Failed to parse start time string for deletion: '\(decodedArgs.startTimeToday)'")
             let errorContent = "{\"error\": \"Invalid start time format for deletion. Expected formats like '9:00 AM' or '14:30'. Provided: '\(decodedArgs.startTimeToday)'.\"}"
             return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
         }
         
-        // 3. Combine with Today's Date
-        let calendar = Calendar.current
-        let startComponents = calendar.dateComponents([.hour, .minute], from: startTimeParsed)
-        let todayComponents = calendar.dateComponents([.year, .month, .day], from: Date())
-        var combinedStartComponents = todayComponents
-        combinedStartComponents.hour = startComponents.hour
-        combinedStartComponents.minute = startComponents.minute
-        
-        guard let startTime = calendar.date(from: combinedStartComponents) else {
-            print("Error: Failed to combine date and time components for deletion.")
-             return ChatMessageItem(content: "{\"error\": \"Internal error combining date and time for deletion.\"}", role: .tool, toolCallId: id, functionName: functionName)
-        }
-
         if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
             print("DEBUG [ViewModel]: Calling CalendarService to delete event: '\(decodedArgs.summary)' starting at \(startTime)") 
         }
@@ -603,56 +577,23 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             let newEndTimeToday: String
         }
         
-        guard let argsData = arguments.data(using: .utf8), 
+        guard let argsData = arguments.data(using: .utf8),
               let decodedArgs = try? JSONDecoder().decode(UpdateTimeArgs.self, from: argsData) else {
             print("Error: Failed to decode arguments for updateCalendarEventTime: \(arguments)")
             let errorContent = "{\"error\": \"Invalid arguments format for updateCalendarEventTime\"}"
             return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
         }
         
-        // 2. Parse Time Strings (Original Start, New Start, New End)
-        let timeFormatter = DateFormatter()
-        timeFormatter.locale = Locale(identifier: "en_US_POSIX")
-        timeFormatter.dateFormat = "h:mm a"
-        let timeFormatter24 = DateFormatter()
-        timeFormatter24.locale = Locale(identifier: "en_US_POSIX")
-        timeFormatter24.dateFormat = "HH:mm"
-        
-        guard let originalStartTimeParsed = timeFormatter.date(from: decodedArgs.originalStartTimeToday) ?? timeFormatter24.date(from: decodedArgs.originalStartTimeToday), 
-              let newStartTimeParsed = timeFormatter.date(from: decodedArgs.newStartTimeToday) ?? timeFormatter24.date(from: decodedArgs.newStartTimeToday), 
-              let newEndTimeParsed = timeFormatter.date(from: decodedArgs.newEndTimeToday) ?? timeFormatter24.date(from: decodedArgs.newEndTimeToday) else {
+        // Parse times using helper
+        guard let originalStartTime = dateForToday(from: decodedArgs.originalStartTimeToday),
+              let newStartTime = dateForToday(from: decodedArgs.newStartTimeToday),
+              let newEndTime = dateForToday(from: decodedArgs.newEndTimeToday) else {
             print("Error: Failed to parse one or more time strings for update: Original='\(decodedArgs.originalStartTimeToday)', NewStart='\(decodedArgs.newStartTimeToday)', NewEnd='\(decodedArgs.newEndTimeToday)'")
             let errorContent = "{\"error\": \"Invalid time format for update. Expected formats like '9:00 AM' or '14:30'. Check original: '\(decodedArgs.originalStartTimeToday)', new start: '\(decodedArgs.newStartTimeToday)', new end: '\(decodedArgs.newEndTimeToday)'.\"}"
             return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
         }
         
-        // 3. Combine with Today's Date
-        let calendar = Calendar.current
-        let todayComponents = calendar.dateComponents([.year, .month, .day], from: Date())
-        
-        let originalStartComponents = calendar.dateComponents([.hour, .minute], from: originalStartTimeParsed)
-        var combinedOriginalStart = todayComponents
-        combinedOriginalStart.hour = originalStartComponents.hour
-        combinedOriginalStart.minute = originalStartComponents.minute
-        
-        let newStartComponents = calendar.dateComponents([.hour, .minute], from: newStartTimeParsed)
-        var combinedNewStart = todayComponents
-        combinedNewStart.hour = newStartComponents.hour
-        combinedNewStart.minute = newStartComponents.minute
-        
-        let newEndComponents = calendar.dateComponents([.hour, .minute], from: newEndTimeParsed)
-        var combinedNewEnd = todayComponents
-        combinedNewEnd.hour = newEndComponents.hour
-        combinedNewEnd.minute = newEndComponents.minute
-        
-        guard let originalStartTime = calendar.date(from: combinedOriginalStart), 
-              let newStartTime = calendar.date(from: combinedNewStart), 
-              let newEndTime = calendar.date(from: combinedNewEnd) else {
-            print("Error: Failed to combine date and time components for update.")
-            return ChatMessageItem(content: "{\"error\": \"Internal error combining date and time for update.\"}", role: .tool, toolCallId: id, functionName: functionName)
-        }
-        
-        // Ensure new end time is after new start time
+        // Ensure new end > new start
         guard newEndTime > newStartTime else {
             print("Error: New end time ('\(decodedArgs.newEndTimeToday)') must be after new start time ('\(decodedArgs.newStartTimeToday)') on the same day.")
             let errorContent = "{\"error\": \"New end time ('\(decodedArgs.newEndTimeToday)') must be after new start time ('\(decodedArgs.newStartTimeToday)') on the same day.\"}"

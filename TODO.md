@@ -29,7 +29,7 @@ This file tracks the planned features and improvements for the AI-powered deep w
 - [ ] Refactor persistence (Consider Core Data or SwiftData for more complex data)
 - [ ] Error handling and robustness
 - [ ] Unit and UI tests 
-- [ ] Refactor `ChatViewModel.swift`: Consolidate repetitive time parsing logic in calendar tool handlers (`handleCreateCalendarEventToolCall`, `handleDeleteCalendarEventToolCall`, `handleUpdateCalendarEventTimeToolCall`) into a shared helper function to improve maintainability.
+- [x] Refactor `ChatViewModel.swift`: Introduced `dateForToday(from:)` helper to consolidate repetitive time parsing logic across calendar tool handlers.
 
 ## Performance & Responsiveness
 

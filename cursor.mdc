@@ -1,0 +1,30 @@
+# Cursor AI Contribution Guidelines
+
+These guidelines are read by AI agents (e.g. Cursor, GPT-4o, Claude) when proposing code changes in this repository.  
+They exist to keep the codebase stable while still enabling incremental, high-quality improvements.
+
+## Prime Directive
+1. **DO NOT break the shipping iOS app.**  All changes must compile under the latest stable Xcode and run on device/simulator without runtime crashes.
+2. **Prefer small, reversible commits.**  Each change should have a single, well-defined purpose.
+
+## Change Process
+1. Search for existing implementations before adding new code.  Re-use or refactor rather than duplicate.
+2. Write or update unit/UI tests when you touch non-trivial logic.
+3. Update documentation (README, TODO, *.mdc files, inline comments) in the same change when it becomes stale.
+4. Treat warnings as errors.  New code **must** build cleanly with `swiftlint` & Xcode warnings enabled.
+
+## Swift Coding Conventions
+* Use Swift 5.9 features where beneficial, but avoid unstable/experimental APIs.
+* Follow Apple's [Swift API Design Guidelines](https://swift.org/documentation/api-design-guidelines/).
+* Group extensions and helper functions by type.  Use `// MARK:` comments.
+* Prefer `private` and `fileprivate` access where possible.
+
+## OpenAI / External APIs
+* Never hard-code secrets in source.  Use `Secrets.plist` for debug builds and a secure runtime mechanism for release.
+* When updating model names, check the OpenAI changelog for compatibility.
+
+## Future Architecture Thoughts (non-blocking)
+The long-term vision involves multiple collaborative agents and a backend service.  Capture exploratory ideas in `docs/` or `TODO.md` rather than shoe-horning incomplete prototypes into the main app.
+
+---
+_Last updated: 2025-05-31_
