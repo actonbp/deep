@@ -95,6 +95,11 @@ struct TodayCalendarView: View {
             }
             // -----------------------------------------
             // Optional: Add a refresh button later
+            // --- Apply background color and ensure visibility --- 
+            .toolbarBackground(.indigo, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar) // Keep this to suggest light status bar items
+            // -----------------------------------------------------
         }
     }
     

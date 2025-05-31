@@ -12,6 +12,10 @@ struct AppSettings {
     // Key for UserDefaults
     static let selectedModelKey = "selectedApiModel"
     static let debugLogEnabledKey = "debugLogEnabled"
+    static let demonstrationModeEnabledKey = "demonstrationModeEnabled"
+    // --- ADDED Key ---
+    static let enableCategoriesKey = "enableCategories"
+    // -----------------
 }
 
 struct SettingsView: View {
@@ -25,6 +29,13 @@ struct SettingsView: View {
     // Add AppStorage for debug logging toggle
     @AppStorage(AppSettings.debugLogEnabledKey) var isDebugLoggingEnabled: Bool = false // Default to off
     
+    // --- ADDED Setting --- 
+    @AppStorage(AppSettings.demonstrationModeEnabledKey) var isDemonstrationModeEnabled: Bool = false // Default to off
+    // ---------------------
+    // --- ADDED Setting --- 
+    @AppStorage(AppSettings.enableCategoriesKey) var areCategoriesEnabled: Bool = false // Default to off
+    // ---------------------
+
     // --- Use shared Authentication Service from Environment --- 
     @EnvironmentObject var authService: AuthenticationService 
     // @StateObject private var authService = AuthenticationService() // <-- REMOVED
@@ -91,6 +102,22 @@ struct SettingsView: View {
                 Section("Debugging") { // New section for debug settings
                     Toggle("Enable Debug Logging", isOn: $isDebugLoggingEnabled)
                     Text("Shows detailed logs in the Xcode console. May slightly impact performance when debugger is attached.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                // --- Roadmap Settings Section --- 
+                Section("Roadmap Customization") {
+                    Toggle("Enable Categories", isOn: $areCategoriesEnabled)
+                    Text("Group roadmap items by category (e.g., Research, Teaching) in addition to specific projects/paths. If off, all projects/paths appear together.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                // -----------------------------
+                
+                Section("Demonstration") {
+                    Toggle("Enable Demo Mode", isOn: $isDemonstrationModeEnabled)
+                    Text("Shows sample tasks and roadmap data for illustration purposes. Your actual data is preserved and will reappear when Demo Mode is turned off.")
                         .font(.caption)
                         .foregroundColor(.gray)
                 }

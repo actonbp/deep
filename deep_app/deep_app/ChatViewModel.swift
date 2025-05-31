@@ -127,49 +127,49 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     // Initialize with a system message AND load previous messages
     init() {
         loadMessages()
-        
-        if !messages.contains(where: { $0.role == .system }) {
-            let systemMessage = ChatMessageItem(
-                content: """
-                    You are Bryan's Brain, a supportive, optimistic, and action-oriented ADHD productivity coach. Your primary goal is to help the user capture thoughts, structure their day, prioritize tasks, and maintain momentum by focusing on the **next small step**.
-                    
-                    **SPECIAL GUIDANCE: "Getting Unstuck" Responses**
-                    When users say things like "I don't know where to start", "help me get unstuck", "what should I do next?", or express feeling overwhelmed:
-                    1. **First, check their context**: Use 'listCurrentTasks' and 'getTodaysCalendarEvents' to see what's on their plate
-                    2. **Identify the smallest possible next action**: Find something that takes 2-5 minutes and requires minimal decision-making
-                    3. **Offer 2-3 specific micro-choices** instead of open-ended questions
-                    4. **Acknowledge the feeling**: "It's totally normal to feel stuck - let's find one tiny thing to get momentum going"
-                    5. **Focus on momentum over perfection**: Any small action is better than no action 
-                    Tools: 'addTaskToList', 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'createCalendarEvent'(summary: string, startTimeToday: string, endTimeToday: string, description: string?), 'getTodaysCalendarEvents', 'getCurrentDateTime', 'deleteCalendarEvent', 'updateCalendarEventTime', 'markTaskComplete'. 
-                    Instructions: 
-                    1. **Capture & Structure:** Use tools proactively. If a task seems large, suggest breaking it down first. *Proactively ask* if the user wants to add a newly mentioned task to the list OR block time for it on their calendar using 'createCalendarEvent'. 
-                    2. **Confirm Actions:** Clearly confirm task additions/removals/updates, task completions, calendar event creations/deletions/updates. 
-                    3. **Prioritize:** Handle general prioritization and specific item-to-top requests using listCurrentTasks and updateTaskPriorities, then confirm. 
-                    4. **Action Focus:** Gently guide towards the **next small action**. Acknowledge feelings if expressed, but pivot back to the immediate next step. 
-                    5. **Time Estimation:** If asked about specific task durations, use 'updateTaskEstimatedDuration' to save a *concise* estimate and confirm to the user. 
-                    6. **Check Calendar:** If the user asks directly about their schedule for today, use the 'getTodaysCalendarEvents' tool and report the findings.
-                    7. **Time Blocking Assistance:** If asked to 'plan my day', 'time block tasks', or similar: 
-                        a. Use 'listCurrentTasks' to get current tasks, priorities, and any estimated durations. 
-                        b. Use 'getTodaysCalendarEvents' tool to get the user's existing fixed commitments for the day. 
-                        c. Based on the tasks, their durations, and the fetched calendar events, identify free slots and suggest a possible time-blocked schedule as a text list in the chat. 
-                        d. Ask the user if they want you to add these blocks to their Google Calendar. If yes, use the 'createCalendarEvent' tool for each suggested block. Provide the event `summary`, the `startTimeToday` (e.g., '9:00 AM'), the `endTimeToday` (e.g., '10:30 AM'), and optional `description`. Do NOT calculate the full date/time string yourself. 
-                    8. **Tone:** Maintain an encouraging, optimistic, patient, and non-judgmental tone.
-                    9. **Current Time/Date:** If the user asks for the current time or date, use the 'getCurrentDateTime' tool.
-                    10. **Delete Event:** If the user asks to delete a calendar event, use 'deleteCalendarEvent', providing the event's `summary` (title) and its `startTimeToday` string (e.g., '9:00 AM').
-                    11. **Update Event Time:** If the user asks to change the time of a calendar event, use 'updateCalendarEventTime', providing the event's `summary` (title), its `originalStartTimeToday` string, the `newStartTimeToday` string, and the `newEndTimeToday` string.
-                    12. **Mark Task Done:** If the user asks to mark a task as done, complete, or finished, use the 'markTaskComplete' tool, providing the exact `taskDescription`. Do NOT use 'removeTaskFromList' for this purpose.
-                    13. **Remove Task:** Only use 'removeTaskFromList' if the user explicitly asks to *remove* or *delete* a task. Confirm removal.
-                    """, 
-                role: .system
-            )
-            messages.insert(systemMessage, at: 0)
-        }
+        updateSystemMessage()
         
         if messages.count == 1 && messages.first?.role == .system {
              addWelcomeMessage()
         }
     }
     
+    // --- ADDED: Function to dynamically set system prompt ---
+    func updateSystemMessage() {
+        let areCategoriesEnabled = UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey)
+        var systemPromptContent = """
+            You are Bryan's Brain, a supportive, optimistic, and action-oriented ADHD productivity coach. Your primary goal is to help the user capture thoughts, structure their day, prioritize tasks, and maintain momentum by focusing on the **next small step**.
+            
+            **SPECIAL GUIDANCE: "Getting Unstuck" Responses**
+            When users say things like "I don't know where to start", "help me get unstuck", "what should I do next?", or express feeling overwhelmed:
+            1. **First, check their context**: Use 'getTodaysCalendarEvents' and 'listCurrentTasks' to understand their current situation
+            2. **Identify the smallest possible next step**: Break down overwhelming tasks into 5-minute actions
+            3. **Offer specific, immediate actions**: Instead of general advice, suggest one concrete thing they can do right now
+            4. **Acknowledge the feeling**: Validate that starting is hard, especially with ADHD
+            5. **Use time-boxing**: Suggest "Just 15 minutes on..." to reduce pressure
+            6. **Be encouraging**: Remind them that any progress counts
+            """
+            
+        if areCategoriesEnabled {
+            systemPromptContent += "\nTasks have metadata: `priority`, `estimatedDuration`, `difficulty` (Low, Medium, High), `dateCreated`, `category` (string), and `projectOrPath` (string)."
+            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath, category), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskCategory', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime'."
+            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project/category if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`category`, `projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskCategory`, `updateTaskProjectOrPath`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked."
+        } else {
+            systemPromptContent += "\nTasks have metadata: `priority`, `estimatedDuration`, `difficulty` (Low, Medium, High), `dateCreated`, and `projectOrPath` (string, e.g., Paper XYZ, LEAD 552)."
+            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime'."
+            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskProjectOrPath`, `updateTaskDifficulty`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked."
+        }
+        
+        // Remove existing system message if it exists
+        messages.removeAll { $0.role == .system }
+        
+        // Create and insert the new system message
+        let systemMessage = ChatMessageItem(content: systemPromptContent, role: .system)
+        messages.insert(systemMessage, at: 0)
+        print("DEBUG [ViewModel]: System prompt updated. Categories Enabled: \(areCategoriesEnabled)")
+    }
+    // -----------------------------------------------------
+
     private func addWelcomeMessage() {
         let welcomeMessage = ChatMessageItem(
             content: "Hey! I'm here to help you capture thoughts, manage tasks, and plan your day.\n\nFeeling stuck or don't know where to start? Just ask - I'm great at helping you find that first small step! What's on your mind?", 
@@ -230,10 +230,50 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     
     // Handles calling the API and processing results, including tool calls
     private func continueConversation() async {
-        // Prepare messages for API using the updated toOpenAIMessage
-        let apiMessages = await MainActor.run { [weak self] in 
-            self?.messages.map { $0.toOpenAIMessage } ?? [] 
+        // --- Smarter History Truncation ---
+        let maxRecentMessages = 20 // Target number of recent messages (flexible)
+        let allMessages = await MainActor.run { messages } // Get current messages safely
+        
+        var messagesToSend: [OpenAIService.ChatMessage] = []
+        var includedCount = 0
+        var mandatoryInclusionNext = false // Flag to ensure assistant tool_call request is included
+
+        // Iterate backwards through non-system messages
+        for messageItem in allMessages.filter({ $0.role != .system }).reversed() {
+            let apiMessage = messageItem.toOpenAIMessage
+            
+            // Ensure we don't exceed the limit unless mandatory inclusion is needed
+            if includedCount >= maxRecentMessages && !mandatoryInclusionNext {
+                break // Stop adding messages once limit is reached (unless required)
+            }
+            
+            messagesToSend.append(apiMessage)
+            includedCount += 1
+            
+            // If this is a tool response, mark that the previous message (assistant request) MUST be included
+            if apiMessage.role == "tool" {
+                mandatoryInclusionNext = true
+            } 
+            // If this is an assistant message with tool_calls, the mandate is fulfilled
+            else if apiMessage.role == "assistant" && apiMessage.tool_calls != nil {
+                mandatoryInclusionNext = false // Reset flag after including the required assistant message
+            } 
+            // For user messages or assistant messages without tool_calls, reset the flag
+            else {
+                 mandatoryInclusionNext = false
+            }
         }
+        
+        // Reverse the selected messages to restore original order
+        messagesToSend.reverse()
+        
+        // Prepend the system message if it exists
+        if let systemMessageItem = allMessages.first(where: { $0.role == .system }) {
+            messagesToSend.insert(systemMessageItem.toOpenAIMessage, at: 0)
+        }
+        
+        let apiMessages = messagesToSend // Use the truncated list
+        // ----------------------------------
         
         // Ensure loading indicator is shown before API call
         await MainActor.run { [weak self] in 
@@ -242,8 +282,22 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             }    
         }
 
+        // --- Logging before API Call ---
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+            print("DEBUG [ViewModel]: Sending \(apiMessages.count) messages to API...")
+            // Optionally print the messages themselves if needed for deeper debugging
+            // print(apiMessages)
+        }
+        // ------------------------------
+
         let result = await openAIService.processConversation(messages: apiMessages)
         
+        // --- Logging after API Call ---
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+            print("DEBUG [ViewModel]: Received result from API: \(result)")
+        }
+        // -----------------------------
+
         // Stop loading indicator *before* processing result / potential next step
         await MainActor.run { [weak self] in
             self?.isLoading = false
@@ -268,52 +322,67 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
                  self?.messages.append(assistantRequestMessage) 
             }
             
-            // --- Execute ALL requested tool calls and COLLECT results --- 
+            // --- Execute ALL requested tool calls using TaskGroup --- 
             var toolResponseItems: [ChatMessageItem] = [] // Array to hold results
             
-            // Use TaskGroup for potential concurrency (optional but good practice)
-            // For simplicity here, we'll use a simple loop first.
-            for toolCall in toolCalls {
-                let id = toolCall.id
-                let functionName = toolCall.function.name
-                let arguments = toolCall.function.arguments
-                
-                // Handle the specific tool call function and get the result message
-                // NOTE: The handler functions will now RETURN the ChatMessageItem instead of appending directly
-                let responseItem: ChatMessageItem
-                switch functionName {
-                case "addTaskToList":
-                    responseItem = await handleAddTaskToolCall(id: id, functionName: functionName, arguments: arguments)
-                case "listCurrentTasks":
-                    responseItem = await handleListTasksToolCall(id: id, functionName: functionName)
-                case "removeTaskFromList":
-                    responseItem = await handleRemoveTaskToolCall(id: id, functionName: functionName, arguments: arguments)
-                case "updateTaskPriorities":
-                    responseItem = await handleUpdatePrioritiesToolCall(id: id, functionName: functionName, arguments: arguments)
-                case "updateTaskEstimatedDuration":
-                    responseItem = await handleUpdateDurationToolCall(id: id, functionName: functionName, arguments: arguments)
-                case "createCalendarEvent":
-                    responseItem = await handleCreateCalendarEventToolCall(id: id, functionName: functionName, arguments: arguments)
-                case "getTodaysCalendarEvents":
-                     responseItem = await handleGetTodaysCalendarEventsToolCall(id: id, functionName: functionName)
-                case "getCurrentDateTime":
-                    responseItem = await handleGetCurrentDateTimeToolCall(id: id, functionName: functionName)
-                case "deleteCalendarEvent":
-                    responseItem = await handleDeleteCalendarEventToolCall(id: id, functionName: functionName, arguments: arguments)
-                case "updateCalendarEventTime":
-                    responseItem = await handleUpdateCalendarEventTimeToolCall(id: id, functionName: functionName, arguments: arguments)
-                case "markTaskComplete":
-                    responseItem = await handleMarkTaskCompleteToolCall(id: id, functionName: functionName, arguments: arguments)
-                default:
-                    // Handle unknown tool call
-                    print("Warning: Received unknown tool call: \(functionName)")
-                    responseItem = ChatMessageItem(content: "{\"error\": \"Unknown function '\(functionName)\'\"}", role: .tool, toolCallId: id, functionName: functionName)
+            // Use TaskGroup to handle potential concurrency and collect results safely
+            await withTaskGroup(of: ChatMessageItem.self) { group in
+                for toolCall in toolCalls {
+                    group.addTask { // Add each tool call handler as a task
+                        let id = toolCall.id
+                        let functionName = toolCall.function.name
+                        let arguments = toolCall.function.arguments
+                        
+                        // Handle the specific tool call function and return the result message
+                        // NOTE: The handler functions already RETURN the ChatMessageItem
+                        let responseItem: ChatMessageItem
+                        switch functionName {
+                        case "addTaskToList":
+                            responseItem = await self.handleAddTaskToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "listCurrentTasks":
+                            responseItem = await self.handleListTasksToolCall(id: id, functionName: functionName)
+                        case "removeTaskFromList":
+                            responseItem = await self.handleRemoveTaskToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "updateTaskPriorities":
+                            responseItem = await self.handleUpdatePrioritiesToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "updateTaskEstimatedDuration":
+                            responseItem = await self.handleUpdateDurationToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "createCalendarEvent":
+                            responseItem = await self.handleCreateCalendarEventToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "getTodaysCalendarEvents":
+                            responseItem = await self.handleGetTodaysCalendarEventsToolCall(id: id, functionName: functionName)
+                        case "getCurrentDateTime":
+                            responseItem = await self.handleGetCurrentDateTimeToolCall(id: id, functionName: functionName)
+                        case "deleteCalendarEvent":
+                            responseItem = await self.handleDeleteCalendarEventToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "updateCalendarEventTime":
+                            responseItem = await self.handleUpdateCalendarEventTimeToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "markTaskComplete":
+                            responseItem = await self.handleMarkTaskCompleteToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "updateTaskDifficulty":
+                            responseItem = await self.handleUpdateTaskDifficultyToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "updateTaskCategory":
+                            responseItem = await self.handleUpdateTaskCategoryToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "updateTaskProjectOrPath":
+                            responseItem = await self.handleUpdateTaskProjectOrPathToolCall(id: id, functionName: functionName, arguments: arguments)
+                        default:
+                            // Handle unknown tool call
+                            print("Warning: Received unknown tool call: \(functionName)")
+                            responseItem = ChatMessageItem(content: "{\"error\": \"Unknown function '\(functionName)'\"}", role: .tool, toolCallId: id, functionName: functionName)
+                        }
+                        return responseItem // Return the result from the task
+                    }
                 }
-                toolResponseItems.append(responseItem) // Collect the result
+                
+                // Collect results from all tasks in the group
+                for await result in group {
+                    // No MainActor needed here as we collect results *after* tasks complete
+                    toolResponseItems.append(result)
+                }
             }
-            // -------------------------------------------------------------
+            // --------------------------------------------------------
             
-            // --- Append ALL collected tool results --- 
+            // --- Append ALL collected tool results AFTER the group finishes --- 
             await MainActor.run { [weak self] in
                 self?.messages.append(contentsOf: toolResponseItems)
             }
@@ -353,12 +422,20 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         }
         
         let taskDescription = decodedArgs.taskDescription
+        // --- Get optional metadata --- 
+        let category = decodedArgs.category
+        let project = decodedArgs.projectOrPath
+        // ---------------------------
         if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
-            print("DEBUG [ViewModel]: Adding task via function call: \(taskDescription)")
+            // --- Update Debug Log --- 
+            print("DEBUG [ViewModel]: Adding task via function call: \(taskDescription) [Category: \(category ?? "nil")] [Project: \(project ?? "nil")]")
+            // ----------------------
         }
         
-        // Add the item using the store
-        await MainActor.run { todoListStore.addItem(text: taskDescription) }
+        // Add the item using the store, passing metadata
+        await MainActor.run { 
+            todoListStore.addItem(text: taskDescription, category: category, projectOrPath: project)
+        }
         
         // Create and RETURN the tool response item
         return ChatMessageItem(content: "Task added successfully.", role: .tool, toolCallId: id, functionName: functionName) // <-- Return Success Item
@@ -719,4 +796,106 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
     }
     // -------------------------------------------
+    
+    // --- ADDED: Handler for updateTaskDifficulty ---
+    private func handleUpdateTaskDifficultyToolCall(id: String, functionName: String = "updateTaskDifficulty", arguments: String) async -> ChatMessageItem {
+        struct UpdateDifficultyArgs: Decodable {
+            let taskDescription: String
+            let difficulty: String // Expect "Low", "Medium", or "High"
+        }
+        
+        guard let argsData = arguments.data(using: .utf8), 
+              let decodedArgs = try? JSONDecoder().decode(UpdateDifficultyArgs.self, from: argsData) else {
+            print("Error: Failed to decode arguments for updateTaskDifficulty: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for updateTaskDifficulty. Expected taskDescription and difficulty (Low, Medium, or High).\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        // Convert the string difficulty back to the enum
+        guard let difficultyEnum = Difficulty(rawValue: decodedArgs.difficulty) else {
+            print("Error: Invalid difficulty value provided: \(decodedArgs.difficulty). Must be one of: \(Difficulty.allCases.map { $0.rawValue }.joined(separator: ", "))")
+            let errorContent = "{\"error\": \"Invalid difficulty value '\(decodedArgs.difficulty)'. Must be Low, Medium, or High.\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        let taskDescription = decodedArgs.taskDescription
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
+            print("DEBUG [ViewModel]: Updating difficulty for task '\(taskDescription)' to '\(difficultyEnum.rawValue)' via function call.") 
+        }
+
+        // Call the store function
+        todoListStore.updateTaskDifficulty(description: taskDescription, difficulty: difficultyEnum)
+        
+        let responseContent = "Difficulty for task '\(taskDescription)' updated to \(difficultyEnum.rawValue)."
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -----------------------------------------------
+    
+    // --- ADDED: Handlers for Roadmap Metadata ---
+    private func handleUpdateTaskCategoryToolCall(id: String, functionName: String = "updateTaskCategory", arguments: String) async -> ChatMessageItem {
+        struct UpdateCategoryArgs: Decodable {
+            let taskDescription: String
+            let category: String? // Can be null/empty to clear
+        }
+        
+        guard let argsData = arguments.data(using: .utf8), 
+              let decodedArgs = try? JSONDecoder().decode(UpdateCategoryArgs.self, from: argsData) else {
+            print("Error: Failed to decode arguments for updateTaskCategory: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for updateTaskCategory. Expected taskDescription and optional category.\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        let taskDescription = decodedArgs.taskDescription
+        let category = decodedArgs.category // Keep optional
+        
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
+            print("DEBUG [ViewModel]: Updating category for task '\(taskDescription)' to '\(category ?? "nil")' via function call.") 
+        }
+
+        // Call the store function
+        todoListStore.updateTaskCategory(description: taskDescription, category: category)
+        
+        let responseContent = "Category for task '\(taskDescription)' updated to \(category ?? "none")."
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+
+    private func handleUpdateTaskProjectOrPathToolCall(id: String, functionName: String = "updateTaskProjectOrPath", arguments: String) async -> ChatMessageItem {
+        struct UpdateProjectPathArgs: Decodable {
+            let taskDescription: String
+            let projectOrPath: String? // Can be null/empty to clear
+        }
+        
+        guard let argsData = arguments.data(using: .utf8), 
+              let decodedArgs = try? JSONDecoder().decode(UpdateProjectPathArgs.self, from: argsData) else {
+            print("Error: Failed to decode arguments for updateTaskProjectOrPath: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for updateTaskProjectOrPath. Expected taskDescription and optional projectOrPath.\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        let taskDescription = decodedArgs.taskDescription
+        let projectOrPath = decodedArgs.projectOrPath // Keep optional
+        
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
+            print("DEBUG [ViewModel]: Updating project/path for task '\(taskDescription)' to '\(projectOrPath ?? "nil")' via function call.") 
+        }
+
+        // Call the store function
+        todoListStore.updateTaskProjectOrPath(description: taskDescription, projectOrPath: projectOrPath)
+        
+        let responseContent = "Project/path for task '\(taskDescription)' updated to \(projectOrPath ?? "none")."
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -------------------------------------------
+
+    // --- ADDED: Function to start a new chat ---
+    func startNewChat() {
+        messages.removeAll()
+        updateSystemMessage()
+        addWelcomeMessage()
+        isLoading = false // Ensure loading state is reset
+        newMessageText = "" // Clear any pending input text
+        print("DEBUG [ViewModel]: Starting new chat.")
+        // Note: saveMessages() will be called automatically due to messages didSet
+    }
+    // -----------------------------------------
 } 

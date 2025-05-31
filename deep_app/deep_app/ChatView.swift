@@ -12,7 +12,7 @@ import GoogleSignInSwift // Needed for SettingsView presentation if that code is
 struct ChatView: View {
     @StateObject private var viewModel = ChatViewModel()
     @State private var showingSettingsSheet = false // State to control settings sheet
-    @State private var showScrollToBottomButton = false // <-- State for button visibility
+    // @State private var showScrollToBottomButton = false // <-- State for button visibility (COMMENTED OUT)
     // let sciFiFont = "Orbitron" // Font only used for title now
     // let bodyFontSize: CGFloat = 15 // No longer needed
     
@@ -32,10 +32,12 @@ struct ChatView: View {
                                 ForEach(viewModel.messages.filter { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) }) { message in
                                     MessageBubble(message: message)
                                         // --- Track visibility of the LAST message --- 
+                                        /* // (COMMENTED OUT)
                                         .if(message.id == viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id) { view in
                                             view.onAppear { showScrollToBottomButton = false }
                                                .onDisappear { showScrollToBottomButton = true }
                                         }
+                                        */
                                         // ---------------------------------------------
                                 }
                                 
@@ -58,28 +60,21 @@ struct ChatView: View {
                             .padding(.horizontal)
                             .padding(.top, 8)
                         }
+                        .onAppear { // <-- Add onAppear for initial scroll
+                            scrollToBottom(scrollView: scrollView, animated: false) // Scroll without animation initially
+                        }
                         .padding(.horizontal, 6)
                         .padding(.top, 4)
                         .onTapGesture { // Add tap gesture to dismiss keyboard
                             hideKeyboard()
                         }
-                        .onChange(of: viewModel.messages.count) { oldCount, newCount in
-                            // Scroll to bottom when messages change
-                            // Get the ID of the actual last message to display
-                            let lastVisibleMessageId = viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id
-
-                            withAnimation {
-                                if let lastId = lastVisibleMessageId {
-                                    scrollView.scrollTo(lastId, anchor: .bottom)
-                                    showScrollToBottomButton = false // Hide button when auto-scrolling
-                                } else if viewModel.isLoading {
-                                    scrollView.scrollTo("loading", anchor: .bottom)
-                                    showScrollToBottomButton = false // Hide button when auto-scrolling
-                                }
-                            }
+                        .onChange(of: viewModel.messages.count) { // Keep observing count
+                            // Use the helper function to scroll
+                            scrollToBottom(scrollView: scrollView, animated: true)
                         }
                         
-                        // --- Scroll To Bottom Button (Moved INSIDE ScrollViewReader) --- 
+                        // --- Scroll To Bottom Button (COMMENTED OUT) --- 
+                        /*
                         if showScrollToBottomButton {
                             Button {
                                 // Get the ID of the actual last message to display
@@ -101,6 +96,7 @@ struct ChatView: View {
                             .padding(.bottom, 10) // Padding from input bar
                             .transition(.scale.combined(with: .opacity)) // Nice transition
                         }
+                        */
                         // -------------------------------------------------------------
                     } // <-- End ScrollViewReader
                 }
@@ -159,15 +155,27 @@ struct ChatView: View {
             }
             // Title and toolbar setup
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-            .background(Color.theme.background.ignoresSafeArea()) // Keep theme color for now
-            .foregroundColor(Color.theme.text) // Keep theme color for now
+            // --- Apply background color and ensure visibility --- 
+            .toolbarBackground(.indigo, for: .navigationBar) // Set background color
+            .toolbarBackground(.visible, for: .navigationBar) // Make it always visible
+            // -----------------------------------------------------
+            .toolbarColorScheme(.dark, for: .navigationBar) // Keep this to suggest light status bar items
+            .background(Color.theme.background.ignoresSafeArea()) // Keep theme color for main view
+            .foregroundColor(Color.theme.text) // Keep theme color for main view text
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Bryan's Brain")
                         .font(.custom(sciFiFont, size: titleFontSize))
                         .fontWeight(.bold)
                         .foregroundColor(Color.theme.titleText) // Use theme title color
+                }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        viewModel.startNewChat()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise.circle")
+                            .foregroundColor(Color.theme.accent)
+                    }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -188,6 +196,29 @@ struct ChatView: View {
     
     // Need access to authService for the sheet
     @EnvironmentObject var authService: AuthenticationService
+    
+    // --- Function to scroll to bottom (Helper - Moved Outside Body) ---
+    private func scrollToBottom(scrollView: ScrollViewProxy, animated: Bool = true) {
+        let lastVisibleMessageId = viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id
+        
+        if animated {
+            withAnimation {
+                if let lastId = lastVisibleMessageId {
+                    scrollView.scrollTo(lastId, anchor: .bottom)
+                } else if viewModel.isLoading {
+                    scrollView.scrollTo("loading", anchor: .bottom)
+                }
+            }
+        } else {
+            if let lastId = lastVisibleMessageId {
+                scrollView.scrollTo(lastId, anchor: .bottom)
+            } else if viewModel.isLoading {
+                scrollView.scrollTo("loading", anchor: .bottom)
+            }
+        }
+        // showScrollToBottomButton = false // Always hide button when explicitly scrolling (COMMENTED OUT)
+    }
+    // -------------------------------------------------------------------
 }
 // --- End Restored ChatView Definition ---
 

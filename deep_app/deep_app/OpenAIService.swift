@@ -136,6 +136,8 @@ class OpenAIService {
     // Arguments for the addTaskToList function
     struct AddTaskArguments: Codable {
         let taskDescription: String
+        let projectOrPath: String? // ADDED: Optional project/path
+        let category: String?      // ADDED: Optional category
     }
 
     // Arguments for createCalendarEvent function
@@ -153,10 +155,12 @@ class OpenAIService {
     // We'll construct the single Tool object within the array.
     private let addTaskToolDefinition = FunctionDefinition(
         name: "addTaskToList",
-        description: "Adds a task to the user's to-do list.",
+        description: "Adds a task to the user's to-do list. Optionally assigns it to a project/path and/or category.",
         parameters: .init(
             properties: [
-                "taskDescription": .init(type: "string", description: "A description of the task to be added.", items: nil)
+                "taskDescription": .init(type: "string", description: "A description of the task to be added.", items: nil),
+                "projectOrPath": .init(type: "string", description: "The project or path to assign the task to (optional).", items: nil),
+                "category": .init(type: "string", description: "The category to assign the task to (optional).", items: nil)
             ],
             required: ["taskDescription"]
         )
@@ -277,6 +281,47 @@ class OpenAIService {
     )
     // ---------------------------------------------
 
+    // --- ADDED: updateTaskDifficulty Tool Definition ---
+    private let updateTaskDifficultyToolDefinition = FunctionDefinition(
+        name: "updateTaskDifficulty",
+        description: "Updates the estimated difficulty (Low, Medium, High) for a specific task.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "The description of the task whose difficulty needs to be updated.", items: nil),
+                // Use an enum string type for difficulty
+                "difficulty": .init(type: "string", description: "The estimated difficulty level: \(Difficulty.allCases.map { $0.rawValue }.joined(separator: ", "))", items: nil)
+            ],
+            required: ["taskDescription", "difficulty"]
+        )
+    )
+    // -------------------------------------------------
+
+    // --- ADDED: Roadmap Metadata Tool Definitions ---
+    private let updateTaskCategoryToolDefinition = FunctionDefinition(
+        name: "updateTaskCategory",
+        description: "Sets or clears the category (e.g., Research, Teaching, Life) for a specific task.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "The description of the task to categorize.", items: nil),
+                "category": .init(type: "string", description: "The category name to assign. Provide an empty string or null to clear the category.", items: nil)
+            ],
+            required: ["taskDescription"]
+        )
+    )
+
+    private let updateTaskProjectOrPathToolDefinition = FunctionDefinition(
+        name: "updateTaskProjectOrPath",
+        description: "Sets or clears the specific project or path (e.g., 'Paper XYZ', 'LEAD 552') for a task within its category.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "The description of the task to assign to a project/path.", items: nil),
+                "projectOrPath": .init(type: "string", description: "The project/path name to assign. Provide an empty string or null to clear the project/path.", items: nil)
+            ],
+            required: ["taskDescription"]
+        )
+    )
+    // ----------------------------------------------
+
     // Combined list of all available tools (now as Tool structs)
     private var allTools: [Tool] { 
         return [
@@ -290,7 +335,12 @@ class OpenAIService {
             .init(function: getCurrentDateTimeToolDefinition),
             .init(function: deleteCalendarEventToolDefinition), // <-- Added delete tool
             .init(function: updateCalendarEventTimeToolDefinition), // <-- Added update tool
-            .init(function: markTaskCompleteToolDefinition) // <-- Added markTaskComplete tool
+            .init(function: markTaskCompleteToolDefinition), // <-- Added markTaskComplete tool
+            .init(function: updateTaskDifficultyToolDefinition), // <-- ADDED difficulty tool
+            // --- ADDED Roadmap Tools ---
+            .init(function: updateTaskCategoryToolDefinition),
+            .init(function: updateTaskProjectOrPathToolDefinition)
+            // -------------------------
         ]
     }
 
@@ -315,6 +365,18 @@ class OpenAIService {
         }
         let choices: [Choice]
     }
+
+    // --- Added Structure for OpenAI Error Response ---
+    private struct OpenAIErrorResponse: Decodable {
+        struct OpenAIError: Decodable {
+            let message: String
+            let type: String?
+            let param: String?
+            let code: String?
+        }
+        let error: OpenAIError
+    }
+    // --------------------------------------------
 
     // MARK: - API Call Function
     
@@ -374,11 +436,29 @@ class OpenAIService {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             
+            // --- Enhanced Error Handling for Non-2xx Status Codes ---
             if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
                 print("Error: HTTP Status Code \(httpResponse.statusCode)")
-                // TODO: Decode potential error body from OpenAI
-                return .failure(error: nil)
+                // Attempt to decode OpenAI's specific error message
+                var errorMessage = "HTTP Error \(httpResponse.statusCode)"
+                do {
+                    let errorResponse = try JSONDecoder().decode(OpenAIErrorResponse.self, from: data)
+                    errorMessage = errorResponse.error.message
+                    print("    OpenAI Error Type: \(errorResponse.error.type ?? "N/A")")
+                    print("    OpenAI Error Message: \(errorMessage)")
+                } catch {
+                    // If decoding the error fails, use the raw data if possible
+                    if let rawError = String(data: data, encoding: .utf8) {
+                        print("    Failed to decode OpenAI error response. Raw response: \(rawError)")
+                    } else {
+                        print("    Failed to decode OpenAI error response and could not read raw data.")
+                    }
+                }
+                // Create a custom Error object or use NSError
+                let apiError = NSError(domain: "OpenAIError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMessage])
+                return .failure(error: apiError)
             }
+            // --- End Enhanced Error Handling ---
             
             let chatResponse = try JSONDecoder().decode(ChatResponse.self, from: data)
             

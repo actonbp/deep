@@ -19,6 +19,21 @@ class TodoListStore: ObservableObject {
     private init() {
         // Load initial data when the store is created
         loadItems()
+        
+        // --- MODIFIED: Populate with Sample Data based on Setting --- 
+        if UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) {
+            print("DEBUG [Store]: Demonstration Mode is ON. Overwriting items with sample data.")
+            // Overwrite the published items array, but DO NOT save back to itemsData
+            populateWithSampleData() 
+        } else {
+            // Ensure loaded items are used if demo mode is off
+            // loadItems() already sets self.items, so nothing needed here usually,
+            // but good place for a debug log.
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                 print("DEBUG [Store]: Demonstration Mode is OFF. Using saved user data (count: \(items.count)).")
+            }
+        }
+        // ---------------------------------------------------------
     }
     
     // Load items from AppStorage
@@ -42,6 +57,14 @@ class TodoListStore: ObservableObject {
     
     // Save items back to AppStorage asynchronously
     private func saveItems() {
+        // --- ADDED Guard --- 
+        // Prevent saving if demo mode is active
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Preventing saveItems() call.")
+            return
+        }
+        // -----------------
+        
         // Capture the current items state to save
         let itemsToSave = self.items
         
@@ -60,18 +83,44 @@ class TodoListStore: ObservableObject {
         }
     }
     
-    // Function to add a new item (now publicly accessible)
-    func addItem(text: String) {
-        let newItemText = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !newItemText.isEmpty else { return } 
+    // Method to add a new item, now with optional metadata
+    func addItem(text: String, category: String? = nil, projectOrPath: String? = nil) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring addItem().")
+            return
+        }
+        // -----------------
         
-        let todo = TodoItem(text: newItemText, isDone: false)
-        items.append(todo)
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else { return } // Don't add empty tasks
+        
+        // Assign a default priority if none exists, or find the highest existing + 1
+        let existingPriorities = items.compactMap { $0.priority }
+        let maxPriority = existingPriorities.max() ?? 0
+        let defaultPriority = maxPriority + 1
+        
+        let newItem = TodoItem(
+            text: trimmedText,
+            priority: defaultPriority, // Assign calculated default priority
+            category: category, // Assign passed category
+            projectOrPath: projectOrPath // Assign passed project/path
+        )
+        items.append(newItem)
         saveItems()
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+            print("DEBUG [Store]: Added item: \(trimmedText) [Priority: \(defaultPriority)] [Category: \(category ?? "nil")] [Project: \(projectOrPath ?? "nil")]")
+        }
     }
     
     // Function to toggle the done status of an item
     func toggleDone(item: TodoItem) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring toggleDone().")
+            return
+        }
+        // -----------------
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items[index].isDone.toggle()
             saveItems()
@@ -80,6 +129,12 @@ class TodoListStore: ObservableObject {
     
     // Function to delete items from the list
     func deleteItems(at offsets: IndexSet) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring deleteItems().")
+            return
+        }
+        // -----------------
         items.remove(atOffsets: offsets)
         saveItems()
     }
@@ -100,6 +155,12 @@ class TodoListStore: ObservableObject {
     
     // Method to delete a single item
     func deleteItem(item: TodoItem) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring deleteItem().")
+            return
+        }
+        // -----------------
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items.remove(at: index)
             saveItems()
@@ -113,6 +174,12 @@ class TodoListStore: ObservableObject {
     // Returns true if a task was found and removed, false otherwise.
     @discardableResult // Indicate that the return value doesn't always need to be used
     func removeTask(description: String) -> Bool {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring removeTask().")
+            return false // Return appropriate default
+        }
+        // -----------------
         let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
         if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
             items.remove(at: index)
@@ -131,6 +198,12 @@ class TodoListStore: ObservableObject {
     
     // Method to update task priorities based on an ordered list of descriptions
     func updatePriorities(orderedTasks: [String]) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updatePriorities().")
+            return
+        }
+        // -----------------
         // Create a map for quick lookup: description -> priority
         var priorityMap: [String: Int] = [:]
         for (index, description) in orderedTasks.enumerated() {
@@ -165,6 +238,12 @@ class TodoListStore: ObservableObject {
 
     // Method to update priorities based on a new manual sort order
     func updateOrder(itemsInNewOrder: [TodoItem]) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updateOrder().")
+            return
+        }
+        // -----------------
         var changed = false
         guard itemsInNewOrder.count == items.count else {
             print("Error: Mismatch in item count during reorder.")
@@ -205,6 +284,12 @@ class TodoListStore: ObservableObject {
 
     // Method to update the estimated duration for a task by its description
     func updateTaskDuration(description: String, duration: String?) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updateTaskDuration().")
+            return
+        }
+        // -----------------
         let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
         if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
             items[index].estimatedDuration = duration
@@ -219,9 +304,38 @@ class TodoListStore: ObservableObject {
         }
     }
     
+    // --- ADDED: Method to update task difficulty --- 
+    func updateTaskDifficulty(description: String, difficulty: Difficulty?) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updateTaskDifficulty().")
+            return
+        }
+        // -----------------
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
+            items[index].difficulty = difficulty
+            saveItems() // Save the change
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [Store]: Updated difficulty for '\(trimmedDescription)' to '\(difficulty?.rawValue ?? "nil")'")
+            }
+        } else {
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [Store]: Task '\(trimmedDescription)' not found for difficulty update.")
+            }
+        }
+    }
+    // ------------------------------------------------
+    
     // --- ADDED: Method to mark a task complete by description ---
     @discardableResult
     func markTaskComplete(description: String) async -> Bool {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring markTaskComplete().")
+            return false // Return appropriate default
+        }
+        // -----------------
         let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
         
         // Use await MainActor.run to ensure modification happens on the main thread
@@ -252,4 +366,89 @@ class TodoListStore: ObservableObject {
         return updated
     }
     // -----------------------------------------------------------
+
+    // --- ADDED: Methods to update Roadmap metadata ---
+    func updateTaskCategory(description: String, category: String?) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updateTaskCategory().")
+            return
+        }
+        // -----------------
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Normalize empty string to nil for consistency
+        let categoryToSet = (category?.isEmpty ?? true) ? nil : category
+        
+        if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
+            if items[index].category != categoryToSet { // Only save if changed
+                items[index].category = categoryToSet
+                saveItems() 
+                if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                    print("DEBUG [Store]: Updated category for '\(trimmedDescription)' to '\(categoryToSet ?? "nil")'")
+                }
+            }
+        } else {
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [Store]: Task '\(trimmedDescription)' not found for category update.")
+            }
+        }
+    }
+
+    func updateTaskProjectOrPath(description: String, projectOrPath: String?) {
+        // --- ADDED Guard ---
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updateTaskProjectOrPath().")
+            return
+        }
+        // -----------------
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Normalize empty string to nil
+        let projectToSet = (projectOrPath?.isEmpty ?? true) ? nil : projectOrPath
+        
+        if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
+             if items[index].projectOrPath != projectToSet { // Only save if changed
+                items[index].projectOrPath = projectToSet
+                saveItems() 
+                if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                    print("DEBUG [Store]: Updated project/path for '\(trimmedDescription)' to '\(projectToSet ?? "nil")'")
+                }
+            }
+        } else {
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [Store]: Task '\(trimmedDescription)' not found for project/path update.")
+            }
+        }
+    }
+    // ----------------------------------------------------
+
+    // --- ADDED: Sample Data Population Logic ---
+    private func populateWithSampleData() {
+        let sampleItems = [
+            // Teaching: LEAD 352
+            TodoItem(text: "Plan Week 1 Lesson", category: "Teaching", projectOrPath: "LEAD 352"),
+            TodoItem(text: "Grade Assignment 1", category: "Teaching", projectOrPath: "LEAD 352"),
+            TodoItem(text: "Prepare Midterm", isDone: true, category: "Teaching", projectOrPath: "LEAD 352"), // Example done
+            
+            // Research: WFD Paper
+            TodoItem(text: "Review Literature", isDone: true, category: "Research", projectOrPath: "WFD Paper"),
+            TodoItem(text: "Collect Data", isDone: true, category: "Research", projectOrPath: "WFD Paper"),
+            TodoItem(text: "Analyze Results", category: "Research", projectOrPath: "WFD Paper"),
+            TodoItem(text: "Write Draft", category: "Research", projectOrPath: "WFD Paper"),
+            TodoItem(text: "Submit Manuscript", category: "Research", projectOrPath: "WFD Paper"),
+            
+            // Research: New Grant Proposal
+            TodoItem(text: "Outline Ideas", category: "Research", projectOrPath: "New Grant Proposal"),
+            TodoItem(text: "Draft Budget", category: "Research", projectOrPath: "New Grant Proposal"),
+            
+            // Life
+            TodoItem(text: "Grocery Shopping", category: "Life"), // No specific project
+            TodoItem(text: "Schedule Dentist Appt", isDone: true, category: "Life")
+        ]
+        
+        // We directly assign to items here because this is only called during init 
+        // when items is guaranteed to be empty. No need to append.
+        self.items = sampleItems
+        // Again, explicitly DO NOT call saveItems()
+    }
+    // ------------------------------------------
 } 
