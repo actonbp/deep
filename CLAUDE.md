@@ -215,4 +215,60 @@ if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
 ### User Data
 - Respect demo mode in all data operations
 - Graceful offline handling
-- Secure token storage for Google services 
+- Secure token storage for Google services
+
+## ⚠️ CRITICAL: Git Recovery Operations
+
+### Lessons Learned from Major Recovery Incident
+
+On May 31, 2025, a git reset operation resulted in the loss of critical features, particularly the **expandable task metadata editing UI**. This feature allows users to click tasks to expand and edit category/project metadata - essential for the roadmap functionality.
+
+### What Can Go Wrong
+1. **File presence ≠ Feature completeness** - ContentView.swift existed but was missing expandable task UI
+2. **Newer commits may have critical fixes** - CalendarService had ISO date fixes in a later commit
+3. **Untracked files disappear** - `.cursor/rules/` folder was lost in reset
+4. **Feature interdependencies** - Missing expandable tasks breaks roadmap organization
+
+### Required Verification After ANY Recovery
+
+```bash
+# Critical feature checks
+grep -q "expandedItemId" deep_app/deep_app/ContentView.swift || echo "❌ MISSING: Expandable tasks!"
+grep -q "demonstrationModeEnabled" deep_app/deep_app/TodoListStore.swift || echo "❌ MISSING: Demo mode!"
+grep -q "I don't know where to start" deep_app/deep_app/ChatViewModel.swift || echo "❌ MISSING: Getting started!"
+
+# File size sanity checks
+wc -l deep_app/deep_app/ContentView.swift # Should be ~500+ lines
+wc -l deep_app/deep_app/TodoListStore.swift # Should be ~400+ lines
+```
+
+### Safe Recovery Pattern
+
+```bash
+# 1. Document current state
+git status > recovery_backup.txt
+git stash list >> recovery_backup.txt
+
+# 2. Create safety backup
+git stash push -m "Pre-recovery backup $(date)"
+
+# 3. Check commit history for the file
+git log --oneline -10 -- deep_app/deep_app/ContentView.swift
+
+# 4. Preview changes before applying
+git diff HEAD 1de9b7f -- deep_app/deep_app/ContentView.swift
+
+# 5. Recover with specific files (never use --hard without backup)
+git checkout 1de9b7f -- deep_app/deep_app/ContentView.swift
+
+# 6. IMMEDIATELY run feature verification
+# See .cursor/rules/feature_verification.mdc
+```
+
+### Red Flags Requiring Investigation
+- ContentView.swift < 400 lines (missing expandable UI)
+- No `expandedItemId` in ContentView (missing click-to-edit)
+- No `updateTaskCategory` methods (missing metadata updates)
+- Missing `.cursor/rules/` folder (documentation lost)
+
+**Remember**: After any recovery operation, manually test in Xcode that you can click tasks to expand and edit metadata! 

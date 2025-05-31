@@ -57,6 +57,17 @@ This allows for a seamless experience where task capture, planning, and calendar
 
 See `TODO.md` for more granular items.
 
+## ⚠️ CRITICAL: Repository Recovery Warning
+
+**Before performing ANY git reset, checkout, or major recovery operations:**
+
+1. **Read `.cursor/rules/feature_verification.mdc`** - Contains comprehensive checklist
+2. **Create a backup**: `git stash push -m "Safety backup"`
+3. **Never trust file presence alone** - Features can be missing even when files exist
+4. **Always verify the expandable task metadata feature** - It's been lost before!
+
+See `.cursor/rules/feature_verification.mdc` for the complete verification protocol.
+
 ## Development
 
 *   Language: Swift

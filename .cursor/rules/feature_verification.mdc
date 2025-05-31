@@ -1,0 +1,135 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Feature Verification Protocol
+
+This rule ensures that ALL features are verified when making repository-wide changes, especially during git operations like resets, checkouts, or merges.
+
+## CRITICAL: Never Trust File Presence Alone
+
+**The presence of a file does NOT guarantee that all features within that file are implemented.** Always verify at the feature level.
+
+## Required Verification Steps
+
+### 1. Before Any Major Git Operation
+- Create a feature inventory snapshot
+- Document current working features
+- Save uncommitted changes explicitly
+
+### 2. Core Feature Checklist
+
+#### UI Features (ContentView.swift)
+- [ ] **Expandable Task Metadata** - `expandedItemId` state variable
+  - [ ] Click task to expand/collapse
+  - [ ] Edit category field (if enabled)
+  - [ ] Project/Path picker with "+" button
+  - [ ] Difficulty display
+  - [ ] Creation date display
+  - [ ] Auto-save on collapse
+- [ ] **5-Tab Structure** with proper tags
+- [ ] **Swipe Actions** - mark done/delete
+- [ ] **Sound Effects** - `playSound` function
+- [ ] **Task Reordering** - `onMove` handler
+
+#### Data Management (TodoListStore.swift)
+- [ ] **Demo Mode** - `populateWithSampleData()`
+- [ ] **Metadata Update Methods**:
+  - [ ] `updateTaskCategory`
+  - [ ] `updateTaskProjectOrPath`
+  - [ ] `updateTaskDifficulty`
+  - [ ] `updateTaskDuration`
+  - [ ] `markTaskComplete`
+- [ ] **Guards for Demo Mode** in all mutating operations
+- [ ] **Priority Management** - `updateOrder`
+
+#### AI Integration (ChatViewModel.swift & OpenAIService.swift)
+- [ ] **Getting Started Prompts**:
+  - [ ] "I don't know where to start"
+  - [ ] "Help me get unstuck"
+  - [ ] "What should I do next?"
+- [ ] **Special System Prompt** for overwhelmed users
+- [ ] **Tool Handlers** for all metadata operations
+- [ ] **Message History** persistence
+
+#### Settings (SettingsView.swift)
+- [ ] **Categories Toggle** - `enableCategoriesKey`
+- [ ] **Demo Mode Toggle** - `demonstrationModeEnabledKey`
+- [ ] **Debug Logging Toggle** - `debugLogEnabledKey`
+- [ ] **Model Selection** - GPT-4o-mini/GPT-4o
+
+#### Advanced Features
+- [ ] **Roadmap Canvas** (RoadmapView.swift)
+  - [ ] Zoom/Pan gestures
+  - [ ] Project grouping
+  - [ ] Visual connections
+- [ ] **Calendar Integration** (CalendarService.swift)
+  - [ ] ISO date comparison (not tolerance-based)
+  - [ ] CRUD operations
+  - [ ] Token refresh
+
+### 3. Verification Commands
+
+```bash
+# Quick Feature Check
+grep -q "expandedItemId" deep_app/deep_app/ContentView.swift || echo "MISSING: Expandable tasks!"
+grep -q "demonstrationModeEnabled" deep_app/deep_app/TodoListStore.swift || echo "MISSING: Demo mode!"
+grep -q "I don't know where to start" deep_app/deep_app/ChatViewModel.swift || echo "MISSING: Getting started!"
+```
+
+### 4. After Recovery Operations
+
+1. **Run Full Verification**:
+   - Check each feature in the checklist above
+   - Test UI interactions in simulator/device
+   - Verify all settings work
+
+2. **Compare Implementations**:
+   ```bash
+   # Check for feature differences
+   git diff [recovered-commit] HEAD -- '*.swift' | grep -E "^-.*func|^-.*@State|^-.*let.*Tool"
+   ```
+
+3. **Document Any Differences**:
+   - List features that were intentionally changed
+   - Note any deprecated features
+   - Update this checklist if new features added
+
+## Red Flags That Require Investigation
+
+1. **ContentView.swift < 400 lines** - Likely missing expandable task feature
+2. **TodoListStore.swift < 400 lines** - Likely missing demo mode or metadata methods
+3. **ChatViewModel.swift without "getting started"** - Missing ADHD guidance
+4. **No `updateTask*` methods in OpenAIService** - Missing AI tools
+
+## Recovery Best Practices
+
+1. **Never use `git reset --hard` without backup**
+2. **Always check for stashed changes**: `git stash list`
+3. **Verify feature-by-feature, not file-by-file**
+4. **Test in Xcode after any major recovery**
+5. **Keep this checklist updated with new features**
+
+## Emergency Recovery Pattern
+
+```bash
+# 1. Check what you're about to lose
+git status
+git stash list
+git log --oneline -10
+
+# 2. Create safety backup
+git stash push -m "Safety backup before recovery"
+
+# 3. Recover files
+git checkout [commit] -- [files]
+
+# 4. IMMEDIATELY verify features
+# Run through the checklist above
+
+# 5. Check for newer versions
+git log --all -- [file] | head -20
+```
+
+Remember: **Trust but Verify** - Every claim of "fully recovered" must be backed by feature-level verification!
