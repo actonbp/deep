@@ -1,0 +1,49 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+\
+---
+description: Explains the Roadmap feature, its data model, UI, and AI interaction.
+globs: []
+alwaysApply: false
+---
+# Roadmap Feature
+
+This feature provides a visual representation of tasks, grouped by category (optional) and project/path, resembling a subway map.
+
+## Core Components
+
+*   **Data Model (`TodoItem` in [ContentView.swift](mdc:deep_app/deep_app/ContentView.swift)):** Tasks have optional `category: String?` and `projectOrPath: String?` properties. These are assigned via AI tools or manual editing.
+*   **Data Store (`TodoListStore.swift](mdc:deep_app/deep_app/TodoListStore.swift)):** Manages the `TodoItem` array. Contains functions like `updateTaskCategory` and `updateTaskProjectOrPath` used by AI tools and manual editing. It also handles Demonstration Mode logic.
+*   **UI (`RoadmapView.swift](mdc:deep_app/deep_app/RoadmapView.swift)):**
+    *   Uses `@ObservedObject` to watch `TodoListStore`.
+    *   Contains a computed property (`groupedTasks`) to group items based on `category` (if enabled via Settings) and `projectOrPath`.
+    *   Uses a `ScrollView` + `RoadmapCanvasView` for drawing.
+    *   `RoadmapCanvasView` handles the drawing logic using `Canvas`, placing category/project headers and task "dots" with connecting lines based on the grouped data and task status (`isDone`).
+    *   Implements basic zoom/pan using `MagnificationGesture` and `DragGesture`.
+    *   Sorts tasks within a project/path visually based on their `priority`.
+*   **Settings (`SettingsView.swift](mdc:deep_app/deep_app/SettingsView.swift)):**
+    *   Contains a toggle ("Enable Categories") stored via `@AppStorage` (`AppSettings.enableCategoriesKey`) that controls whether the Roadmap groups by category.
+    *   Contains a toggle ("Enable Demo Mode") that loads sample data into `TodoListStore` for illustration.
+*   **AI Interaction (`ChatViewModel.swift](mdc:deep_app/deep_app/ChatViewModel.swift)):**
+    *   The AI system prompt dynamically includes/excludes instructions and tools related to categories based on the Settings toggle.
+    *   Uses tools `updateTaskCategory` and `updateTaskProjectOrPath` to modify task metadata based on user requests.
+    *   The AI *does not* directly "see" or interact with the visual map; it only manipulates the underlying task metadata.
+*   **Tool Definitions (`OpenAIService.swift](mdc:deep_app/deep_app/OpenAIService.swift)):** Defines the `updateTaskCategory` and `updateTaskProjectOrPath` functions available to the AI.
+
+## Workflow
+
+1.  User adds tasks (via Chat or To-Do List).
+2.  User assigns `category` (optional, if enabled) and `projectOrPath` to tasks (via Chat AI tools or manual edit in To-Do List expanded view).
+3.  `RoadmapView` observes `TodoListStore`, groups the tasks using `groupedTasks`, and passes this data to `RoadmapCanvasView`.
+4.  `RoadmapCanvasView` draws the visual representation (headers, dots, lines) based on the grouped data, task status, and priority sorting.
+5.  User can zoom/pan the canvas.
+
+## Future Development (See [README.md](mdc:README.md))
+
+*   Visual Polish (Phase 3)
+*   Enhanced Interactivity (Phase 4)
+*   Advanced Ordering/Sequencing (Phase 5)
+*   Gamification (Phase 6)

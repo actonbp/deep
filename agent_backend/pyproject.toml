@@ -1,0 +1,15 @@
+[project]
+name = "agent_backend"
+version = "0.1.0"
+description = "Backend service for Bryan's Brain app using OpenAI Agents SDK"
+requires-python = ">=3.9" # OpenAI Agents SDK generally works well with modern Python
+
+dependencies = [
+    "openai-agents",
+    "fastapi",
+    "uvicorn[standard]", # [standard] installs common optional dependencies for uvicorn
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta" 

@@ -1,0 +1,41 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Chat Interaction and Tool Handling
+
+This rule outlines the main flow of conversation handling, including API interaction, tool usage, and history management within the iOS application.
+
+## Core Components
+
+*   **UI (`ChatView.swift`)**: Displays messages, handles user input, and observes the `ChatViewModel` for updates. Uses `ScrollViewReader` for scrolling. ([ChatView.swift](mdc:deep_app/deep_app/ChatView.swift))
+*   **ViewModel (`ChatViewModel.swift`)**: Manages the chat state (`@Published var messages`, `@Published var isLoading`), processes user input (`processUserInput`), orchestrates API calls and tool handling (`continueConversation`), saves/loads history (`saveMessages`, `loadMessages`), and contains specific tool handler functions (`handle...ToolCall`). ([ChatViewModel.swift](mdc:deep_app/deep_app/ChatViewModel.swift))
+*   **API Service (`OpenAIService.swift`)**: Handles communication with the OpenAI API, defines request/response structures (like `ChatMessage`, `ToolCall`), and likely specifies the available tools to the API. (This file wasn't explicitly shown but is central to the process).
+*   **Data/Service Layers**:
+    *   `TodoListStore.swift`: Manages the to-do list state.
+    *   `CalendarService.swift`: Interacts with Google Calendar API.
+    *   `AuthenticationService.swift`: Handles Google Sign-In.
+*   **Settings (`SettingsView.swift`)**: Allows configuration, notably the debug logging toggle (`AppSettings.debugLogEnabledKey`) used in `ChatViewModel`. ([SettingsView.swift](mdc:deep_app/deep_app/SettingsView.swift))
+
+## Conversation Flow (`continueConversation` in ChatViewModel)
+
+1.  **History Truncation**: Before sending messages to the API, a "Smarter History Truncation" logic is applied. It aims for a recent message limit (`maxRecentMessages`) but crucially ensures that if a message with `role: "tool"` is included, its preceding assistant message containing the `tool_calls` request is also included. This prevents API errors related to tool call sequence. The system prompt is always prepended.
+2.  **API Call**: The potentially truncated message list is sent to the OpenAI API via `OpenAIService.processConversation`. Debug logging (`AppSettings.debugLogEnabledKey`) provides visibility into sent/received messages.
+3.  **Response Handling**:
+    *   **Text Response**: If the API returns simple text, it's added as an `.assistant` message to the `@Published messages` array, updating the UI.
+    *   **Tool Call Response**:
+        *   The assistant's message containing the `tool_calls` is added to the history.
+        *   The `ChatViewModel` iterates through each requested `toolCall`.
+        *   The appropriate `handle...ToolCall` function is invoked based on the `function.name`.
+        *   The handler function decodes arguments, interacts with the relevant service (`TodoListStore`, `CalendarService`, etc.), and **returns** a `ChatMessageItem` with `role: .tool`, the `toolCallId`, and the result (or error).
+        *   All generated tool response messages are collected and appended to the `@Published messages` array.
+        *   `continueConversation` is called **recursively** to send the tool results back to the API for the next response.
+    *   **API Error**: Errors are logged, and the conversation flow stops for that turn. Errors are *not* added to the message history sent back to OpenAI.
+
+## Key Concepts
+
+*   **Tool Call Sequence**: The strict requirement that a `role: "tool"` message must follow an assistant message with `tool_calls` is handled by the history truncation and the recursive nature of `continueConversation`.
+*   **State Management**: SwiftUI's `@Published` and `@StateObject` are used to link the `ChatViewModel`'s state to the `ChatView`.
+*   **Asynchronous Operations**: `async`/`await` is used throughout for API calls and tool execution. Tool handlers often bridge callback-based services (like `CalendarService`) using `Task` and `withCheckedContinuation`.
+*   **Persistence**: Chat history is saved to `UserDefaults` via `saveMessages` whenever the `messages` array changes.
