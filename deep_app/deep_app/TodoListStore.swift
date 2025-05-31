@@ -15,6 +15,10 @@ class TodoListStore: ObservableObject {
     // Views can subscribe to this
     @Published var items: [TodoItem] = []
     
+    // CloudKit sync manager
+    private let cloudKitManager = CloudKitManager.shared
+    private var hasLoadedFromCloud = false
+    
     // Make initializer private to prevent creating other instances
     private init() {
         // Load initial data when the store is created
@@ -32,6 +36,10 @@ class TodoListStore: ObservableObject {
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                  print("DEBUG [Store]: Demonstration Mode is OFF. Using saved user data (count: \(items.count)).")
             }
+            
+            // --- CloudKit Sync ---
+            syncWithCloudKit()
+            setupCloudKitSubscriptions()
         }
         // ---------------------------------------------------------
     }
@@ -108,6 +116,10 @@ class TodoListStore: ObservableObject {
         )
         items.append(newItem)
         saveItems()
+        
+        // Sync to CloudKit
+        cloudKitManager.saveTodoItem(newItem)
+        
         if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
             print("DEBUG [Store]: Added item: \(trimmedText) [Priority: \(defaultPriority)] [Category: \(category ?? "nil")] [Project: \(projectOrPath ?? "nil")]")
         }
@@ -451,4 +463,65 @@ class TodoListStore: ObservableObject {
         // Again, explicitly DO NOT call saveItems()
     }
     // ------------------------------------------
+    
+    // MARK: - CloudKit Integration
+    
+    private func syncWithCloudKit() {
+        guard cloudKitManager.iCloudAvailable else {
+            print("☁️ iCloud not available, using local storage only")
+            return
+        }
+        
+        // Fetch all items from CloudKit
+        cloudKitManager.fetchAllTodoItems { [weak self] cloudItems in
+            guard let self = self else { return }
+            
+            if !self.hasLoadedFromCloud {
+                self.hasLoadedFromCloud = true
+                self.mergeCloudItemsWithLocal(cloudItems)
+            }
+        }
+    }
+    
+    private func setupCloudKitSubscriptions() {
+        cloudKitManager.subscribeToChanges()
+    }
+    
+    private func mergeCloudItemsWithLocal(_ cloudItems: [TodoItem]) {
+        // Simple merge strategy: combine both sets and remove duplicates by ID
+        var mergedItems = self.items
+        
+        for cloudItem in cloudItems {
+            if !mergedItems.contains(where: { $0.id == cloudItem.id }) {
+                mergedItems.append(cloudItem)
+            } else if let index = mergedItems.firstIndex(where: { $0.id == cloudItem.id }) {
+                // If item exists, use the one with more recent modification
+                // Since we don't have modification dates yet, prefer cloud version
+                mergedItems[index] = cloudItem
+            }
+        }
+        
+        self.items = mergedItems
+        saveItems() // Save the merged state locally
+        
+        // Upload any local-only items to CloudKit
+        for item in self.items {
+            cloudKitManager.saveTodoItem(item)
+        }
+    }
+    
+    // Override saveItems to also sync with CloudKit
+    private func saveItemsWithCloudSync() {
+        // Save locally first
+        saveItems()
+        
+        // Then sync to CloudKit if available
+        guard cloudKitManager.iCloudAvailable else { return }
+        
+        // Upload all items to CloudKit
+        // In a production app, you'd want to track which items have changed
+        for item in items {
+            cloudKitManager.saveTodoItem(item)
+        }
+    }
 } 
