@@ -335,7 +335,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     // MARK: - Time Parsing Helpers (NEW)
     /// Parses a time string such as "9:00 AM" or "14:30" and returns the corresponding `Date` **for today**.
     /// Returns `nil` if the string cannot be parsed.
-    private func dateForToday(from timeString: String) -> Date? {
+    internal func dateForToday(from timeString: String) -> Date? {
         // Accept both 12-hour and 24-hour formats.
         let formatter12 = DateFormatter()
         formatter12.locale = Locale(identifier: "en_US_POSIX")
