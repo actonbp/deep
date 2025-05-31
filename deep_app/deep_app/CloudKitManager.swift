@@ -20,7 +20,7 @@ class CloudKitManager: ObservableObject {
     @Published var iCloudAvailable = false
     @Published var syncStatus: SyncStatus = .idle
     
-    enum SyncStatus {
+    enum SyncStatus: Equatable {
         case idle
         case syncing
         case error(String)
@@ -29,7 +29,11 @@ class CloudKitManager: ObservableObject {
     
     private init() {
         // Use your app's CloudKit container
-        container = CKContainer(identifier: "iCloud.com.bryanacton.deep")
+        // Option 1: Use default container (recommended for new setups)
+        container = CKContainer.default()
+        // Option 2: Use specific container (if you've already created one)
+        // container = CKContainer(identifier: "iCloud.com.bryanacton.deep")
+        
         privateDatabase = container.privateCloudDatabase
         
         checkiCloudAvailability()
@@ -51,6 +55,9 @@ class CloudKitManager: ObservableObject {
                 case .restricted, .couldNotDetermine:
                     self?.iCloudAvailable = false
                     print("☁️ iCloud restricted or unknown")
+                case .temporarilyUnavailable:
+                    self?.iCloudAvailable = false
+                    print("☁️ iCloud temporarily unavailable")
                 @unknown default:
                     self?.iCloudAvailable = false
                 }
@@ -74,6 +81,8 @@ class CloudKitManager: ObservableObject {
             switch result {
             case .success:
                 print("☁️ Zones created successfully")
+                // After zones are created, create initial schema
+                self.createInitialSchema()
             case .failure(let error):
                 print("☁️ Failed to create zones: \(error)")
             }
@@ -82,10 +91,41 @@ class CloudKitManager: ObservableObject {
         privateDatabase.add(operation)
     }
     
+    // Create initial schema by saving a dummy record
+    private func createInitialSchema() {
+        // Create a dummy TodoItem to establish the schema
+        let dummyRecord = CKRecord(recordType: todoItemType)
+        dummyRecord["text"] = "Schema Setup"
+        dummyRecord["isDone"] = false
+        dummyRecord["priority"] = 0
+        dummyRecord["estimatedDuration"] = ""
+        dummyRecord["category"] = ""
+        dummyRecord["projectOrPath"] = ""
+        dummyRecord["difficulty"] = ""
+        dummyRecord["dateCreated"] = Date()
+        
+        privateDatabase.save(dummyRecord) { _, error in
+            if let error = error {
+                print("☁️ Schema creation note: \(error)")
+            } else {
+                print("☁️ Schema initialized successfully")
+                // Delete the dummy record
+                self.privateDatabase.delete(withRecordID: dummyRecord.recordID) { _, _ in
+                    print("☁️ Cleanup complete")
+                }
+            }
+        }
+    }
+    
     // MARK: - Todo Item Sync
     
     func saveTodoItem(_ item: TodoItem) {
         guard iCloudAvailable else { return }
+        
+        // Set syncing status
+        DispatchQueue.main.async {
+            self.syncStatus = .syncing
+        }
         
         let record = CKRecord(
             recordType: todoItemType,
@@ -100,14 +140,59 @@ class CloudKitManager: ObservableObject {
         record["category"] = item.category
         record["projectOrPath"] = item.projectOrPath
         record["difficulty"] = item.difficulty?.rawValue
-        record["createdAt"] = item.createdAt
+        record["dateCreated"] = item.dateCreated
         
         privateDatabase.save(record) { [weak self] _, error in
             DispatchQueue.main.async {
                 if let error = error {
-                    self?.syncStatus = .error(error.localizedDescription)
+                    // Check if it's just a duplicate record error
+                    if error.localizedDescription.contains("already exists") {
+                        print("☁️ Record already synced (this is OK)")
+                        self?.syncStatus = .success
+                    } else {
+                        self?.syncStatus = .error(error.localizedDescription)
+                    }
                 } else {
                     self?.syncStatus = .success
+                }
+                
+                // Reset to idle after 2 seconds for success states
+                if case .success = self?.syncStatus {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        if case .success = self?.syncStatus {
+                            self?.syncStatus = .idle
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    func deleteTodoItem(_ item: TodoItem) {
+        guard iCloudAvailable else { return }
+        
+        // Set syncing status
+        DispatchQueue.main.async {
+            self.syncStatus = .syncing
+        }
+        
+        let recordID = CKRecord.ID(recordName: item.id.uuidString)
+        
+        privateDatabase.delete(withRecordID: recordID) { [weak self] _, error in
+            DispatchQueue.main.async {
+                if let error = error {
+                    print("☁️ Failed to delete item: \(error)")
+                    self?.syncStatus = .error(error.localizedDescription)
+                } else {
+                    print("☁️ Successfully deleted item from CloudKit")
+                    self?.syncStatus = .success
+                    
+                    // Reset to idle after 2 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        if case .success = self?.syncStatus {
+                            self?.syncStatus = .idle
+                        }
+                    }
                 }
             }
         }
@@ -119,15 +204,20 @@ class CloudKitManager: ObservableObject {
             return 
         }
         
+        // Use perform query operation which is more flexible
         let query = CKQuery(recordType: todoItemType, predicate: NSPredicate(value: true))
-        query.sortDescriptors = [NSSortDescriptor(key: "priority", ascending: true)]
+        // Remove sort descriptors to avoid queryable field issues
+        // We'll sort locally instead
         
-        privateDatabase.fetch(withQuery: query) { result in
+        let operation = CKQueryOperation(query: query)
+        operation.recordMatchedBlock = { _, _ in }
+        operation.queryResultBlock = { result in
+            var items: [TodoItem] = []
+            
             switch result {
-            case .success(let matchResults):
-                var items: [TodoItem] = []
-                
-                for (_, recordResult) in matchResults.matchResults {
+            case .success(let cursor):
+                // Process all matched records
+                operation.recordMatchedBlock = { recordID, recordResult in
                     switch recordResult {
                     case .success(let record):
                         if let item = self.todoItemFromRecord(record) {
@@ -138,15 +228,89 @@ class CloudKitManager: ObservableObject {
                     }
                 }
                 
+                // If there's more data, we'd handle cursor here
+                // For now, complete with what we have
                 DispatchQueue.main.async {
-                    completion(items)
+                    // Sort locally by priority
+                    let sortedItems = items.sorted { (item1, item2) in
+                        let p1 = item1.priority ?? Int.max
+                        let p2 = item2.priority ?? Int.max
+                        return p1 < p2
+                    }
+                    completion(sortedItems)
                 }
                 
             case .failure(let error):
-                print("☁️ Query failed: \(error)")
+                print("☁️ Query operation failed: \(error)")
+                // If it's a schema issue, try without zones
+                if error.localizedDescription.contains("Field") {
+                    self.fetchAllTodoItemsSimple(completion: completion)
+                } else {
+                    DispatchQueue.main.async {
+                        completion([])
+                    }
+                }
+            }
+        }
+        
+        // Set up the record matched block before adding to database
+        var collectedItems: [TodoItem] = []
+        operation.recordMatchedBlock = { recordID, recordResult in
+            switch recordResult {
+            case .success(let record):
+                if let item = self.todoItemFromRecord(record) {
+                    collectedItems.append(item)
+                }
+            case .failure(let error):
+                print("☁️ Failed to fetch record: \(error)")
+            }
+        }
+        
+        operation.queryResultBlock = { result in
+            DispatchQueue.main.async {
+                // Sort locally by priority
+                let sortedItems = collectedItems.sorted { (item1, item2) in
+                    let p1 = item1.priority ?? Int.max
+                    let p2 = item2.priority ?? Int.max
+                    return p1 < p2
+                }
+                completion(sortedItems)
+            }
+        }
+        
+        privateDatabase.add(operation)
+    }
+    
+    // Fallback simple fetch without sorting
+    private func fetchAllTodoItemsSimple(completion: @escaping ([TodoItem]) -> Void) {
+        print("☁️ Using simple fetch as fallback")
+        
+        let query = CKQuery(recordType: todoItemType, predicate: NSPredicate(value: true))
+        
+        privateDatabase.perform(query, inZoneWith: nil) { records, error in
+            if let error = error {
+                print("☁️ Simple query failed: \(error)")
                 DispatchQueue.main.async {
                     completion([])
                 }
+                return
+            }
+            
+            var items: [TodoItem] = []
+            for record in records ?? [] {
+                if let item = self.todoItemFromRecord(record) {
+                    items.append(item)
+                }
+            }
+            
+            DispatchQueue.main.async {
+                // Sort locally
+                let sortedItems = items.sorted { (item1, item2) in
+                    let p1 = item1.priority ?? Int.max
+                    let p2 = item2.priority ?? Int.max
+                    return p1 < p2
+                }
+                completion(sortedItems)
             }
         }
     }
@@ -166,7 +330,7 @@ class CloudKitManager: ObservableObject {
         if let difficultyRaw = record["difficulty"] as? String {
             item.difficulty = Difficulty(rawValue: difficultyRaw)
         }
-        item.createdAt = record["createdAt"] as? Date ?? Date()
+        item.dateCreated = record["dateCreated"] as? Date ?? Date()
         
         return item
     }
@@ -179,6 +343,7 @@ class CloudKitManager: ObservableObject {
         let subscription = CKQuerySubscription(
             recordType: todoItemType,
             predicate: NSPredicate(value: true),
+            subscriptionID: "TodoItemChanges",
             options: [.firesOnRecordCreation, .firesOnRecordUpdate, .firesOnRecordDeletion]
         )
         

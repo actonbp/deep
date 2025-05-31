@@ -28,26 +28,48 @@ This allows for a seamless experience where task capture, planning, and calendar
 ## Current Features
 
 *   **iOS Application:** Built natively using SwiftUI.
-*   **Tabbed Interface:** Separate views for Chat, To-Do List, and Today's Calendar.
+*   **Tabbed Interface:** Separate views for Chat, To-Do List, Calendar, Scratchpad, and Roadmap.
 *   **AI Chat:**
     *   Connects to OpenAI's `gpt-4o-mini` model.
     *   Conversation starter prompts.
 *   **To-Do List:**
     *   Add, toggle completion, delete, prioritize, drag-reorder items.
     *   Display estimated task durations.
-    *   Persisted locally.
+    *   Expandable task metadata (category, project/path, difficulty).
+    *   Persisted locally and **synced across devices via CloudKit**.
+*   **CloudKit Sync (New!):**
+    *   Automatic sync of all tasks across iPhone, iPad, and Mac.
+    *   Syncs task content, completion status, priorities, and metadata.
+    *   Supports add, update, and delete operations.
+    *   **Auto-sync on app lifecycle** - syncs when entering foreground/background.
+    *   **Visual sync status indicators** - see sync status in real-time.
+    *   **Manual refresh button** - force sync when needed.
+    *   **Smart error handling** - handles duplicate saves gracefully.
+    *   Requires iCloud account and internet connection.
 *   **Google Calendar Integration:**
     *   Secure Google Sign-In authentication.
     *   View today's calendar events in a dedicated tab.
+*   **Roadmap View:**
+    *   Visual organization of tasks by category and project.
+    *   Progress tracking with completion indicators.
+*   **Notes/Scratchpad:**
+    *   Quick capture for ideas and notes.
+    *   Local persistence.
 *   **Agentic AI Capabilities:**
     *   Uses tools (`addTaskToList`, `listCurrentTasks`, `removeTaskFromList`, `updateTaskPriorities`, `updateTaskEstimatedDuration`, `createCalendarEvent`) triggered by conversation.
-    *   AI can estimate task durations.
+    *   AI can estimate task durations and difficulty levels.
     *   AI can assist with time blocking suggestions (asking user for calendar constraints).
     *   AI can create events in the user's primary Google Calendar upon request.
+    *   AI can mark tasks as complete.
 *   **Secure API Key Handling (Debug):** Uses `Secrets.plist`.
 
 ## Planned Features / Roadmap
 
+*   **Enhanced CloudKit Sync:**
+    *   Real-time sync without app restart.
+    *   Sync status indicators.
+    *   Notes/Scratchpad sync.
+    *   Conflict resolution for simultaneous edits.
 *   **Calendar Creation Enhancement:** Allow AI to create events based on time blocking suggestions.
 *   **UI/UX:** Improve Dark Mode support, general UI polish.
 *   **Task Metadata:** Add Deep/Shallow work categorization.

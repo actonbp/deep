@@ -158,7 +158,8 @@ struct ContentView: View {
         .onChange(of: selectedTab) { oldValue, newValue in
             // Play sound if navigating AWAY from Roadmap
             if oldValue == roadmapTabIndex && newValue != roadmapTabIndex {
-                playSound(sound: "tab_switch.wav") // <-- REPLACE with your sound file name
+                // TODO: Add tab_switch.wav to project resources
+                // playSound(sound: "tab_switch.wav")
             }
         }
         // ----------------------------------
@@ -438,13 +439,26 @@ struct TodoListView: View {
             .foregroundColor(Color.theme.text)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { 
+                ToolbarItem(placement: .navigationBarLeading) {
+                    SyncStatusView()
+                }
                 ToolbarItem(placement: .principal) {
                     Text("Objectives")
                         .font(.custom(sciFiFont, size: titleFontSize))
                         .fontWeight(.bold)
                         .foregroundColor(Color.theme.titleText)
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    // Manual refresh button
+                    Button {
+                        Task {
+                            await refreshFromCloudKit()
+                        }
+                    } label: {
+                        Image(systemName: "arrow.clockwise.icloud")
+                            .foregroundColor(Color.theme.accent)
+                    }
+                    
                     EditButton().foregroundColor(Color.theme.accent)
                 }
             }
@@ -506,6 +520,11 @@ struct TodoListView: View {
         }
         // Optionally hide keyboard
         // hideKeyboard()
+    }
+    
+    // Manual refresh from CloudKit
+    private func refreshFromCloudKit() async {
+        await todoListStore.manualRefreshFromCloudKit()
     }
     // ---------------------------------------------
 }

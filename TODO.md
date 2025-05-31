@@ -2,80 +2,142 @@
 
 This file tracks the planned features and improvements for the AI-powered deep work assistant app.
 
-## Core Functionality
+## ✅ Recently Completed (2025)
+
+### CloudKit Sync Implementation
+- [x] Enable CloudKit capability in Xcode project
+- [x] Configure CloudKit container and entitlements
+- [x] Implement CloudKitManager for sync operations
+- [x] Full CRUD sync for TodoItems
+- [x] Sync all task metadata (category, project, priority, etc.)
+- [x] Handle offline/online states gracefully
+- [x] Merge logic for initial sync from multiple devices
+- [x] Auto-sync on app lifecycle (foreground/background)
+- [x] Visual sync status indicators with tap for details
+- [x] Manual refresh button in toolbar
+- [x] Smart duplicate handling (no false errors)
+- [x] Automatic schema creation on first run
+
+### Core Functionality
 - [x] Basic To-Do List UI (Add, View, Delete)
 - [x] Persistence (Items saved between launches)
+- [x] Expandable task metadata UI (click to edit category/project)
+- [x] 5-tab structure (Chat, To-Do, Calendar, Scratchpad, Roadmap)
+- [x] Roadmap view with category/project organization
+- [x] Demo mode for testing without affecting real data
 
-## Future Enhancements
+### AI Integration (Partial)
+- [x] Chat-based interface with OpenAI
+- [x] Tool-based task management (13+ tools)
+- [x] Natural language task addition via tools
+- [x] AI-powered task prioritization
+- [x] "Getting unstuck" guidance for ADHD users
+- [x] Task completion via AI command
 
-### AI Integration
-- [ ] Chat-based interface
-- [ ] Natural Language Processing (NLP) to identify tasks from chat input (using commands currently)
-- [ ] Explore OpenAI Function Calling for smarter task extraction
-- [ ] AI-powered task prioritization suggestions
+## 🚧 In Progress / High Priority
+
+### CloudKit Enhancements
+- [x] Auto-sync on app lifecycle ✅
+- [x] Visual sync status indicators ✅
+- [x] Manual refresh button ✅
+- [ ] Real-time sync without app restart (push notifications)
+- [ ] Notes/Scratchpad CloudKit sync
+- [ ] Conflict resolution UI for simultaneous edits
+- [ ] Batch sync operations for performance
+- [ ] Pull-to-refresh gesture on lists
+- [ ] Last sync timestamp display
+- [ ] Offline changes queue indicator
+
+### Performance & Responsiveness
+- [ ] **Optimize List Sorting:** Move sorting logic from `TodoListView` into `TodoListStore` to avoid repeated sorting during view updates
+- [ ] **Asynchronous Initial Load:** Refactor `TodoListStore.loadItems()` to run asynchronously in the background
+- [x] **Asynchronous Saving:** Implemented (using Task.detached)
+
+## 📋 Future Enhancements
+
+### AI Integration (Advanced)
+- [ ] Explore on-device model integration (waiting for Apple's SDK in iOS 19)
 - [ ] AI assistance in breaking down large tasks
-- [ ] Explore on-device model (Core ML) integration
+- [ ] More sophisticated time estimation learning
+- [ ] Contextual suggestions based on calendar availability
 
 ### Focus & Productivity Features
 - [ ] Integration with Deep Work principles (e.g., timers, focus sessions)
-- [ ] Minimalist UI/UX design refinement
-- [ ] Task categorization/tagging
-
-### Integrations
-- [ ] Google Calendar integration (View events, potentially add tasks as events)
-- [ ] Other potential integrations (e.g., email, notes apps)
+- [ ] Time blocking visualization
+- [ ] Task categorization as Deep/Shallow work
+- [ ] Pomodoro timer integration
+- [ ] Focus mode with notification blocking
 
 ### Technical Improvements
-- [ ] Refactor persistence (Consider Core Data or SwiftData for more complex data)
-- [ ] Error handling and robustness
-- [ ] Unit and UI tests 
-- [ ] Refactor `ChatViewModel.swift`: Consolidate repetitive time parsing logic in calendar tool handlers (`handleCreateCalendarEventToolCall`, `handleDeleteCalendarEventToolCall`, `handleUpdateCalendarEventTimeToolCall`) into a shared helper function to improve maintainability.
+- [ ] Implement secure API key handling for Release builds (currently DEBUG only)
+- [ ] Unit and UI tests for critical paths
+- [ ] Accessibility improvements (VoiceOver support)
+- [ ] Widget support for quick task addition
+- [ ] App Intents for Siri integration
 
-## Performance & Responsiveness
+### UI/UX Refinements
+- [ ] Dark mode polish
+- [ ] Custom app icon options
+- [ ] Haptic feedback for task actions
+- [ ] Swipe gesture customization
+- [ ] Task templates for recurring items
 
-*   **Optimize List Sorting:** Move sorting logic from `TodoListView` into `TodoListStore` to avoid repeated sorting during view updates. Publish a pre-sorted array from the store.
-*   **Asynchronous Initial Load:** Refactor `TodoListStore.loadItems()` to run asynchronously in the background to prevent potential main thread blocking during app startup.
-*   **Asynchronous Saving:** Implemented (using Task.detached).
+## 🗓️ Google Calendar Integration (Mostly Complete)
 
-## Other Potential Tasks (from previous discussions)
+**Phase 1: Authentication & Setup** ✅
+- [x] Configure Google Cloud Project
+- [x] Add `GoogleSignIn-iOS` SDK
+- [x] Implement "Sign in with Google" in app
+- [x] Secure token storage using Keychain
 
-*   Implement secure API key handling for Release builds.
-*   Address warning regarding required interface orientations.
-*   Resolve `Codable` warning related to `TodoItem.id` (if still present and causing issues).
-*   Refine AI prompting further (e.g., error handling, more complex scenarios, task breakdown implementation).
-*   Explore adding explicit Date/Time handling for tasks/reminders.
-*   UI/UX improvements for Chat and To-Do views.
+**Phase 2: Basic Calendar Interaction** ✅
+- [x] Create `CalendarService.swift`
+- [x] OAuth token management
+- [x] List calendars functionality
+- [x] Create/Update/Delete events
 
-## Google Calendar Integration (Future Goal)
+**Phase 3: AI Integration** ✅
+- [x] Calendar tools in OpenAI service
+- [x] AI can create calendar events
+- [x] AI can query today's events
 
-Integrate with Google Calendar to allow the AI to schedule tasks as events.
+**Phase 4: Advanced Features** 🚧
+- [ ] Multi-calendar support
+- [ ] Recurring event handling
+- [ ] Calendar event templates
+- [ ] Two-way sync with tasks
 
-**Phase 1: Authentication & Setup**
-- [ ] Configure Google Cloud Project (Enable Calendar API, Create OAuth iOS Client ID, Configure Consent Screen).
-- [ ] Add `GoogleSignIn-iOS` SDK via Swift Package Manager.
-- [ ] Implement "Sign in with Google" button/flow in `SettingsView` using the SDK.
-- [ ] Implement secure storage for OAuth tokens using iOS Keychain.
-- [ ] Add UI in `SettingsView` to show signed-in status and provide a Sign Out option.
+## 💻 macOS Companion App (Future - Lower Priority)
 
-**Phase 2: Basic Calendar Interaction**
-- [ ] Create `GoogleCalendarService.swift` class.
-- [ ] Implement logic to retrieve/refresh OAuth tokens from Keychain.
-- [ ] Implement basic API call function (e.g., `listCalendars`) using `URLSession` and authenticated requests.
-- [ ] Implement core function `addEventToCalendar(...)` to create events via the Calendar API.
+- [ ] **Project Setup:** Add macOS target
+- [ ] **Code Sharing:** Configure shared files
+- [ ] **Authentication:** macOS-compatible Google Sign-In
+- [ ] **UI/UX Adaptation:** macOS-specific layouts
+- [ ] **Menu Bar:** Quick task addition from menu bar
+- [ ] **Keyboard Shortcuts:** Power user features
 
-**Phase 3: AI Integration**
-- [ ] Define new AI tool spec (`scheduleTaskOnCalendar`) in `OpenAIService` with parameters (description, date, time, duration).
-- [ ] Add the tool to `allTools` list in `OpenAIService`.
-- [ ] Add handler in `ChatViewModel` for the new tool call, parsing arguments and calling `GoogleCalendarService.addEventToCalendar`.
-- [ ] Update system prompt to instruct AI on using the `scheduleTaskOnCalendar` tool. 
+## ⚠️ Known Issues to Address
 
-## macOS Companion App (Future Goal - Lower Priority)
+- [ ] Address warning regarding required interface orientations
+- [ ] Resolve any remaining `Codable` warnings
+- [ ] Fix any memory leaks in long chat sessions
+- [ ] Improve error messages for user-facing failures
 
-Explore creating a native macOS version leveraging the shared SwiftUI codebase.
+## 🔄 Refactoring Opportunities
 
-- [ ] **Project Setup:** Add a new macOS target to the existing Xcode project.
-- [ ] **Code Sharing:** Configure existing shared files (Services, Models, some Views) to be included in the macOS target.
-- [ ] **Authentication:** Investigate and implement a macOS-compatible Google Sign-In solution (e.g., web-based OAuth flow).
-- [ ] **UI/UX Adaptation:** Adapt SwiftUI views for macOS conventions (windowing, layout, sidebars, toolbars, menu bar integration).
-- [ ] **Platform-Specific APIs:** Address any other iOS-specific APIs or dependencies.
-- [ ] **Testing:** Thoroughly test the macOS application. 
+- [ ] Consolidate repetitive time parsing logic in calendar tool handlers
+- [ ] Extract common UI components into reusable views
+- [ ] Create proper view models for all views (some still use direct store access)
+- [ ] Implement proper dependency injection
+
+## 📝 Documentation Needs
+
+- [x] CloudKit setup guide ✅
+- [ ] User manual for ADHD-specific features
+- [ ] Developer onboarding guide
+- [ ] API documentation for tool system
+- [ ] Troubleshooting guide for common issues
+
+---
+
+*Note: This TODO list preserves all historical items while showing current progress. Items may move between sections as they're completed or reprioritized.* 

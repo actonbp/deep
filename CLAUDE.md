@@ -33,6 +33,12 @@
   - AppStorage persistence with demo mode support
   - Comprehensive CRUD operations with metadata updates
   - Smart priority management and reordering
+  - **CloudKit sync integration for cross-device synchronization**
+- **`CloudKitManager`** (`CloudKitManager.swift`) - iCloud sync operations
+  - Full CRUD operations for TodoItem sync
+  - Automatic container and zone setup
+  - Subscription for change notifications
+  - Graceful offline handling
 - **`CalendarService`** (`CalendarService.swift`) - Google Calendar API integration
   - URLSession-based implementation (no deprecated GTLRService)
   - Full CRUD operations for today's events
@@ -169,6 +175,77 @@ func updateSystemMessage() {
     let areCategoriesEnabled = UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey)
     // Adjust AI behavior based on user preferences
 }
+```
+
+## CloudKit Sync Implementation
+
+### Overview
+Bryan's Brain now includes full CloudKit sync, allowing tasks to synchronize across all devices signed into the same iCloud account. This addresses a key ADHD need: consistent access to tasks regardless of which device is at hand.
+
+### Architecture
+```swift
+// CloudKitManager singleton handles all sync operations
+private let cloudKitManager = CloudKitManager.shared
+
+// Every data mutation includes CloudKit sync
+func addItem(text: String, category: String? = nil, projectOrPath: String? = nil) {
+    // ... local operations ...
+    cloudKitManager.saveTodoItem(newItem)
+}
+```
+
+### Key Features
+- **Auto-sync on app lifecycle** - Syncs when app enters foreground/background
+- **Visual feedback** - Sync status indicator shows current state
+- **Manual control** - Refresh button for immediate sync
+- **Smart error handling** - "Already exists" errors treated as success
+- **Automatic schema creation** - No manual CloudKit setup needed
+
+### Sync Coverage
+- ✅ **Create**: New tasks sync immediately
+- ✅ **Read**: Tasks fetched from CloudKit on app launch  
+- ✅ **Update**: All metadata changes sync (completion, priority, category, etc.)
+- ✅ **Delete**: All deletion methods sync to CloudKit
+- ✅ **Lifecycle**: Auto-sync on foreground/background transitions
+
+### User Experience
+```swift
+// Visual sync status in toolbar
+SyncStatusView() // Shows: Synced ✅, Syncing... 🔄, Error ❌
+
+// Manual refresh available
+Button("Refresh") { 
+    await todoListStore.manualRefreshFromCloudKit() 
+}
+```
+
+### ADHD Benefits
+- **Device Flexibility**: Add tasks on iPhone, complete on iPad
+- **Reduced Anxiety**: Tasks won't be "lost" on another device
+- **Visual Confidence**: Always see sync status
+- **Control When Needed**: Manual refresh for peace of mind
+
+### Implementation Notes
+```swift
+// Always check CloudKit availability
+guard cloudKitManager.iCloudAvailable else { 
+    print("☁️ iCloud not available, using local storage only")
+    return 
+}
+
+// Sync operations are fire-and-forget for performance
+cloudKitManager.saveTodoItem(item) // Non-blocking
+
+// Current limitation: Requires app restart to see changes from other devices
+// Future: Implement push notifications for real-time sync
+```
+
+### Debugging CloudKit Issues
+```swift
+// Console messages indicate sync status
+"☁️ iCloud is available" // Good - sync active
+"☁️ No iCloud account" // User needs to sign in
+"☁️ Failed to save item: ..." // Network or permission issue
 ```
 
 ## Testing & Debugging

@@ -19,6 +19,9 @@ class TodoListStore: ObservableObject {
     private let cloudKitManager = CloudKitManager.shared
     private var hasLoadedFromCloud = false
     
+    // Notification observers
+    private var notificationObservers: [NSObjectProtocol] = []
+    
     // Make initializer private to prevent creating other instances
     private init() {
         // Load initial data when the store is created
@@ -40,8 +43,52 @@ class TodoListStore: ObservableObject {
             // --- CloudKit Sync ---
             syncWithCloudKit()
             setupCloudKitSubscriptions()
+            setupLifecycleObservers()
         }
         // ---------------------------------------------------------
+    }
+    
+    deinit {
+        // Clean up observers
+        for observer in notificationObservers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
+    
+    // MARK: - Lifecycle Observers
+    
+    private func setupLifecycleObservers() {
+        // Sync when app enters foreground
+        let foregroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("☁️ App entering foreground - syncing with CloudKit")
+            self?.syncWithCloudKit()
+        }
+        
+        // Sync when app is about to resign active
+        let backgroundObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("☁️ App entering background - ensuring CloudKit sync")
+            // Force sync all items to CloudKit before backgrounding
+            self?.syncAllItemsToCloudKit()
+        }
+        
+        notificationObservers = [foregroundObserver, backgroundObserver]
+    }
+    
+    private func syncAllItemsToCloudKit() {
+        guard cloudKitManager.iCloudAvailable else { return }
+        
+        // Upload all items to ensure everything is synced
+        for item in items {
+            cloudKitManager.saveTodoItem(item)
+        }
     }
     
     // Load items from AppStorage
@@ -136,6 +183,9 @@ class TodoListStore: ObservableObject {
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items[index].isDone.toggle()
             saveItems()
+            
+            // Sync to CloudKit
+            cloudKitManager.saveTodoItem(items[index])
         }
     }
     
@@ -147,8 +197,17 @@ class TodoListStore: ObservableObject {
             return
         }
         // -----------------
+        
+        // Get items to delete before removing them
+        let itemsToDelete = offsets.map { items[$0] }
+        
         items.remove(atOffsets: offsets)
         saveItems()
+        
+        // Sync deletions to CloudKit
+        for item in itemsToDelete {
+            cloudKitManager.deleteTodoItem(item)
+        }
     }
     
     // Method to provide a formatted string of the current tasks
@@ -176,6 +235,10 @@ class TodoListStore: ObservableObject {
         if let index = items.firstIndex(where: { $0.id == item.id }) {
             items.remove(at: index)
             saveItems()
+            
+            // Sync deletion to CloudKit
+            cloudKitManager.deleteTodoItem(item)
+            
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Deleted single item '\(item.text)'")
             }
@@ -194,8 +257,13 @@ class TodoListStore: ObservableObject {
         // -----------------
         let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
         if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
+            let itemToDelete = items[index]  // Save reference before deletion
             items.remove(at: index)
             saveItems()
+            
+            // Sync deletion to CloudKit
+            cloudKitManager.deleteTodoItem(itemToDelete)
+            
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Removed task '\(trimmedDescription)'")
             }
@@ -242,6 +310,14 @@ class TodoListStore: ObservableObject {
                 print("DEBUG [Store]: Priorities updated based on ordered list.")
             }
             saveItems()
+            
+            // Sync updated items to CloudKit
+            for item in items {
+                if priorityMap[item.text.trimmingCharacters(in: .whitespacesAndNewlines)] != nil {
+                    cloudKitManager.saveTodoItem(item)
+                }
+            }
+            
             // Since `items` is @Published, this will trigger UI updates in views observing the store
             // We might need to explicitly trigger objectWillChange if sorting happens outside SwiftUI view update
             // But since sorting is in the View's ForEach, it should re-render correctly.
@@ -289,6 +365,12 @@ class TodoListStore: ObservableObject {
                 print("DEBUG [Store]: Priorities updated based on manual move.")
             }
             saveItems()
+            
+            // Sync all items with updated priorities to CloudKit
+            for item in items {
+                cloudKitManager.saveTodoItem(item)
+            }
+            
             // No need to manually publish changes here, the @Published items array modification
             // combined with saveItems() calling @AppStorage setter handles updates.
         }
@@ -306,6 +388,10 @@ class TodoListStore: ObservableObject {
         if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
             items[index].estimatedDuration = duration
             saveItems() // Save the change
+            
+            // Sync to CloudKit
+            cloudKitManager.saveTodoItem(items[index])
+            
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Updated duration for '\(trimmedDescription)' to '\(duration ?? "nil")'")
             }
@@ -328,6 +414,10 @@ class TodoListStore: ObservableObject {
         if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
             items[index].difficulty = difficulty
             saveItems() // Save the change
+            
+            // Sync to CloudKit
+            cloudKitManager.saveTodoItem(items[index])
+            
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Updated difficulty for '\(trimmedDescription)' to '\(difficulty?.rawValue ?? "nil")'")
             }
@@ -361,6 +451,10 @@ class TodoListStore: ObservableObject {
                     }
                     // Trigger save since we modified the items array
                     saveItems()
+                    
+                    // Sync to CloudKit
+                    cloudKitManager.saveTodoItem(items[index])
+                    
                     return true // Task found and marked done
                 } else {
                     if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
@@ -395,6 +489,10 @@ class TodoListStore: ObservableObject {
             if items[index].category != categoryToSet { // Only save if changed
                 items[index].category = categoryToSet
                 saveItems() 
+                
+                // Sync to CloudKit
+                cloudKitManager.saveTodoItem(items[index])
+                
                 if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                     print("DEBUG [Store]: Updated category for '\(trimmedDescription)' to '\(categoryToSet ?? "nil")'")
                 }
@@ -421,6 +519,10 @@ class TodoListStore: ObservableObject {
              if items[index].projectOrPath != projectToSet { // Only save if changed
                 items[index].projectOrPath = projectToSet
                 saveItems() 
+                
+                // Sync to CloudKit
+                cloudKitManager.saveTodoItem(items[index])
+                
                 if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                     print("DEBUG [Store]: Updated project/path for '\(trimmedDescription)' to '\(projectToSet ?? "nil")'")
                 }
@@ -479,6 +581,42 @@ class TodoListStore: ObservableObject {
             if !self.hasLoadedFromCloud {
                 self.hasLoadedFromCloud = true
                 self.mergeCloudItemsWithLocal(cloudItems)
+            }
+        }
+    }
+    
+    // Public method for manual refresh
+    @MainActor
+    func manualRefreshFromCloudKit() async {
+        guard cloudKitManager.iCloudAvailable else {
+            print("☁️ iCloud not available for manual refresh")
+            return
+        }
+        
+        // Set syncing status
+        cloudKitManager.syncStatus = .syncing
+        
+        // Use async/await wrapper for the completion handler
+        await withCheckedContinuation { continuation in
+            cloudKitManager.fetchAllTodoItems { [weak self] cloudItems in
+                guard let self = self else {
+                    continuation.resume()
+                    return
+                }
+                
+                // Always merge on manual refresh
+                self.mergeCloudItemsWithLocal(cloudItems)
+                
+                // Set success status briefly
+                self.cloudKitManager.syncStatus = .success
+                
+                // Reset to idle after a short delay
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                    self.cloudKitManager.syncStatus = .idle
+                }
+                
+                continuation.resume()
             }
         }
     }

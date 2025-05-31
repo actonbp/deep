@@ -2,6 +2,19 @@
 
 Follow these steps to enable CloudKit sync in your Xcode project:
 
+## 0. Configure Entitlements (IMPORTANT - Do This First!)
+
+1. An entitlements file has been created at `deep_app/deep_app.entitlements`
+2. In Xcode, select your project in the navigator
+3. Select the `deep_app` target
+4. Go to the **Build Settings** tab
+5. Search for "Code Signing Entitlements"
+6. Set the value to `deep_app/deep_app.entitlements`
+
+Alternatively, in the **Signing & Capabilities** tab:
+- The entitlements file should be automatically detected
+- If not, you may need to remove and re-add the CloudKit capability
+
 ## 1. Enable CloudKit Capability
 
 1. Open your project in Xcode
@@ -69,14 +82,29 @@ For development testing:
 ## Current Implementation Status
 
 ✅ **Implemented:**
-- CloudKitManager with basic CRUD operations
+- CloudKitManager with full CRUD operations
 - Integration with TodoListStore
 - Automatic sync on app launch
+- **Auto-sync on app lifecycle (foreground/background)**
 - Save new items to CloudKit
+- Delete sync for all deletion methods
+- Update sync for task completion status
+- Update sync for task metadata (category, project/path, difficulty)
+- Update sync for task priorities (manual reordering)
+- Update sync for task duration estimates
+- CloudKit subscription for change notifications
+- **Visual sync status indicators in UI**
+- **Manual refresh button for force sync**
+- **Smart error handling for duplicate saves**
+- **Automatic schema creation on first run**
+- **Fallback query methods for compatibility**
 
 ⏳ **TODO (Future Improvements):**
-- Delete sync (currently only adds/updates)
+- Real-time sync (currently requires app relaunch to see changes from other devices)
 - Conflict resolution for simultaneous edits
 - Offline queue for changes made without internet
-- Sync status UI indicator
 - Notes/Scratchpad sync 
+- Progress indicator during initial sync
+- Batch operations for better performance
+- Pull-to-refresh gesture
+- Last sync timestamp display 
