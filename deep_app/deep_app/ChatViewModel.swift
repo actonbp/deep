@@ -22,14 +22,14 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     @Published var newMessageText: String = ""
     @Published var isLoading: Bool = false
     
-    // Add suggested prompts
+    // Add suggested prompts - prioritizing "getting started" guidance
     let suggestedPrompts: [String] = [
-        "What's on my calendar today?",
+        "I don't know where to start",
+        "Help me get unstuck",
+        "What should I do next?",
         "Plan my day",
-        "Add 'Writing Time' 2 PM to 3 PM today",
-        "Estimate task times",
-        "Make 'Finish slides' the top priority",
-        "Remove 'Dentist appointment' at 10 AM"
+        "What's on my calendar today?",
+        "Estimate task times"
     ]
     
     // A representation of a chat message in the UI
@@ -131,7 +131,15 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         if !messages.contains(where: { $0.role == .system }) {
             let systemMessage = ChatMessageItem(
                 content: """
-                    You are Bryan's Brain, a supportive, optimistic, and action-oriented ADHD productivity coach. Your primary goal is to help the user capture thoughts, structure their day, prioritize tasks, and maintain momentum by focusing on the **next small step**. 
+                    You are Bryan's Brain, a supportive, optimistic, and action-oriented ADHD productivity coach. Your primary goal is to help the user capture thoughts, structure their day, prioritize tasks, and maintain momentum by focusing on the **next small step**.
+                    
+                    **SPECIAL GUIDANCE: "Getting Unstuck" Responses**
+                    When users say things like "I don't know where to start", "help me get unstuck", "what should I do next?", or express feeling overwhelmed:
+                    1. **First, check their context**: Use 'listCurrentTasks' and 'getTodaysCalendarEvents' to see what's on their plate
+                    2. **Identify the smallest possible next action**: Find something that takes 2-5 minutes and requires minimal decision-making
+                    3. **Offer 2-3 specific micro-choices** instead of open-ended questions
+                    4. **Acknowledge the feeling**: "It's totally normal to feel stuck - let's find one tiny thing to get momentum going"
+                    5. **Focus on momentum over perfection**: Any small action is better than no action 
                     Tools: 'addTaskToList', 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'createCalendarEvent'(summary: string, startTimeToday: string, endTimeToday: string, description: string?), 'getTodaysCalendarEvents', 'getCurrentDateTime', 'deleteCalendarEvent', 'updateCalendarEventTime', 'markTaskComplete'. 
                     Instructions: 
                     1. **Capture & Structure:** Use tools proactively. If a task seems large, suggest breaking it down first. *Proactively ask* if the user wants to add a newly mentioned task to the list OR block time for it on their calendar using 'createCalendarEvent'. 
@@ -164,7 +172,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     
     private func addWelcomeMessage() {
         let welcomeMessage = ChatMessageItem(
-            content: "Hey! I'm here to help you capture thoughts, manage tasks, and plan your day. What's on your mind?", 
+            content: "Hey! I'm here to help you capture thoughts, manage tasks, and plan your day.\n\nFeeling stuck or don't know where to start? Just ask - I'm great at helping you find that first small step! What's on your mind?", 
             role: .assistant, 
             timestamp: Date()
         )

@@ -6,4 +6,6 @@
 # Secrets
 Secrets.plist
 deep_app/Secrets.plist
-deep_app/deep_app/Config.xcconfig 
+deep_app/deep_app/Config.xcconfig
+.env
+**/.env 
