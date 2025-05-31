@@ -7,13 +7,73 @@
 
 import SwiftUI
 
+// --- ADDED: Difficulty Enum ---
+enum Difficulty: String, Codable, CaseIterable, Identifiable {
+    case low = "Low"
+    case medium = "Medium"
+    case high = "High"
+    
+    var id: String { self.rawValue }
+}
+// ------------------------------
+
 // Define the structure for a To-Do item
 struct TodoItem: Identifiable, Codable {
-    let id = UUID() // Use let for stable identifier
+    let id: UUID // Use let for stable identifier
     var text: String
     var isDone: Bool = false // Status flag
     var priority: Int? = nil // Added priority field (optional integer)
     var estimatedDuration: String? = nil // Added estimated duration (optional string)
+    var dateCreated: Date
+    var difficulty: Difficulty? = nil
+    // --- Roadmap Metadata ---
+    var category: String? = nil // e.g., "Research", "Teaching", "Life"
+    var projectOrPath: String? = nil // e.g., "Paper XYZ", "LEAD 552"
+    // ------------------------
+    
+    // --- Custom Init ---
+    init(id: UUID = UUID(), text: String, isDone: Bool = false, priority: Int? = nil, estimatedDuration: String? = nil, dateCreated: Date = Date(), difficulty: Difficulty? = nil, category: String? = nil, projectOrPath: String? = nil) {
+        self.id = id
+        self.text = text
+        self.isDone = isDone
+        self.priority = priority
+        self.estimatedDuration = estimatedDuration
+        self.dateCreated = dateCreated
+        self.difficulty = difficulty
+        self.category = category
+        self.projectOrPath = projectOrPath
+    }
+    
+    // --- Custom Codable Implementation for backward compatibility --- 
+    enum CodingKeys: String, CodingKey {
+        case id, text, isDone, priority, estimatedDuration, dateCreated, difficulty, category, projectOrPath
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        text = try container.decode(String.self, forKey: .text)
+        isDone = try container.decode(Bool.self, forKey: .isDone)
+        priority = try container.decodeIfPresent(Int.self, forKey: .priority)
+        estimatedDuration = try container.decodeIfPresent(String.self, forKey: .estimatedDuration)
+        dateCreated = try container.decodeIfPresent(Date.self, forKey: .dateCreated) ?? Date()
+        difficulty = try container.decodeIfPresent(Difficulty.self, forKey: .difficulty)
+        category = try container.decodeIfPresent(String.self, forKey: .category)
+        projectOrPath = try container.decodeIfPresent(String.self, forKey: .projectOrPath)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(text, forKey: .text)
+        try container.encode(isDone, forKey: .isDone)
+        try container.encodeIfPresent(priority, forKey: .priority)
+        try container.encodeIfPresent(estimatedDuration, forKey: .estimatedDuration)
+        try container.encode(dateCreated, forKey: .dateCreated)
+        try container.encodeIfPresent(difficulty, forKey: .difficulty)
+        try container.encodeIfPresent(category, forKey: .category)
+        try container.encodeIfPresent(projectOrPath, forKey: .projectOrPath)
+    }
 }
 
 // Main View hosting the TabView
@@ -36,12 +96,26 @@ struct ContentView: View {
                     Label("To-Do List", systemImage: "list.bullet.clipboard.fill")
                 }
             
-            // --- NEW Calendar Tab --- 
+            // --- Calendar Tab --- 
             TodayCalendarView()
                 .tabItem {
                     Label("Calendar", systemImage: "calendar")
                 }
-            // ------------------------
+            // --------------------
+            
+            // --- Scratchpad Tab --- 
+            NotesView()
+                .tabItem {
+                    Label("Scratchpad", systemImage: "note.text")
+                }
+            // ----------------------
+            
+            // --- Roadmap Tab ---
+            RoadmapView()
+                .tabItem {
+                    Label("Roadmap", systemImage: "map.fill")
+                }
+            // ------------------
         }
         // .font(.custom(sciFiFont, size: sciFiFontSize)) // <-- REMOVE Global Font
         .accentColor(Color.theme.accent) // Set global accent color (for tab items, etc.)
