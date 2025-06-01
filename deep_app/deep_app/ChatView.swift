@@ -107,12 +107,14 @@ struct ChatView: View {
                     HStack(spacing: 10) {
                         ForEach(viewModel.suggestedPrompts, id: \.self) { prompt in
                             Text(prompt)
-                                .font(.caption) // Use system font
+                                .font(.system(.caption, design: .rounded))
+                                .fontWeight(.medium)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(Color(.systemGray5)) // Use system color
+                                .background(Color.white)
                                 .clipShape(Capsule())
-                                .foregroundColor(Color(.label)) // Use system color
+                                .foregroundColor(.primary)
+                                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
                                 .lineLimit(1) // Prevent wrapping
                                 .onTapGesture { viewModel.newMessageText = prompt }
                         }
@@ -126,14 +128,11 @@ struct ChatView: View {
                 HStack {
                     // Message input field
                     TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(20)
+                        .font(.system(.body, design: .rounded))
+                        .padding(.vertical, 12)
+                        .padding(.horizontal, 16)
                         .textFieldStyle(.plain)
-                        .padding(.leading)
-                        // Removed custom font
-                        .foregroundColor(Color.theme.text) // Keep theme color for now, might change later
-                        // Use AttributedString for placeholder color if needed
+                        .foregroundColor(.primary)
                     
                     // Send button
                     Button {
@@ -142,12 +141,16 @@ struct ChatView: View {
                         }
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 30))
-                            .foregroundColor(Color.theme.accent) // Use theme accent
+                            .font(.system(size: 28))
+                            .foregroundColor(Color.theme.accent)
                     }
                     .disabled(viewModel.newMessageText.isEmpty || viewModel.isLoading)
-                    .padding(.horizontal)
+                    .padding(.trailing, 16)
                 }
+                .background(Color.white)
+                .cornerRadius(12)
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(Color(UIColor.systemBackground)) // Use system background (adapts light/dark)
                 // Optional: Add a subtle top border
@@ -160,8 +163,8 @@ struct ChatView: View {
             .toolbarBackground(.visible, for: .navigationBar) // Make it always visible
             // -----------------------------------------------------
             .toolbarColorScheme(.dark, for: .navigationBar) // Keep this to suggest light status bar items
-            .background(Color.theme.background.ignoresSafeArea()) // Keep theme color for main view
-            .foregroundColor(Color.theme.text) // Keep theme color for main view text
+            .background(Color(UIColor.systemGray6).ignoresSafeArea()) // Match new clean design
+            .foregroundColor(.primary) // Use primary color for main view text
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     Text("Bryan's Brain")
@@ -238,18 +241,31 @@ struct MessageBubble: View {
                 Spacer(minLength: 60)
             }
             
-            VStack(alignment: message.role == .user ? .trailing : .leading) {
+            VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
                 Text(message.content ?? "")
-                    .padding(12)
-                    // Adjust background/foreground later based on new theme
-                    .background(message.role == .user ? Color.theme.accent.opacity(0.8) : Color(.systemGray5)) // Example adjustment
-                    .foregroundColor(message.role == .user ? .white : Color(.label)) // Example adjustment
-                    .cornerRadius(16) // Slightly larger radius maybe?
-                    // Removed custom font
+                    .font(.system(.body, design: .rounded))
+                    .padding(16)
+                    .background(
+                        message.role == .user ? 
+                        Color.theme.accent : 
+                        Color.white
+                    )
+                    .foregroundColor(
+                        message.role == .user ? 
+                        .white : 
+                        .primary
+                    )
+                    .cornerRadius(12)
+                    .shadow(
+                        color: .black.opacity(message.role == .user ? 0.1 : 0.05), 
+                        radius: 3, 
+                        x: 0, 
+                        y: 1
+                    )
                 
                 Text(formattedTime)
-                    .font(.caption2) // Use smaller system font
-                    .foregroundColor(Color.theme.secondaryText) // Use theme color for now
+                    .font(.system(.caption2, design: .rounded))
+                    .foregroundColor(.secondary)
                     .padding(.horizontal, 4)
             }
             

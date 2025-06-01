@@ -18,6 +18,10 @@ struct TodayCalendarView: View {
     let hourHeight: CGFloat = 60 // Height per hour block
     // ---------------------------
 
+    // Consistent title styling
+    let titleFontSize: CGFloat = 22 
+    let sciFiFont = "Orbitron"
+
     var body: some View {
         NavigationView { // For title and potential future toolbar items
             VStack {
@@ -80,7 +84,17 @@ struct TodayCalendarView: View {
                     }
                 }
             }
+            .background(Color(UIColor.systemGray6).ignoresSafeArea())
             .navigationTitle("Today's Calendar")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Text("Calendar")
+                        .font(.custom(sciFiFont, size: titleFontSize))
+                        .fontWeight(.bold)
+                        .foregroundColor(Color.theme.titleText)
+                }
+            }
             .onAppear(perform: loadEvents) // Load events when view appears first time
             // --- React to sign-in status changes --- 
             .onChange(of: authService.isSignedIn) { _, isSignedIn in
@@ -201,13 +215,14 @@ struct TimelineBackground: View {
                 HStack(alignment: .top, spacing: 5) {
                     // Hour Label
                     Text(hourLabel(hour))
-                        .font(.caption)
-                        .foregroundColor(Color.theme.secondaryText)
+                        .font(.system(.caption, design: .rounded))
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
                         .frame(width: 50, alignment: .trailing) // Fixed width for labels
                         
                     // Horizontal Line
                     Rectangle()
-                        .fill(Color.theme.secondaryText.opacity(0.3))
+                        .fill(Color.gray.opacity(0.2))
                         .frame(height: 1)
                 }
                 .frame(height: hourHeight) // Set height for the hour block
@@ -232,19 +247,40 @@ struct EventBlockView: View {
     let event: CalendarEvent
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(event.summary ?? "(No Title)")
-                .font(.footnote)
+                .font(.system(.footnote, design: .rounded))
                 .fontWeight(.semibold)
-            // Optionally add start/end time within the block if space permits
-            // Text("\(event.startTimeString) - \(event.endTimeString)").font(.caption2)
+                .foregroundColor(.white)
+            
+            // Add time if available
+            if let startDate = event.startDate, let endDate = event.endDate {
+                HStack {
+                    Text("\(timeString(from: startDate)) - \(timeString(from: endDate))")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundColor(.white.opacity(0.8))
+                    Spacer()
+                }
+            }
         }
-        .padding(4)
-        .frame(maxWidth: .infinity, alignment: .leading) // Take available width
-        .background(Color.blue.opacity(0.7)) // Example background
-        .foregroundColor(.white)
-        .cornerRadius(4)
-        .clipped() // Prevent text overflow
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            LinearGradient(
+                gradient: Gradient(colors: [Color.theme.accent, Color.theme.accent.opacity(0.8)]),
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .cornerRadius(8)
+        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+    
+    private func timeString(from date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "h:mm a"
+        return formatter.string(from: date)
     }
 }
 // ----------------------------------

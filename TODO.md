@@ -68,6 +68,40 @@ This file tracks the planned features and improvements for the AI-powered deep w
 
 ## 📋 Future Enhancements
 
+### 🎓 Onboarding & Tutorial System (High Priority)
+The app has grown in complexity and needs a comprehensive tutorial system to help users understand all features:
+
+**Initial Onboarding Flow:**
+- [ ] Welcome screen explaining Bryan's Brain philosophy for ADHD users
+- [ ] Step-by-step tutorial for basic task creation and management
+- [ ] Interactive guide showing expandable task metadata (click tasks to edit)
+- [ ] Explanation of project organization and categories
+- [ ] Gamified roadmap tutorial (islands, quests, levels, XP, achievements)
+- [ ] AI chat introduction with example prompts ("I don't know where to start")
+- [ ] Calendar integration setup and benefits
+- [ ] CloudKit sync explanation and iCloud account requirements
+
+**Tutorial Features:**
+- [ ] Settings option to "Restart Tutorial" for returning users
+- [ ] Contextual tips that appear when users first visit each tab
+- [ ] Interactive overlay system with arrows pointing to key features
+- [ ] "Getting Started" checklist that guides users through first tasks
+- [ ] Video-style animated guides for complex features (roadmap navigation)
+- [ ] Quick tips that appear based on user behavior patterns
+
+**ADHD-Specific Guidance:**
+- [ ] "Feeling Overwhelmed?" mode with simplified interface
+- [ ] Tutorial focused on "next small step" philosophy
+- [ ] Examples of how to break down large tasks into manageable pieces
+- [ ] Demo project showing real-world task organization patterns
+- [ ] Explanation of how visual progress (islands) helps with motivation
+
+**Progressive Disclosure:**
+- [ ] Basic mode that hides advanced features initially
+- [ ] "Power User" mode unlock after completing basic tutorial
+- [ ] Feature discovery system that introduces new capabilities gradually
+- [ ] Achievement-based unlocking of advanced features
+
 ### AI Integration (Advanced)
 - [ ] Explore on-device model integration (waiting for Apple's SDK in iOS 19)
 - [ ] AI assistance in breaking down large tasks
@@ -89,11 +123,24 @@ This file tracks the planned features and improvements for the AI-powered deep w
 - [ ] App Intents for Siri integration
 
 ### UI/UX Refinements
-- [ ] Dark mode polish
+**Visual Design System Implementation:**
+- [ ] **Apply new color system throughout app** - Currently colors are added but not fully utilized
+- [ ] Update task list to use Gray50/Gray600 for better text hierarchy
+- [ ] Implement Indigo500 consistently across accent elements
+- [ ] Color-coded priority indicators using the new palette
+- [ ] Project-type color coding in task list (not just roadmap)
+- [ ] Enhanced card designs using the new spacing system
+- [ ] Typography improvements using the refined font scales
+
+**Polish & Refinements:**
+- [ ] Dark mode polish with proper new color variants
 - [ ] Custom app icon options
-- [ ] Haptic feedback for task actions
+- [ ] Enhanced haptic feedback for task actions (currently basic)
 - [ ] Swipe gesture customization
 - [ ] Task templates for recurring items
+- [ ] Improved visual feedback for task completion
+- [ ] Better contrast and accessibility with new color system
+- [ ] Animated transitions between tab views
 
 ## 🗓️ Google Calendar Integration (Mostly Complete)
 

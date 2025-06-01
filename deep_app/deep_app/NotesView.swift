@@ -9,25 +9,25 @@ struct NotesView: View {
 
     var body: some View {
         NavigationView {
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 16) {
                 // Use TextEditor for multi-line input
                 TextEditor(text: $notes)
                     .frame(maxWidth: .infinity, maxHeight: .infinity) // Allow it to expand
-                    .padding(8) // Padding inside the editor
-                    .background(Color(UIColor.systemGray6)) // Subtle background
-                    .cornerRadius(10)
-                    .font(.body) // Use standard body font for notes
-                    .foregroundColor(Color.theme.text) // Use theme text color
+                    .padding(16) // More generous padding inside the editor
+                    .background(Color.white) // Clean white background
+                    .cornerRadius(12)
+                    .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+                    .font(.system(.body, design: .rounded)) // Use rounded system font
+                    .foregroundColor(.primary) // Use primary text color
                     .accessibilityLabel("Notes editor") // Accessibility
 
                 // Add a small instruction or status if needed
                 Text("Notes are saved automatically.")
-                    .font(.caption)
-                    .foregroundColor(.gray)
-                    .padding(.top, 4)
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundColor(.secondary)
             }
-            .padding() // Padding around the VStack
-            .background(Color.theme.background.ignoresSafeArea()) // Use theme background
+            .padding(16) // Padding around the VStack
+            .background(Color(UIColor.systemGray6).ignoresSafeArea()) // Clean light background
             .onTapGesture {
                 hideKeyboard()
             }

@@ -297,11 +297,11 @@ struct TodoListView: View {
 
     var body: some View {
         NavigationView { 
-            VStack {
+            VStack(spacing: 0) {
                 inputBar
                 taskList
             }
-            .background(Color.theme.background.ignoresSafeArea())
+            .background(Color(UIColor.systemGray6).ignoresSafeArea())
             .foregroundColor(Color.theme.text)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { 
@@ -339,9 +339,10 @@ struct TodoListView: View {
     
     private var inputBar: some View {
         HStack {
-            TextField("Enter new item", text: $newItemText)
+            TextField("What needs to be done?", text: $newItemText)
                 .textFieldStyle(.plain)
-                .padding(.vertical, 8)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 16)
             
             Spacer()
 
@@ -349,43 +350,51 @@ struct TodoListView: View {
                 todoListStore.addItem(text: newItemText)
                 newItemText = "" 
             } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
+                Text("Add")
+                    .font(.system(.body, design: .rounded))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 8)
+                    .background(Color.theme.accent)
+                    .cornerRadius(8)
             }
             .disabled(newItemText.isEmpty)
-            .foregroundColor(Color.theme.accent)
             .buttonStyle(.borderless)
         }
-        .padding(.horizontal)
-        .padding(.vertical, 5)
-        .background(Color(UIColor.systemGray6))
-        .cornerRadius(10)
-        .padding(.horizontal)
-        .padding(.top, 5)
+        .background(Color.white)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
     
     private var taskList: some View {
-        List {
-            ForEach(sortedItems) { item in
-                TaskRowView(
-                    item: item,
-                    expandedItemId: $expandedItemId,
-                    editingCategory: $editingCategory,
-                    editingProject: $editingProject,
-                    showingNewProjectAlert: $showingNewProjectAlert,
-                    newProjectName: $newProjectName,
-                    existingProjectsForPicker: existingProjectsForPicker,
-                    dateFormatter: dateFormatter,
-                    todoListStore: todoListStore,
-                    saveEdits: saveEdits,
-                    playSound: playSound
-                )
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(sortedItems) { item in
+                    TaskRowView(
+                        item: item,
+                        expandedItemId: $expandedItemId,
+                        editingCategory: $editingCategory,
+                        editingProject: $editingProject,
+                        showingNewProjectAlert: $showingNewProjectAlert,
+                        newProjectName: $newProjectName,
+                        existingProjectsForPicker: existingProjectsForPicker,
+                        dateFormatter: dateFormatter,
+                        todoListStore: todoListStore,
+                        saveEdits: saveEdits,
+                        playSound: playSound
+                    )
+                    .background(Color.white)
+                    .cornerRadius(12)
+                    .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+                }
             }
-            .onMove(perform: moveItems)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
         }
-        .listStyle(PlainListStyle())
-        .background(Color.theme.background)
-        .foregroundColor(Color.theme.text)
+        .background(Color(UIColor.systemGray6))
     }
     
     private var refreshButton: some View {
@@ -399,17 +408,8 @@ struct TodoListView: View {
         }
     }
     
-    // --- ADDED: Function to handle moving items in the list --- 
-    private func moveItems(from source: IndexSet, to destination: Int) {
-        // 1. Get the current sorted list as displayed
-        var orderedItems = sortedItems
-        
-        // 2. Perform the move on this mutable copy
-        orderedItems.move(fromOffsets: source, toOffset: destination)
-        
-        // 3. Pass the newly ordered list to the store to update persistent priorities
-        todoListStore.updateOrder(itemsInNewOrder: orderedItems)
-    }
+    // Note: Move functionality removed since we switched to card-based layout
+    // Users can still reorder by editing priority numbers in the expanded view
     
     // --- ADDED: Helper function to save edits --- 
     private func saveEdits(for item: TodoItem) {
@@ -457,73 +457,87 @@ struct TaskRowView: View {
     let playSound: (String) -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 0) {
             mainRowContent
             
             if expandedItemId == item.id {
                 expandedContent
             }
         }
-        .padding(.vertical, 4)
-        .listRowSeparator(.hidden)
-        .swipeActions(edge: .leading) { 
-            Button {
-                // Add haptic feedback on task completion
-                let impact = UIImpactFeedbackGenerator(style: .light)
-                impact.impactOccurred()
-                
-                todoListStore.toggleDone(item: item)
-                
-                // Play sound if task is being completed (not undone)
-                if !item.isDone {
-                    playSound("task_complete.wav")
-                }
-            } label: {
-                Label(item.isDone ? "Mark Undone" : "Mark Done", systemImage: item.isDone ? "arrow.uturn.backward.circle.fill" : "checkmark.circle.fill")
-            }
-            .tint(item.isDone ? Color.theme.secondaryText : Color.theme.done)
-        }
-        .swipeActions(edge: .trailing) {
-            Button(role: .destructive) {
-                todoListStore.deleteItem(item: item)
-            } label: {
-                Label("Delete", systemImage: "trash.fill")
-            }
-        }
     }
     
     private var mainRowContent: some View {
-        HStack(spacing: 15) { 
+        HStack(spacing: 16) { 
             // Tappable Done/Undone Icon
             Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
                 .resizable()
-                .frame(width: 24, height: 24) 
-                .foregroundColor(item.isDone ? Color.theme.accent : Color.theme.secondaryText)
+                .frame(width: 28, height: 28) 
+                .foregroundColor(item.isDone ? Color.green : Color.gray)
                 .onTapGesture { 
                     todoListStore.toggleDone(item: item)
                 }
             
-            // Text, Priority, Duration 
-            VStack(alignment: .leading, spacing: 2) { 
-                if let priority = item.priority {
-                    Text("(\(priority))")
-                        .font(.caption)
-                        .fontWeight(.bold)
-                        .foregroundColor(Color.theme.accent)
-                }
+            // Main content area
+            VStack(alignment: .leading, spacing: 6) { 
+                // Task title
                 Text(item.text)
+                    .font(.system(.body, design: .rounded))
+                    .fontWeight(.medium)
                     .strikethrough(item.isDone, color: .gray) 
-                    .foregroundColor(item.isDone ? Color.theme.secondaryText : Color.theme.text) 
+                    .foregroundColor(item.isDone ? Color.gray : Color.primary)
+                    .multilineTextAlignment(.leading)
                 
-                if let duration = item.estimatedDuration, !duration.isEmpty {
-                    Text(duration)
-                        .font(.caption2)
-                        .foregroundColor(Color.theme.secondaryText)
-                        .padding(.leading, item.priority == nil ? 0 : 5) 
+                // Summary text (if available)
+                if let summary = item.shortSummary, !summary.isEmpty {
+                    Text(summary)
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundColor(.secondary)
                 }
-            } 
-            Spacer()
+                
+                // Metadata badges
+                HStack(spacing: 8) {
+                    // Priority badge
+                    if let priority = item.priority {
+                        Text(priorityText(for: priority))
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(priorityColor(for: priority))
+                            .foregroundColor(priorityTextColor(for: priority))
+                            .cornerRadius(6)
+                    }
+                    
+                    // Duration badge
+                    if let duration = item.estimatedDuration, !duration.isEmpty {
+                        Text(duration)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.gray.opacity(0.1))
+                            .foregroundColor(.secondary)
+                            .cornerRadius(6)
+                    }
+                    
+                    // Project badge
+                    if let project = item.projectOrPath, !project.isEmpty {
+                        Text(project)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.gray.opacity(0.1))
+                            .foregroundColor(.secondary)
+                            .cornerRadius(6)
+                    }
+                    
+                    Spacer()
+                }
+            }
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -609,8 +623,39 @@ struct TaskRowView: View {
             .font(.caption)
             .foregroundColor(Color.theme.secondaryText)
         }
-        .padding(.leading, 39)
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
+        .background(Color.gray.opacity(0.03))
         .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+    }
+    
+    // Priority helper functions
+    private func priorityText(for priority: Int) -> String {
+        switch priority {
+        case 1...3: return "High Priority"
+        case 4...6: return "Medium Priority"
+        case 7...10: return "Low Priority"
+        default: return "Priority \(priority)"
+        }
+    }
+    
+    private func priorityColor(for priority: Int) -> Color {
+        switch priority {
+        case 1...3: return Color.red.opacity(0.1)
+        case 4...6: return Color.orange.opacity(0.1)
+        case 7...10: return Color.gray.opacity(0.1)
+        default: return Color.gray.opacity(0.1)
+        }
+    }
+    
+    private func priorityTextColor(for priority: Int) -> Color {
+        switch priority {
+        case 1...3: return Color.red
+        case 4...6: return Color.orange
+        case 7...10: return Color.secondary
+        default: return Color.secondary
+        }
     }
     
     private func handleTap() {
