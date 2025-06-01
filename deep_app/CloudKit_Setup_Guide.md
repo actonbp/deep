@@ -1,5 +1,15 @@
 # CloudKit Setup Guide for Bryan's Brain
 
+## Prerequisites
+
+- **Apple Developer Program membership** ($99/year) - Required for CloudKit
+- Xcode with your paid developer team selected (not "Personal Team")
+- Devices signed into iCloud for testing
+
+## Important Note
+
+CloudKit is **not available** with free Apple Developer accounts. You must have a paid Apple Developer Program membership to use CloudKit sync features.
+
 Follow these steps to enable CloudKit sync in your Xcode project:
 
 ## 0. Configure Entitlements (IMPORTANT - Do This First!)

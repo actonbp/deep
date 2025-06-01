@@ -96,3 +96,22 @@ See `.cursor/rules/feature_verification.mdc` for the complete verification proto
 *   UI Framework: SwiftUI
 *   Platform: iOS
 *   IDE: Xcode 
+
+## Apple Developer Program Membership
+
+This project requires an **Apple Developer Program membership** ($99/year) for full functionality:
+
+### Benefits Utilized:
+- ✅ **CloudKit** - Cross-device task synchronization
+- ✅ **Increased Memory Limits** - Better performance for AI operations
+- ✅ **Push Notifications** (capability enabled for future real-time sync)
+- ✅ **TestFlight** - Beta testing distribution (when ready)
+- ✅ **App Store Distribution** - Public release capability
+
+### Setup Requirements:
+1. Active Apple Developer Program membership
+2. Xcode configured with paid developer team (not Personal Team)
+3. Valid provisioning profiles for CloudKit capabilities
+4. iCloud account on test devices
+
+See `deep_app/DEVELOPER_ACCOUNT_SETUP.md` for detailed configuration instructions. 

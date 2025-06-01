@@ -96,6 +96,16 @@ systemPromptContent += "\n**SPECIAL GUIDANCE: \"Getting Unstuck\" Responses**"
 
 ## Development Guidelines
 
+### 0. Prerequisites
+- **Apple Developer Program membership** ($99/year) required for:
+  - CloudKit sync functionality
+  - Push notification capabilities
+  - Increased memory limits
+  - TestFlight beta distribution
+  - App Store release
+- Xcode with paid developer team configured
+- Test devices signed into iCloud
+
 ### 1. Incremental Changes Only
 - **Never break existing functionality**
 - Test thoroughly on device before committing
