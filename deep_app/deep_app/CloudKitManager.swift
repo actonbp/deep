@@ -141,6 +141,7 @@ class CloudKitManager: ObservableObject {
         record["projectOrPath"] = item.projectOrPath
         record["difficulty"] = item.difficulty?.rawValue
         record["dateCreated"] = item.dateCreated
+        record["shortSummary"] = item.shortSummary
         
         privateDatabase.save(record) { [weak self] _, error in
             DispatchQueue.main.async {
@@ -327,6 +328,7 @@ class CloudKitManager: ObservableObject {
         item.estimatedDuration = record["estimatedDuration"] as? String
         item.category = record["category"] as? String
         item.projectOrPath = record["projectOrPath"] as? String
+        item.shortSummary = record["shortSummary"] as? String
         if let difficultyRaw = record["difficulty"] as? String {
             item.difficulty = Difficulty(rawValue: difficultyRaw)
         }

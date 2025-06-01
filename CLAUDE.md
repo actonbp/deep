@@ -1,5 +1,11 @@
 # Bryan's Brain - AI Development Guide
 
+## Developer Notes
+- Bryan is new to Xcode - provide exact click-by-click instructions
+- Always specify exact menu paths and button locations
+- Break down complex changes into small steps
+- Test after each change before proceeding
+
 ## Project Overview
 
 **Bryan's Brain** is an iOS productivity app specifically designed for ADHD users. The app focuses on reducing cognitive friction, providing action-oriented guidance, and helping users maintain momentum through "next small step" philosophy.
@@ -55,7 +61,8 @@
   - Secure API key management (DEBUG only)
 
 #### UI Components
-- **Theme System** (`Theme.swift`) - Consistent color scheme
+- **Theme System** (`Theme.swift`) - Comprehensive design system with colors, typography, spacing
+- **Gamified Roadmap** (`RoadmapView.swift`) - Interactive project island visualization
 - **Settings Management** (`SettingsView.swift`) - App configuration
 - **Authentication** (`AuthenticationService.swift`) - Google Sign-In
 
@@ -359,3 +366,76 @@ git checkout 1de9b7f -- deep_app/deep_app/ContentView.swift
 - Missing `.cursor/rules/` folder (documentation lost)
 
 **Remember**: After any recovery operation, manually test in Xcode that you can click tasks to expand and edit metadata! 
+
+## 🎮 Gamified Roadmap Implementation
+
+### Overview (December 2024)
+The roadmap has been completely reimplemented as an interactive "quest map" using gaming principles to make project management more engaging for ADHD users.
+
+### Key Features
+- **🏝️ Project Islands** - Each project is visualized as a floating island with gradients and shadows
+- **🎯 Quest Dots** - Tasks displayed as small circles in a grid (green when completed)
+- **📊 Progress Rings** - Circular progress indicators around each island
+- **🏆 Level System** - Projects have levels (Lv 1-5) based on task count
+- **💎 XP System** - 10 experience points awarded per completed task
+- **🌟 Achievement Badges** - Floating gold stars for projects with 5+ completed tasks or 80%+ progress
+- **🌉 Bridges** - Curved connecting lines between related projects
+- **🌤️ Sky Background** - Beautiful cyan-to-blue gradient background
+- **🔍 Zoom/Pan Controls** - Pinch to zoom, drag to explore, reset button
+
+### Implementation Details
+
+#### Project Types & Colors
+```swift
+enum ProjectType: String, Codable, CaseIterable, Identifiable {
+    case work = "Work"        // 💼 Blue (ProjectBlue)
+    case personal = "Personal" // 🚀 Purple (ProjectPurple)
+    case health = "Health"     // 💚 Green (ProjectGreen)
+    case learning = "Learning" // 📚 Yellow (ProjectYellow)
+}
+```
+
+#### Gamification Logic
+```swift
+// Calculate progress
+let progress = totalTasks > 0 ? Double(completedTasks) / Double(totalTasks) : 0.0
+
+// Calculate level based on number of tasks
+let level = min(5, max(1, totalTasks / 3))
+
+// Calculate XP (10 points per completed task)
+let xp = completedTasks * 10
+
+// Achievement criteria
+let hasAchievement = completedTasks >= 5 || progress >= 0.8
+```
+
+#### Color System Integration
+```swift
+// Assets.xcassets colors used:
+- ProjectBlue: #DBEAFE (light) / #1E40AF (dark)
+- ProjectPurple: #EDE9FE (light) / #6B21A8 (dark)  
+- ProjectGreen: #DCFCE7 (light) / #166534 (dark)
+- ProjectYellow: #FEF3C7 (light) / #A16207 (dark)
+```
+
+### ADHD Benefits
+- **Visual Progress** - Dopamine reward from seeing islands fill up
+- **Clear Hierarchy** - Levels and achievement badges show importance
+- **Micro-Rewards** - Immediate feedback for task completion
+- **Spatial Memory** - Remember projects by their visual position
+- **Engaging Metaphor** - "Conquering islands" feels more rewarding than "managing tasks"
+
+### Technical Architecture
+- **ProjectIsland** model stores island data and position
+- **GameMapCanvasView** handles layout and rendering
+- **ProjectIslandView** creates individual island UI
+- **BridgeView** draws curved connections between islands
+- Zoom/pan gestures with momentum and bounds checking
+- Automatic island positioning with overflow handling
+
+### Performance Optimizations
+- Islands positioned statically (no real-time physics)
+- Efficient SwiftUI rendering with proper view composition
+- Gesture handling optimized for smooth interactions
+- Color system integrated with existing theme architecture

@@ -4,12 +4,11 @@ struct RoadmapView: View {
     // Access the shared store
     @ObservedObject private var todoListStore = TodoListStore.shared
     
-    // --- State for Zoom/Pan --- 
+    // State for Zoom/Pan
     @State private var currentScale: CGFloat = 1.0
-    @State private var finalScale: CGFloat = 1.0 // Store committed scale
+    @State private var finalScale: CGFloat = 1.0
     @State private var currentOffset: CGSize = .zero
-    @State private var finalOffset: CGSize = .zero // Store committed offset
-    // --------------------------
+    @State private var finalOffset: CGSize = .zero
     
     // Consistent title styling
     let titleFontSize: CGFloat = 22 
@@ -17,286 +16,340 @@ struct RoadmapView: View {
 
     var body: some View {
         NavigationView {
-            // --- Replace List with ScrollView + Canvas --- 
-            ScrollView([.horizontal, .vertical]) { // Allow both directions
-                // Pass grouped data and settings to the Canvas View
-                RoadmapCanvasView(groupedTasks: groupedTasks, 
-                                  sortedTopLevelKeys: sortedTopLevelKeys,
-                                  areCategoriesEnabled: areCategoriesEnabled,
-                                  size: CGSize(width: 1000, height: 1500)) // Pass intended size
-                .scaleEffect(currentScale) 
-                .offset(currentOffset) 
-                .frame(width: 1000, height: 1500) // Keep frame on the inner view
+            // Gamified Island Map
+            ScrollView([.horizontal, .vertical]) {
+                GameMapCanvasView(
+                    projects: projectIslands,
+                    size: CGSize(width: 1400, height: 900)
+                )
+                .scaleEffect(currentScale)
+                .offset(currentOffset)
+                .frame(width: 1400, height: 900)
             }
-            // --- Revised Gesture Logic --- 
+            .background(
+                // Sky background gradient
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.cyan.opacity(0.3), Color.blue.opacity(0.2)]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
             .gesture(
                 SimultaneousGesture(
                     MagnificationGesture()
                         .onChanged { value in
-                           // Calculate new scale based on gesture value and previous final scale
                            currentScale = finalScale * value
-                           // Clamp during gesture for immediate feedback
                            currentScale = max(0.5, min(currentScale, 3.0))
                         }
                         .onEnded { value in
-                            // Commit the final scale
                             finalScale = currentScale
                         },
                     DragGesture()
                         .onChanged { value in
-                            // Calculate new offset based on gesture translation and previous final offset
                             currentOffset.width = finalOffset.width + value.translation.width
                             currentOffset.height = finalOffset.height + value.translation.height
                         }
                         .onEnded { value in
-                            // Commit the final offset
                             finalOffset = currentOffset
                         }
                 )
             )
-            // -----------------------------
             .navigationTitle("Roadmap")
             .navigationBarTitleDisplayMode(.inline)
-            // Apply consistent navigation bar styling
             .toolbarBackground(.indigo, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar) 
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Roadmap")
+                    Text("Quest Map")
                         .font(.custom(sciFiFont, size: titleFontSize))
                         .fontWeight(.bold)
                         .foregroundColor(Color.theme.titleText)
                 }
-                // Potential future toolbar items (e.g., filter/sort)
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    // Reset zoom button
+                    Button {
+                        withAnimation(.smooth) {
+                            currentScale = 1.0
+                            finalScale = 1.0
+                            currentOffset = .zero
+                            finalOffset = .zero
+                        }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .foregroundColor(Color.theme.titleText)
+                    }
+                }
             }
-            .background(Color.theme.background.ignoresSafeArea())
-            .foregroundColor(Color.theme.text)
         }
     }
     
-    // --- Computed Property for Grouping --- 
-    // --- MODIFIED to handle categories disabled ---
-    private var groupedTasks: [String: [String?: [TodoItem]]] {
-        let categoriesEnabled = UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey)
+    // Convert tasks into project islands
+    private var projectIslands: [ProjectIsland] {
+        let groupedByProject = Dictionary(grouping: todoListStore.items) { item in
+            item.projectOrPath ?? "Unassigned"
+        }
         
-        if categoriesEnabled {
-            // Group by Category, then Project (existing logic)
-            let defaultCategory = "(Uncategorized)"
-            let groupedByCategory = Dictionary(grouping: todoListStore.items) { item in
-                item.category ?? defaultCategory
+        var islands: [ProjectIsland] = []
+        var yOffset: CGFloat = 100
+        var xOffset: CGFloat = 200
+        
+        for (projectName, tasks) in groupedByProject {
+            // Determine project type from first task
+            let projectType = tasks.first?.projectType ?? .personal
+            
+            // Calculate progress
+            let completedTasks = tasks.filter { $0.isDone }.count
+            let totalTasks = tasks.count
+            let progress = totalTasks > 0 ? Double(completedTasks) / Double(totalTasks) : 0.0
+            
+            // Calculate level based on number of tasks
+            let level = min(5, max(1, totalTasks / 3))
+            
+            // Calculate XP (10 points per completed task)
+            let xp = completedTasks * 10
+            
+            // Check for achievements
+            let hasAchievement = completedTasks >= 5 || progress >= 0.8
+            
+            let island = ProjectIsland(
+                id: UUID(),
+                title: projectName,
+                type: projectType,
+                position: CGPoint(x: xOffset, y: yOffset),
+                tasks: tasks,
+                level: level,
+                xp: xp,
+                progress: progress,
+                hasAchievement: hasAchievement
+            )
+            
+            islands.append(island)
+            
+            // Position next island
+            xOffset += 300
+            if xOffset > 1100 {
+                xOffset = 200
+                yOffset += 250
+            }
+        }
+        
+        return islands
+    }
+}
+
+// MARK: - Project Island Model
+struct ProjectIsland: Identifiable {
+    let id: UUID
+    let title: String
+    let type: ProjectType
+    let position: CGPoint
+    let tasks: [TodoItem]
+    let level: Int
+    let xp: Int
+    let progress: Double
+    let hasAchievement: Bool
+}
+
+// MARK: - Game Map Canvas
+struct GameMapCanvasView: View {
+    let projects: [ProjectIsland]
+    let size: CGSize
+    
+    var body: some View {
+        ZStack {
+            // Background islands
+            ForEach(projects) { project in
+                ProjectIslandView(island: project)
             }
             
-            var finalGrouped: [String: [String?: [TodoItem]]] = [:]
-            for (category, itemsInCategory) in groupedByCategory {
-                finalGrouped[category] = Dictionary(grouping: itemsInCategory) { item in
-                    item.projectOrPath // Use optional String? as key
+            // Connecting bridges
+            ForEach(Array(projects.enumerated()), id: \.element.id) { index, project in
+                if index > 0 {
+                    BridgeView(
+                        from: projects[index - 1].position,
+                        to: project.position
+                    )
                 }
             }
-            return finalGrouped
-        } else {
-            // Categories Disabled: Group all under a single key, then by Project
-            let allProjectsGrouped = Dictionary(grouping: todoListStore.items) { item in
-                item.projectOrPath // Use optional String? as key
-            }
-            // Return a dictionary with one entry using a placeholder key
-            return ["(All Projects)": allProjectsGrouped] 
         }
+        .frame(width: size.width, height: size.height)
     }
-    // -------------------------------------------
-    
-    // --- Computed Property for Sorted Top-Level Keys --- 
-    private var sortedTopLevelKeys: [String] {
-        return groupedTasks.keys.sorted()
-    }
-    // --------------------------------------------------
-    
-    // --- Computed Property to check if Categories are enabled ---
-    private var areCategoriesEnabled: Bool {
-        UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey)
-    }
-    // -----------------------------------------------------------
 }
 
-// --- MODIFIED Canvas Drawing Logic (Reverting to Vertical Project Layout) ---
-struct RoadmapCanvasView: View { 
-    let groupedTasks: [String: [String?: [TodoItem]]]
-    let sortedTopLevelKeys: [String]
-    let areCategoriesEnabled: Bool
-    let size: CGSize // Pass size from Canvas
+// MARK: - Project Island View
+struct ProjectIslandView: View {
+    let island: ProjectIsland
+    @State private var isAnimating = false
     
-    // --- REMOVED projectXOffsets State ---
-    // @State private var projectXOffsets: [String: CGFloat] = [:] 
-    // -----------------------------------
-
-    let projectPadding: CGFloat = 30 // Unused now
-
-    // Drawing constants (Adjusted for vertical project layout)
-    let categoryHeaderSpacing: CGFloat = 30
-    let projectHeaderSpacing: CGFloat = 110 // Increased vertical spacing between project headers
-    let projectHeaderIndent: CGFloat = 20 // Indent project headers under category (if enabled)
-    let taskHorizontalSpacing: CGFloat = 75 
-    let taskVerticalOffset: CGFloat = 8
-    let milestoneRadius: CGFloat = 5
-    let taskFontSize: Font = .caption2
-    let doneColor = Color.green // Use green for completed tasks
-    let todoColor = Color.secondary // Keep grey for pending tasks
-    let lineStyle = StrokeStyle(lineWidth: 3.0, lineCap: .round)
-    let headerX: CGFloat = 50 // X position for headers
-    let headerPadding: CGFloat = 4
-    let headerCornerRadius: CGFloat = 6
-    let textRotationAngle = Angle(degrees: 45) // Angle for task text
-    let textPaddingBelowDot: CGFloat = 8 // Padding between dot and start of text
-
     var body: some View {
-        Canvas { context, canvasSize in
-            var currentY: CGFloat = 50 // Tracks the vertical position
-
-            for topLevelKey in sortedTopLevelKeys {
-                // --- Draw Category Header (Conditional) ---
-                if areCategoriesEnabled {
-                    let headerPoint = CGPoint(x: headerX, y: currentY)
-                    let categoryTitle = Text(topLevelKey).font(.title2).bold().foregroundColor(Color.theme.text)
-                    let resolvedCategoryTitle = context.resolve(categoryTitle)
-                    let categoryTitleSize = resolvedCategoryTitle.measure(in: canvasSize)
-                    
-                    // Draw background similar to project headers, but maybe different color
-                    let categoryBackgroundRect = CGRect(x: headerPoint.x - headerPadding,
-                                                        y: headerPoint.y - headerPadding,
-                                                        width: categoryTitleSize.width + headerPadding * 2,
-                                                        height: categoryTitleSize.height + headerPadding * 2)
-                    context.fill(Path(roundedRect: categoryBackgroundRect, cornerRadius: headerCornerRadius), with: .color(Color(.systemGray4)))
-                    
-                    // Draw the text itself
-                    context.draw(resolvedCategoryTitle, at: headerPoint, anchor: .topLeading)
-                    
-                    currentY += categoryTitleSize.height + headerPadding * 2 + categoryHeaderSpacing // Adjust spacing
-                } else {
-                     // If categories are disabled, add some initial top padding
-                     currentY += categoryHeaderSpacing // Use the same spacing for consistency
-                }
-                // -----------------------------------------
-                
-                guard let projectsInGroup = groupedTasks[topLevelKey] else { continue }
-                let sortedProjects = projectsInGroup.keys.sorted { $0 ?? "_" < $1 ?? "_" }
-                
-                // --- Loop through projects VERTICALLY --- 
-                for projectOrPath in sortedProjects {
-                    guard let tasks = projectsInGroup[projectOrPath], !tasks.isEmpty else { continue }
-                    
-                    // --- Determine Project Header X Position --- 
-                    let projectX = areCategoriesEnabled ? headerX + projectHeaderIndent : headerX
-                    // -----------------------------------------
-                    
-                    let projectTitle = projectOrPath ?? "(Unassigned Project)"
-                    let projectHeaderPoint = CGPoint(x: projectX, y: currentY)
-                    
-                    // --- Draw Project Header with Background --- 
-                    let resolvedProjectTitle = context.resolve(Text(projectTitle).font(.headline).foregroundColor(Color.theme.text))
-                    let titleSize = resolvedProjectTitle.measure(in: canvasSize)
-                    let backgroundRect = CGRect(x: projectHeaderPoint.x - headerPadding,
-                                                y: projectHeaderPoint.y - headerPadding,
-                                                width: titleSize.width + headerPadding * 2,
-                                                height: titleSize.height + headerPadding * 2)
-                    context.fill(Path(roundedRect: backgroundRect, cornerRadius: headerCornerRadius), with: .color(Color(.systemGray5)))
-                    context.draw(resolvedProjectTitle, at: projectHeaderPoint, anchor: .topLeading)
-                    // ------------------------------------------
-                    
-                    // Y position for the task dots/line (below header)
-                    let taskY = currentY + titleSize.height + taskVerticalOffset 
-                    
-                    let sortedTasks = tasks.sorted { /* Priority Sort Logic */
-                        guard let p1 = $0.priority else { return false } 
-                        guard let p2 = $1.priority else { return true }  
-                        return p1 < p2 
-                    }
-
-                    // --- Task Drawing Logic (Horizontal Extension) --- 
-                    var taskX = projectX // Start tasks horizontally from the project header X
-                    var previousTaskCenter: CGPoint? = nil
-                    var previousTaskIsDone: Bool = false
-                    var maxTaskTextY: CGFloat = taskY // Track lowest point reached by text in this row
-                    
-                    // --- REMOVE Stagger Text Variable --- 
-                    // let textVerticalSeparation: CGFloat = 10 
-
-                    // --- REMOVE enumerated() --- 
-                    for item in sortedTasks { 
-                        let taskCenter = CGPoint(x: taskX, y: taskY)
-                        let milestonePath = Path(ellipseIn: CGRect(x: taskCenter.x - milestoneRadius, y: taskCenter.y - milestoneRadius, width: milestoneRadius * 2, height: milestoneRadius * 2))
-                        let taskColor = item.isDone ? doneColor : todoColor
-                        context.fill(milestonePath, with: .color(taskColor))
-
-                        // --- Draw Inner Dot for Target Look ---
-                        let innerDotRadius = milestoneRadius * 0.4
-                        let innerDotPath = Path(ellipseIn: CGRect(x: taskCenter.x - innerDotRadius, y: taskCenter.y - innerDotRadius, width: innerDotRadius * 2, height: innerDotRadius * 2))
-                        context.fill(innerDotPath, with: .color(.white))
-                        // -------------------------------------
-
-                        // --- Draw Task Text (Diagonally Rotated) ---
-                        let textDrawPoint = CGPoint(x: taskCenter.x,
-                                                  y: taskCenter.y + milestoneRadius + textPaddingBelowDot)
-
-                        // Translate to origin, rotate, translate back
-                        context.translateBy(x: textDrawPoint.x, y: textDrawPoint.y)
-                        context.rotate(by: textRotationAngle)
-                        context.translateBy(x: -textDrawPoint.x, y: -textDrawPoint.y)
-
-                        let resolvedText = context.resolve(Text(item.text).font(taskFontSize).foregroundColor(Color.theme.text))
-                        let textSize = resolvedText.measure(in: canvasSize) // Measure for layout
-                        // Draw text at the original point, but the context is rotated
-                        context.draw(resolvedText, at: textDrawPoint, anchor: .topLeading)
-
-                        // --- IMPORTANT: Reset transformations --- 
-                        // Apply inverse transformations in reverse order
-                        context.translateBy(x: textDrawPoint.x, y: textDrawPoint.y)
-                        context.rotate(by: -textRotationAngle)
-                        context.translateBy(x: -textDrawPoint.x, y: -textDrawPoint.y)
-                        // --------------------------------------
-
-                        // --- Update Max Y --- 
-                        // Estimate max Y based on unrotated position + buffer, refine if needed
-                        maxTaskTextY = max(maxTaskTextY, textDrawPoint.y + textSize.height + textPaddingBelowDot * 2) // Add extra padding
-                        // -------------------
-                        
-                        // --- Draw Horizontal Connecting Line --- 
-                        if let previousCenter = previousTaskCenter {
-                            var linePath = Path()
-                            linePath.move(to: CGPoint(x: previousCenter.x + milestoneRadius, y: previousCenter.y))
-                            linePath.addLine(to: CGPoint(x: taskCenter.x - milestoneRadius, y: taskCenter.y))
-                            let lineColor = previousTaskIsDone ? doneColor : todoColor
-                            context.stroke(linePath, with: .color(lineColor), style: lineStyle)
-                        }
-                        // -------------------------------------
-                        
-                        previousTaskCenter = taskCenter
-                        previousTaskIsDone = item.isDone 
-                        taskX += taskHorizontalSpacing // Move right for next task dot
-                    }
-                    // --- End Task Drawing --- 
-
-                    // --- Update currentY for the NEXT project --- 
-                    // Base it on the lowest point reached (header or task text) + spacing
-                    currentY = max(currentY + titleSize.height, maxTaskTextY) + projectHeaderSpacing
-                    // -------------------------------------------
-                }
-                // --- End Project Loop ---
-                
-                // Add a bit more space after a category group (if enabled)
-                if areCategoriesEnabled { currentY += categoryHeaderSpacing * 0.5 }
-
+        VStack(spacing: 0) {
+            // Achievement badge
+            if island.hasAchievement {
+                Text("🌟")
+                    .font(.title)
+                    .offset(y: -10)
+                    .scaleEffect(isAnimating ? 1.2 : 1.0)
+                    .animation(.easeInOut(duration: 2.0).repeatForever(), value: isAnimating)
             }
-            // --- End Top Level Key Loop ---
+            
+            // Main island
+            VStack(spacing: 12) {
+                // Header with icon and title
+                HStack {
+                    Text(island.type.icon)
+                        .font(.title)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(island.title)
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.primary)
+                        
+                        Text("Lv \(island.level)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(Color.black.opacity(0.1))
+                            .cornerRadius(8)
+                    }
+                    
+                    Spacer()
+                }
+                
+                // Quest dots (tasks)
+                LazyVGrid(columns: Array(repeating: GridItem(.fixed(16), spacing: 4), count: 8), spacing: 4) {
+                    ForEach(Array(island.tasks.enumerated()), id: \.element.id) { index, task in
+                        Circle()
+                            .fill(task.isDone ? Color.green : Color.white.opacity(0.6))
+                            .frame(width: 12, height: 12)
+                            .overlay(
+                                Circle()
+                                    .stroke(island.typeColor, lineWidth: 2)
+                            )
+                            .overlay(
+                                // Checkmark for completed tasks
+                                Group {
+                                    if task.isDone {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 6, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                            )
+                    }
+                }
+                .padding(.vertical, 4)
+                
+                // Stats
+                HStack(spacing: 16) {
+                    HStack(spacing: 4) {
+                        Text("⚡")
+                        Text("\(island.tasks.filter { $0.isDone }.count)/\(island.tasks.count)")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                    }
+                    
+                    HStack(spacing: 4) {
+                        Text("💎")
+                        Text("\(island.xp) XP")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                    }
+                    
+                    Spacer()
+                }
+                .foregroundColor(.secondary)
+            }
+            .padding(20)
+            .background(
+                // Island gradient background
+                LinearGradient(
+                    gradient: Gradient(colors: [
+                        island.typeColor.opacity(0.3),
+                        island.typeColor.opacity(0.1)
+                    ]),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+            .overlay(
+                // Progress ring
+                Circle()
+                    .trim(from: 0, to: island.progress)
+                    .stroke(
+                        island.typeColor,
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .scaleEffect(1.1)
+                    .opacity(0.8)
+            )
+            .overlay(
+                // Border
+                RoundedRectangle(cornerRadius: 24)
+                    .stroke(island.typeColor, lineWidth: 3)
+            )
+            .cornerRadius(24)
+            .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+            .frame(width: 200, height: 160)
         }
-        // --- REMOVED onAppear reset logic as state was removed --- 
-        // .onAppear { ... }
-        // --------------------------------------------------------
+        .position(island.position)
+        .onAppear {
+            isAnimating = true
+        }
     }
 }
-// ----------------------------------------------------------------------------
+
+// MARK: - Bridge View
+struct BridgeView: View {
+    let from: CGPoint
+    let to: CGPoint
+    
+    var body: some View {
+        Path { path in
+            // Create a curved bridge
+            let midX = (from.x + to.x) / 2
+            let midY = (from.y + to.y) / 2 - 30 // Curve upward
+            
+            path.move(to: from)
+            path.addQuadCurve(to: to, control: CGPoint(x: midX, y: midY))
+        }
+        .stroke(
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.indigo.opacity(0.3),
+                    Color.indigo.opacity(0.6),
+                    Color.indigo.opacity(0.3)
+                ]),
+                startPoint: .leading,
+                endPoint: .trailing
+            ),
+            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+        )
+        .zIndex(-1)
+    }
+}
+
+// MARK: - Extensions
+extension ProjectType {
+    var color: Color {
+        switch self {
+        case .work: return Color("ProjectBlue") // Use your new colors
+        case .personal: return Color("ProjectPurple") 
+        case .health: return Color("ProjectGreen")
+        case .learning: return Color("ProjectYellow")
+        }
+    }
+}
+
+extension ProjectIsland {
+    var typeColor: Color {
+        return type.color
+    }
+}
 
 #Preview {
-    // Provide dummy store for preview if needed
     RoadmapView()
-        // .environmentObject(TodoListStore.shared) // Example if store needed deep state
-} 
+}

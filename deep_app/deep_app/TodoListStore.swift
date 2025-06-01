@@ -429,6 +429,52 @@ class TodoListStore: ObservableObject {
     }
     // ------------------------------------------------
     
+    // --- ADDED: Method to update task short summary ---
+    func updateTaskSummary(taskId: UUID, summary: String?) {
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updateTaskSummary().")
+            return
+        }
+        
+        if let index = items.firstIndex(where: { $0.id == taskId }) {
+            items[index].shortSummary = summary?.isEmpty == true ? nil : summary
+            saveItems()
+            
+            // Sync to CloudKit
+            cloudKitManager.saveTodoItem(items[index])
+            
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [Store]: Updated summary for task to '\(summary ?? "nil")'")
+            }
+        }
+    }
+    
+    // Method to update task summary by description (for AI tools)
+    func updateTaskSummaryByDescription(description: String, summary: String?) {
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            print("DEBUG [Store]: Demo Mode Active: Ignoring updateTaskSummaryByDescription().")
+            return
+        }
+        
+        let trimmedDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let index = items.firstIndex(where: { $0.text.caseInsensitiveCompare(trimmedDescription) == .orderedSame }) {
+            items[index].shortSummary = summary?.isEmpty == true ? nil : summary
+            saveItems()
+            
+            // Sync to CloudKit
+            cloudKitManager.saveTodoItem(items[index])
+            
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [Store]: Updated summary for '\(trimmedDescription)' to '\(summary ?? "nil")'")
+            }
+        } else {
+            if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+                print("DEBUG [Store]: Task '\(trimmedDescription)' not found for summary update.")
+            }
+        }
+    }
+    // ------------------------------------------------
+    
     // --- ADDED: Method to mark a task complete by description ---
     @discardableResult
     func markTaskComplete(description: String) async -> Bool {

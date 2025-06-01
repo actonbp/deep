@@ -320,6 +320,18 @@ class OpenAIService {
             required: ["taskDescription"]
         )
     )
+    
+    private let generateTaskSummaryToolDefinition = FunctionDefinition(
+        name: "generateTaskSummary",
+        description: "Generates a short (3-5 word) summary for a task. Useful for long task descriptions that need concise display on the roadmap.",
+        parameters: .init(
+            properties: [
+                "taskDescription": .init(type: "string", description: "The full task description to summarize.", items: nil),
+                "summary": .init(type: "string", description: "A short 3-5 word summary of the task. Should capture the essence of the task.", items: nil)
+            ],
+            required: ["taskDescription", "summary"]
+        )
+    )
     // ----------------------------------------------
 
     // Combined list of all available tools (now as Tool structs)
@@ -339,7 +351,8 @@ class OpenAIService {
             .init(function: updateTaskDifficultyToolDefinition), // <-- ADDED difficulty tool
             // --- ADDED Roadmap Tools ---
             .init(function: updateTaskCategoryToolDefinition),
-            .init(function: updateTaskProjectOrPathToolDefinition)
+            .init(function: updateTaskProjectOrPathToolDefinition),
+            .init(function: generateTaskSummaryToolDefinition)
             // -------------------------
         ]
     }

@@ -152,12 +152,12 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             
         if areCategoriesEnabled {
             systemPromptContent += "\nTasks have metadata: `priority`, `estimatedDuration`, `difficulty` (Low, Medium, High), `dateCreated`, `category` (string), and `projectOrPath` (string)."
-            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath, category), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskCategory', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime'."
-            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project/category if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`category`, `projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskCategory`, `updateTaskProjectOrPath`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked."
+            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath, category), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskCategory', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime', 'generateTaskSummary'."
+            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project/category if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`category`, `projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskCategory`, `updateTaskProjectOrPath`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked.\n14. **Task Summaries:** For tasks with descriptions longer than 40 characters, proactively generate a 3-5 word summary using 'generateTaskSummary'. This helps the roadmap view stay readable. Only generate summaries for tasks that don't already have one."
         } else {
             systemPromptContent += "\nTasks have metadata: `priority`, `estimatedDuration`, `difficulty` (Low, Medium, High), `dateCreated`, and `projectOrPath` (string, e.g., Paper XYZ, LEAD 552)."
-            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime'."
-            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskProjectOrPath`, `updateTaskDifficulty`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked."
+            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime', 'generateTaskSummary'."
+            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskProjectOrPath`, `updateTaskDifficulty`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked.\n14. **Task Summaries:** For tasks with descriptions longer than 40 characters, proactively generate a 3-5 word summary using 'generateTaskSummary'. This helps the roadmap view stay readable. Only generate summaries for tasks that don't already have one."
         }
         
         // Remove existing system message if it exists
@@ -365,6 +365,8 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
                             responseItem = await self.handleUpdateTaskCategoryToolCall(id: id, functionName: functionName, arguments: arguments)
                         case "updateTaskProjectOrPath":
                             responseItem = await self.handleUpdateTaskProjectOrPathToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "generateTaskSummary":
+                            responseItem = await self.handleGenerateTaskSummaryToolCall(id: id, functionName: functionName, arguments: arguments)
                         default:
                             // Handle unknown tool call
                             print("Warning: Received unknown tool call: \(functionName)")
@@ -883,6 +885,31 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         todoListStore.updateTaskProjectOrPath(description: taskDescription, projectOrPath: projectOrPath)
         
         let responseContent = "Project/path for task '\(taskDescription)' updated to \(projectOrPath ?? "none")."
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -------------------------------------------
+    
+    // --- Handler for generateTaskSummary function call ---
+    private func handleGenerateTaskSummaryToolCall(id: String, functionName: String = "generateTaskSummary", arguments: String) async -> ChatMessageItem {
+        struct GenerateTaskSummaryArgs: Decodable {
+            let taskDescription: String
+            let summary: String
+        }
+        
+        guard let decodedArgs = try? JSONDecoder().decode(GenerateTaskSummaryArgs.self, from: arguments.data(using: .utf8)!) else {
+            print("Error: Failed to decode arguments for generateTaskSummary: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for generateTaskSummary. Expected taskDescription and summary.\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
+            print("DEBUG [ViewModel]: Generating summary for task '\(decodedArgs.taskDescription)': '\(decodedArgs.summary)'") 
+        }
+        
+        // Update the task summary in the store
+        todoListStore.updateTaskSummaryByDescription(description: decodedArgs.taskDescription, summary: decodedArgs.summary)
+        
+        let responseContent = "Summary for task '\(decodedArgs.taskDescription)' set to: '\(decodedArgs.summary)'"
         return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
     }
     // -------------------------------------------

@@ -16,6 +16,36 @@ enum Difficulty: String, Codable, CaseIterable, Identifiable {
     
     var id: String { self.rawValue }
 }
+
+// --- ADDED: ProjectType Enum for Gamified Roadmap ---
+enum ProjectType: String, Codable, CaseIterable, Identifiable {
+    case work = "Work"
+    case personal = "Personal"
+    case health = "Health"
+    case learning = "Learning"
+    
+    var id: String { self.rawValue }
+    
+    // Icon for each project type
+    var icon: String {
+        switch self {
+        case .work: return "💼"
+        case .personal: return "🚀"
+        case .health: return "💚"
+        case .learning: return "📚"
+        }
+    }
+    
+    // Color for each project type
+    var colorName: String {
+        switch self {
+        case .work: return "ProjectBlue"
+        case .personal: return "ProjectPurple" 
+        case .health: return "ProjectGreen"
+        case .learning: return "ProjectYellow"
+        }
+    }
+}
 // ------------------------------
 
 // Define the structure for a To-Do item
@@ -30,10 +60,12 @@ struct TodoItem: Identifiable, Codable {
     // --- Roadmap Metadata ---
     var category: String? = nil // e.g., "Research", "Teaching", "Life"
     var projectOrPath: String? = nil // e.g., "Paper XYZ", "LEAD 552"
+    var shortSummary: String? = nil // e.g., "Call dentist" for "Call dentist to schedule cleaning appointment for next month"
+    var projectType: ProjectType? = nil // e.g., .work, .personal, .health, .learning
     // ------------------------
     
     // --- Corrected Custom Init (only assigns properties not already defaulted) ---
-    init(id: UUID = UUID(), text: String, isDone: Bool = false, priority: Int? = nil, estimatedDuration: String? = nil, dateCreated: Date = Date(), difficulty: Difficulty? = nil, category: String? = nil, projectOrPath: String? = nil) {
+    init(id: UUID = UUID(), text: String, isDone: Bool = false, priority: Int? = nil, estimatedDuration: String? = nil, dateCreated: Date = Date(), difficulty: Difficulty? = nil, category: String? = nil, projectOrPath: String? = nil, shortSummary: String? = nil, projectType: ProjectType? = nil) {
         self.id = id // Assign the provided or default ID
         self.text = text
         self.isDone = isDone
@@ -44,6 +76,8 @@ struct TodoItem: Identifiable, Codable {
         // --- Assign Roadmap Metadata ---
         self.category = category
         self.projectOrPath = projectOrPath
+        self.shortSummary = shortSummary
+        self.projectType = projectType
         // -----------------------------
     }
     // ------------------------------------------------------------------------
@@ -52,7 +86,7 @@ struct TodoItem: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, text, isDone, priority, estimatedDuration, dateCreated, difficulty
         // --- Add Roadmap Keys ---
-        case category, projectOrPath
+        case category, projectOrPath, shortSummary, projectType
         // -----------------------
     }
     
@@ -69,6 +103,8 @@ struct TodoItem: Identifiable, Codable {
         // --- Decode Roadmap Metadata ---
         category = try container.decodeIfPresent(String.self, forKey: .category)
         projectOrPath = try container.decodeIfPresent(String.self, forKey: .projectOrPath)
+        shortSummary = try container.decodeIfPresent(String.self, forKey: .shortSummary)
+        projectType = try container.decodeIfPresent(ProjectType.self, forKey: .projectType)
         // -----------------------------
     }
     
@@ -85,9 +121,33 @@ struct TodoItem: Identifiable, Codable {
         // --- Encode Roadmap Metadata ---
         try container.encodeIfPresent(category, forKey: .category)
         try container.encodeIfPresent(projectOrPath, forKey: .projectOrPath)
+        try container.encodeIfPresent(shortSummary, forKey: .shortSummary)
+        try container.encodeIfPresent(projectType, forKey: .projectType)
         // -----------------------------
     }
     // -------------------------------------
+}
+
+// Extension to provide display text for roadmap
+extension TodoItem {
+    // Get text for roadmap display (prefers short summary, falls back to truncated text)
+    var roadmapDisplayText: String {
+        if let summary = shortSummary, !summary.isEmpty {
+            return summary
+        } else {
+            // Truncate long text to ~30 characters
+            let maxLength = 30
+            if text.count > maxLength {
+                return String(text.prefix(maxLength)) + "..."
+            }
+            return text
+        }
+    }
+    
+    // Helper to check if task needs a summary
+    var needsSummary: Bool {
+        shortSummary == nil && text.count > 40
+    }
 }
 
 // Main View hosting the TabView
@@ -225,215 +285,21 @@ struct TodoListView: View {
         return projects.sorted()
     }
     // -----------------------------------------------------
+    
+    // Computed property for sorted items
+    private var sortedItems: [TodoItem] {
+        todoListStore.items.sorted { 
+            guard let p1 = $0.priority else { return false }
+            guard let p2 = $1.priority else { return true }
+            return p1 < p2 
+        }
+    }
 
     var body: some View {
         NavigationView { 
             VStack {
-                // --- Input Bar --- 
-                HStack {
-                    TextField("Enter new item", text: $newItemText)
-                        .textFieldStyle(.plain) // Use plain style
-                        .padding(.vertical, 8) // Add some vertical padding
-                    
-                    Spacer() // Push button to the right
-
-                    Button {
-                        todoListStore.addItem(text: newItemText)
-                        newItemText = "" 
-                    } label: {
-                        Image(systemName: "plus.circle.fill") // Use an icon button
-                            .font(.title2)
-                    }
-                    .disabled(newItemText.isEmpty)
-                    .foregroundColor(Color.theme.accent)
-                    .buttonStyle(.borderless) // Use borderless style
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 5) // Less vertical padding for the bar itself
-                .background(Color(UIColor.systemGray6)) // Subtle background
-                .cornerRadius(10)
-                .padding(.horizontal) // Padding around the bar
-                .padding(.top, 5) // Padding from the top edge / title
-                // ---------------
-
-                List { // Display the list of items from the store
-                    // Sort items by priority (nil is lowest), then alphabetically
-                    ForEach(todoListStore.items.sorted { 
-                        // Handle nil priorities: non-nil priority comes before nil
-                        guard let p1 = $0.priority else { return false } // item 1 has nil priority, sort it last
-                        guard let p2 = $1.priority else { return true }  // item 2 has nil priority, sort item 1 first
-                        // Both have non-nil priority, sort numerically
-                        return p1 < p2 
-                    }) { item in // Iterate over sorted items
-                        // --- Wrap Row Content in VStack for Expandability --- 
-                        VStack(alignment: .leading, spacing: 4) { // Added spacing
-                            // --- Main Tappable Row Content --- 
-                            HStack(spacing: 15) { 
-                                // Tappable Done/Undone Icon
-                                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                                    .resizable()
-                                    .frame(width: 24, height: 24) 
-                                    .foregroundColor(item.isDone ? Color.theme.accent : Color.theme.secondaryText)
-                                    .onTapGesture { 
-                                         // Allow toggling done even when expanded
-                                        todoListStore.toggleDone(item: item)
-                                    }
-                                
-                                // Text, Priority, Duration 
-                                VStack(alignment: .leading, spacing: 2) { 
-                                    if let priority = item.priority {
-                                        Text("(\(priority))")
-                                            .font(.caption)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(Color.theme.accent)
-                                    }
-                                    Text(item.text)
-                                        .strikethrough(item.isDone, color: .gray) 
-                                        .foregroundColor(item.isDone ? Color.theme.secondaryText : Color.theme.text) 
-                                    
-                                    if let duration = item.estimatedDuration, !duration.isEmpty {
-                                        Text(duration)
-                                            .font(.caption2)
-                                            .foregroundColor(Color.theme.secondaryText)
-                                            .padding(.leading, item.priority == nil ? 0 : 5) 
-                                    }
-                                } 
-                                Spacer()
-                            }
-                            .contentShape(Rectangle()) // Make the whole HStack tappable area
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) { // Add animation
-                                    // --- Save changes when collapsing --- 
-                                    if let currentlyExpanded = expandedItemId,
-                                       let expandedIndex = todoListStore.items.firstIndex(where: { $0.id == currentlyExpanded }) {
-                                        // Only update if text actually changed to avoid unnecessary saves
-                                        let currentItem = todoListStore.items[expandedIndex]
-                                        if currentItem.category ?? "" != editingCategory || currentItem.projectOrPath ?? "" != editingProject {
-                                            print("DEBUG [TodoView]: Saving edits for \(currentItem.text)")
-                                            todoListStore.updateTaskCategory(description: currentItem.text, category: editingCategory)
-                                            todoListStore.updateTaskProjectOrPath(description: currentItem.text, projectOrPath: editingProject)
-                                        }
-                                    }
-                                    // ----------------------------------
-                                    
-                                    if expandedItemId == item.id {
-                                        expandedItemId = nil // Collapse
-                                    } else {
-                                        expandedItemId = item.id // Expand this item
-                                        // --- Load current data into editing state --- 
-                                        editingCategory = item.category ?? ""
-                                        editingProject = item.projectOrPath ?? ""
-                                        // --------------------------------------
-                                    }
-                                }
-                            }
-                            // -----------------------------------
-                            
-                            // --- Expanded Metadata Section ---
-                            if expandedItemId == item.id {
-                                // --- Use VStack for editable fields --- 
-                                VStack(alignment: .leading, spacing: 8) { 
-                                    // --- Conditionally Show Category Field --- 
-                                    if UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey) {
-                                        HStack {
-                                            Text("Category:").font(.caption).foregroundColor(.gray).frame(width: 70, alignment: .leading)
-                                            TextField("None", text: $editingCategory)
-                                                .font(.caption)
-                                                .textFieldStyle(.roundedBorder)
-                                                .onSubmit { saveEdits(for: item) } // Save on submit
-                                        }
-                                    }
-                                    // -----------------------------------------
-                                    // --- Project/Path Picker + New Button --- 
-                                    HStack {
-                                        Text("Project/Path:")
-                                            .font(.caption)
-                                            .foregroundColor(Color.theme.secondaryText)
-                                            .frame(width: 90, alignment: .leading) // Align labels
-                                        
-                                        Picker("Project/Path", selection: $editingProject) {
-                                            Text("Unassigned").tag("") // Option for no project
-                                            // Use the modified list for the picker options
-                                            ForEach(existingProjectsForPicker, id: \.self) { project in
-                                                Text(project).tag(project)
-                                            }
-                                        }
-                                        .pickerStyle(.menu)
-                                        .tint(Color.theme.text) // Match other controls
-                                        
-                                        Button {
-                                            showingNewProjectAlert = true
-                                            newProjectName = "" // Clear previous entry
-                                        } label: {
-                                            Image(systemName: "plus.circle")
-                                        }
-                                        .buttonStyle(.borderless)
-                                        .foregroundColor(Color.theme.accent)
-                                    }
-                                    .padding(.bottom, 10) // More bottom padding
-                                    // ----------------------------------------
-                                    
-                                    // --- RE-ADD Other Metadata Display --- 
-                                    // Difficulty
-                                    if let difficulty = item.difficulty {
-                                        HStack(spacing: 5) { 
-                                            Image(systemName: "gauge.medium") 
-                                            Text("Effort: \(difficulty.rawValue)")
-                                        }
-                                        .font(.caption)
-                                        .foregroundColor(Color.theme.secondaryText)
-                                    }
-                                    
-                                    // Estimated Duration (already displayed in main row, maybe omit here? Or display again)
-                                    /* // Example if we wanted to show duration again here
-                                    if let duration = item.estimatedDuration, !duration.isEmpty {
-                                        HStack(spacing: 5) { 
-                                            Image(systemName: "clock") 
-                                            Text("Est: \(duration)")
-                                        }
-                                        .font(.caption)
-                                        .foregroundColor(Color.theme.secondaryText)
-                                    }
-                                    */
-                                    
-                                    // Date Created
-                                    HStack(spacing: 5) { 
-                                        Image(systemName: "calendar") 
-                                        Text("Created: \(item.dateCreated, formatter: dateFormatter)")
-                                    }
-                                    .font(.caption)
-                                    .foregroundColor(Color.theme.secondaryText)
-                                    // ---------------------------------------
-                                }
-                                .padding(.leading, 39) // Indent metadata section consistently
-                                .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top))) // Add transition
-                            }
-                            // -----------------------------------
-                        }
-                        // --- End Row VStack ---
-                        .padding(.vertical, 4) 
-                        .listRowSeparator(.hidden) 
-                        .swipeActions(edge: .leading) { 
-                            Button {
-                                todoListStore.toggleDone(item: item)
-                            } label: {
-                                Label(item.isDone ? "Mark Undone" : "Mark Done", systemImage: item.isDone ? "arrow.uturn.backward.circle.fill" : "checkmark.circle.fill")
-                            }
-                            .tint(item.isDone ? Color.theme.secondaryText : Color.theme.done)
-                        }
-                        .swipeActions(edge: .trailing) { // Swipe from right (trailing edge)
-                            Button(role: .destructive) {
-                                todoListStore.deleteItem(item: item) // Use new single item delete
-                            } label: {
-                                Label("Delete", systemImage: "trash.fill")
-                            }
-                        }
-                    }
-                    .onMove(perform: moveItems) // Keep .onMove for drag-reorder
-                }
-                .listStyle(PlainListStyle())
-                .background(Color.theme.background)
-                .foregroundColor(Color.theme.text)
+                inputBar
+                taskList
             }
             .background(Color.theme.background.ignoresSafeArea())
             .foregroundColor(Color.theme.text)
@@ -449,53 +315,94 @@ struct TodoListView: View {
                         .foregroundColor(Color.theme.titleText)
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
-                    // Manual refresh button
-                    Button {
-                        Task {
-                            await refreshFromCloudKit()
-                        }
-                    } label: {
-                        Image(systemName: "arrow.clockwise.icloud")
-                            .foregroundColor(Color.theme.accent)
-                    }
-                    
+                    refreshButton
                     EditButton().foregroundColor(Color.theme.accent)
                 }
             }
-            // --- Apply background color and ensure visibility --- 
             .toolbarBackground(.indigo, for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar) // Keep this to suggest light status bar items
-            // -----------------------------------------------------
-            // --- ADDED: Alert for New Project ---
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .alert("New Project", isPresented: $showingNewProjectAlert) {
                 TextField("Project Name", text: $newProjectName)
                     .autocapitalization(.words)
                 Button("Cancel", role: .cancel) { }
                 Button("Add") {
                     if !newProjectName.isEmpty {
-                        // Update the editing state directly
                         editingProject = newProjectName 
-                        // If we want this to be immediately reflected in the store 
-                        // for the expanded item, we'd need access to the item's ID here.
-                        // For now, rely on the collapse logic to save.
                     }
                 }
             } message: {
                 Text("Enter the name for the new project.")
             }
-            // -------------------------------------
+        }
+    }
+    
+    private var inputBar: some View {
+        HStack {
+            TextField("Enter new item", text: $newItemText)
+                .textFieldStyle(.plain)
+                .padding(.vertical, 8)
+            
+            Spacer()
+
+            Button {
+                todoListStore.addItem(text: newItemText)
+                newItemText = "" 
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.title2)
+            }
+            .disabled(newItemText.isEmpty)
+            .foregroundColor(Color.theme.accent)
+            .buttonStyle(.borderless)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 5)
+        .background(Color(UIColor.systemGray6))
+        .cornerRadius(10)
+        .padding(.horizontal)
+        .padding(.top, 5)
+    }
+    
+    private var taskList: some View {
+        List {
+            ForEach(sortedItems) { item in
+                TaskRowView(
+                    item: item,
+                    expandedItemId: $expandedItemId,
+                    editingCategory: $editingCategory,
+                    editingProject: $editingProject,
+                    showingNewProjectAlert: $showingNewProjectAlert,
+                    newProjectName: $newProjectName,
+                    existingProjectsForPicker: existingProjectsForPicker,
+                    dateFormatter: dateFormatter,
+                    todoListStore: todoListStore,
+                    saveEdits: saveEdits,
+                    playSound: playSound
+                )
+            }
+            .onMove(perform: moveItems)
+        }
+        .listStyle(PlainListStyle())
+        .background(Color.theme.background)
+        .foregroundColor(Color.theme.text)
+    }
+    
+    private var refreshButton: some View {
+        Button {
+            Task {
+                await refreshFromCloudKit()
+            }
+        } label: {
+            Image(systemName: "arrow.clockwise.icloud")
+                .foregroundColor(Color.theme.accent)
         }
     }
     
     // --- ADDED: Function to handle moving items in the list --- 
     private func moveItems(from source: IndexSet, to destination: Int) {
         // 1. Get the current sorted list as displayed
-        var orderedItems = todoListStore.items.sorted { 
-            guard let p1 = $0.priority else { return false } 
-            guard let p2 = $1.priority else { return true }  
-            return p1 < p2 
-        }
+        var orderedItems = sortedItems
         
         // 2. Perform the move on this mutable copy
         orderedItems.move(fromOffsets: source, toOffset: destination)
@@ -522,11 +429,210 @@ struct TodoListView: View {
         // hideKeyboard()
     }
     
+    // --- Function to play sound --- 
+    func playSound(sound: String) {
+        // Simple implementation - can be enhanced
+        print("Playing sound: \(sound)")
+    }
+    
     // Manual refresh from CloudKit
     private func refreshFromCloudKit() async {
         await todoListStore.manualRefreshFromCloudKit()
     }
     // ---------------------------------------------
+}
+
+// Separate view for task rows to reduce complexity
+struct TaskRowView: View {
+    let item: TodoItem
+    @Binding var expandedItemId: UUID?
+    @Binding var editingCategory: String
+    @Binding var editingProject: String
+    @Binding var showingNewProjectAlert: Bool
+    @Binding var newProjectName: String
+    let existingProjectsForPicker: [String]
+    let dateFormatter: DateFormatter
+    let todoListStore: TodoListStore
+    let saveEdits: (TodoItem) -> Void
+    let playSound: (String) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            mainRowContent
+            
+            if expandedItemId == item.id {
+                expandedContent
+            }
+        }
+        .padding(.vertical, 4)
+        .listRowSeparator(.hidden)
+        .swipeActions(edge: .leading) { 
+            Button {
+                // Add haptic feedback on task completion
+                let impact = UIImpactFeedbackGenerator(style: .light)
+                impact.impactOccurred()
+                
+                todoListStore.toggleDone(item: item)
+                
+                // Play sound if task is being completed (not undone)
+                if !item.isDone {
+                    playSound("task_complete.wav")
+                }
+            } label: {
+                Label(item.isDone ? "Mark Undone" : "Mark Done", systemImage: item.isDone ? "arrow.uturn.backward.circle.fill" : "checkmark.circle.fill")
+            }
+            .tint(item.isDone ? Color.theme.secondaryText : Color.theme.done)
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                todoListStore.deleteItem(item: item)
+            } label: {
+                Label("Delete", systemImage: "trash.fill")
+            }
+        }
+    }
+    
+    private var mainRowContent: some View {
+        HStack(spacing: 15) { 
+            // Tappable Done/Undone Icon
+            Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                .resizable()
+                .frame(width: 24, height: 24) 
+                .foregroundColor(item.isDone ? Color.theme.accent : Color.theme.secondaryText)
+                .onTapGesture { 
+                    todoListStore.toggleDone(item: item)
+                }
+            
+            // Text, Priority, Duration 
+            VStack(alignment: .leading, spacing: 2) { 
+                if let priority = item.priority {
+                    Text("(\(priority))")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(Color.theme.accent)
+                }
+                Text(item.text)
+                    .strikethrough(item.isDone, color: .gray) 
+                    .foregroundColor(item.isDone ? Color.theme.secondaryText : Color.theme.text) 
+                
+                if let duration = item.estimatedDuration, !duration.isEmpty {
+                    Text(duration)
+                        .font(.caption2)
+                        .foregroundColor(Color.theme.secondaryText)
+                        .padding(.leading, item.priority == nil ? 0 : 5) 
+                }
+            } 
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                handleTap()
+            }
+        }
+    }
+    
+    private var expandedContent: some View {
+        VStack(alignment: .leading, spacing: 8) { 
+            // Category field (conditional)
+            if UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey) {
+                HStack {
+                    Text("Category:").font(.caption).foregroundColor(.gray).frame(width: 70, alignment: .leading)
+                    TextField("None", text: $editingCategory)
+                        .font(.caption)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit { saveEdits(item) }
+                }
+            }
+            
+            // Summary field
+            HStack {
+                Text("Summary:").font(.caption).foregroundColor(.gray).frame(width: 70, alignment: .leading)
+                TextField("Short summary for roadmap", text: Binding(
+                    get: { item.shortSummary ?? "" },
+                    set: { newValue in
+                        todoListStore.updateTaskSummary(taskId: item.id, summary: newValue.isEmpty ? nil : newValue)
+                    }
+                ))
+                .font(.caption)
+                .textFieldStyle(.roundedBorder)
+                .onSubmit { saveEdits(item) }
+            }
+            if item.needsSummary {
+                Text("Tip: Add a 3-5 word summary for better roadmap display")
+                    .font(.caption2)
+                    .foregroundColor(.orange)
+                    .padding(.leading, 75)
+            }
+            
+            // Project picker
+            HStack {
+                Text("Project/Path:")
+                    .font(.caption)
+                    .foregroundColor(Color.theme.secondaryText)
+                    .frame(width: 90, alignment: .leading)
+                
+                Picker("Project/Path", selection: $editingProject) {
+                    Text("Unassigned").tag("")
+                    ForEach(existingProjectsForPicker, id: \.self) { project in
+                        Text(project).tag(project)
+                    }
+                }
+                .pickerStyle(.menu)
+                .tint(Color.theme.text)
+                
+                Button {
+                    showingNewProjectAlert = true
+                    newProjectName = ""
+                } label: {
+                    Image(systemName: "plus.circle")
+                }
+                .buttonStyle(.borderless)
+                .foregroundColor(Color.theme.accent)
+            }
+            .padding(.bottom, 10)
+            
+            // Metadata display
+            if let difficulty = item.difficulty {
+                HStack(spacing: 5) { 
+                    Image(systemName: "gauge.medium") 
+                    Text("Effort: \(difficulty.rawValue)")
+                }
+                .font(.caption)
+                .foregroundColor(Color.theme.secondaryText)
+            }
+            
+            HStack(spacing: 5) { 
+                Image(systemName: "calendar") 
+                Text("Created: \(item.dateCreated, formatter: dateFormatter)")
+            }
+            .font(.caption)
+            .foregroundColor(Color.theme.secondaryText)
+        }
+        .padding(.leading, 39)
+        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+    }
+    
+    private func handleTap() {
+        // Save changes when collapsing
+        if let currentlyExpanded = expandedItemId,
+           let expandedIndex = todoListStore.items.firstIndex(where: { $0.id == currentlyExpanded }) {
+            let currentItem = todoListStore.items[expandedIndex]
+            if currentItem.category ?? "" != editingCategory || currentItem.projectOrPath ?? "" != editingProject {
+                print("DEBUG [TodoView]: Saving edits for \(currentItem.text)")
+                todoListStore.updateTaskCategory(description: currentItem.text, category: editingCategory)
+                todoListStore.updateTaskProjectOrPath(description: currentItem.text, projectOrPath: editingProject)
+            }
+        }
+        
+        if expandedItemId == item.id {
+            expandedItemId = nil
+        } else {
+            expandedItemId = item.id
+            editingCategory = item.category ?? ""
+            editingProject = item.projectOrPath ?? ""
+        }
+    }
 }
 
 #Preview {

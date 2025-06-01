@@ -49,9 +49,14 @@ This allows for a seamless experience where task capture, planning, and calendar
 *   **Google Calendar Integration:**
     *   Secure Google Sign-In authentication.
     *   View today's calendar events in a dedicated tab.
-*   **Roadmap View:**
-    *   Visual organization of tasks by category and project.
-    *   Progress tracking with completion indicators.
+*   **🎮 Gamified Roadmap View:**
+    *   Interactive "quest map" visualization with project islands.
+    *   Tasks displayed as quest dots with progress rings around islands.
+    *   Level system (Lv 1-5) based on project complexity.
+    *   XP system (10 points per completed task).
+    *   Achievement badges for major milestones.
+    *   Zoom/pan controls for exploration.
+    *   Beautiful sky gradient background with connecting bridges.
 *   **Notes/Scratchpad:**
     *   Quick capture for ideas and notes.
     *   Local persistence.
@@ -67,7 +72,6 @@ This allows for a seamless experience where task capture, planning, and calendar
 
 *   **Enhanced CloudKit Sync:**
     *   Real-time sync without app restart.
-    *   Sync status indicators.
     *   Notes/Scratchpad sync.
     *   Conflict resolution for simultaneous edits.
 *   **Calendar Creation Enhancement:** Allow AI to create events based on time blocking suggestions.
