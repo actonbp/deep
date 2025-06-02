@@ -243,7 +243,7 @@ struct MessageBubble: View {
             
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
                 Text(message.content ?? "")
-                    .font(.system(.body, design: .rounded))
+                    .font(.system(.callout, design: .rounded))
                     .padding(16)
                     .background(
                         message.role == .user ? 

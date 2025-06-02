@@ -582,9 +582,9 @@ struct TaskRowView: View {
             // Project picker
             HStack {
                 Text("Project/Path:")
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundColor(Color.theme.secondaryText)
-                    .frame(width: 90, alignment: .leading)
+                    .frame(width: 80, alignment: .leading)
                 
                 Picker("Project/Path", selection: $editingProject) {
                     Text("Unassigned").tag("")
@@ -593,6 +593,7 @@ struct TaskRowView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .font(.caption)
                 .tint(Color.theme.text)
                 
                 Button {

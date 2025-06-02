@@ -45,28 +45,35 @@ struct TodayCalendarView: View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .refreshable { loadEvents() } // Allow refresh even when empty
                     } else {
-                        // --- Timeline View --- 
-                        GeometryReader { geometry in
-                            ScrollView {
-                                ZStack(alignment: .topLeading) {
-                                    TimelineBackground(startHour: startHour, endHour: endHour, hourHeight: hourHeight)
-                                    
-                                    // --- Draw Event Blocks ---
-                                    ForEach(events) { event in
-                                        // Skip events without a start date for positioning
-                                        if let startDate = event.startDate {
-                                            EventBlockView(event: event)
-                                                .frame(height: height(for: event))
-                                                .offset(x: 60, y: yOffset(for: startDate)) // Offset X to align past hour labels
-                                                .padding(.trailing, 10) // Add some trailing padding
-                                        }
-                                    }
-                                    // ------------------------
-                                }
-                                .frame(width: geometry.size.width)
+                        // --- Modern Timeline View ---
+                        VStack(spacing: 0) {
+                            // Date Header
+                            HStack {
+                                Text("Today • \(formattedDate())")
+                                    .font(.system(.title3, design: .rounded))
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(Color.theme.titleText)
+                                Spacer()
                             }
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+                            .padding(.bottom, 16)
+                            
+                            // Timeline
+                            ScrollView {
+                                LazyVStack(spacing: 0) {
+                                    ForEach(startHour..<endHour, id: \.self) { hour in
+                                        TimeSlotView(
+                                            hour: hour,
+                                            events: eventsForHour(hour),
+                                            hourHeight: hourHeight
+                                        )
+                                    }
+                                }
+                                .padding(.horizontal)
+                            }
+                            .refreshable { loadEvents() }
                         }
-                        .refreshable { loadEvents() } // Add pull-to-refresh to ScrollView
                         // ---------------------
                     }
                 } else {
@@ -84,7 +91,7 @@ struct TodayCalendarView: View {
                     }
                 }
             }
-            .background(Color(UIColor.systemGray6).ignoresSafeArea())
+            .background(Color.white.ignoresSafeArea())
             .navigationTitle("Today's Calendar")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -152,6 +159,22 @@ struct TodayCalendarView: View {
         
         return (clampedDuration / 60.0) * hourHeight
     }
+    
+    // Helper functions for the modern calendar view
+    private func formattedDate() -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM d, yyyy"
+        return formatter.string(from: Date())
+    }
+    
+    private func eventsForHour(_ hour: Int) -> [CalendarEvent] {
+        return events.filter { event in
+            guard let startDate = event.startDate else { return false }
+            let calendar = Calendar.current
+            let eventHour = calendar.component(.hour, from: startDate)
+            return eventHour == hour
+        }
+    }
     // ----------------------------------
 
     // Function to load events from the service
@@ -203,78 +226,116 @@ struct TodayCalendarView: View {
     }
 }
 
-// --- Timeline Background View ---
-struct TimelineBackground: View {
-    let startHour: Int
-    let endHour: Int
+// --- Modern Time Slot View ---
+struct TimeSlotView: View {
+    let hour: Int
+    let events: [CalendarEvent]
     let hourHeight: CGFloat
-
+    
     var body: some View {
-        VStack(spacing: 0) {
-            ForEach(startHour..<endHour, id: \.self) { hour in
-                HStack(alignment: .top, spacing: 5) {
-                    // Hour Label
-                    Text(hourLabel(hour))
-                        .font(.system(.caption, design: .rounded))
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
-                        .frame(width: 50, alignment: .trailing) // Fixed width for labels
-                        
-                    // Horizontal Line
+        HStack(alignment: .top, spacing: 16) {
+            // Time Label
+            Text(hourLabel(hour))
+                .font(.system(.subheadline, design: .rounded))
+                .fontWeight(.medium)
+                .foregroundColor(Color.theme.secondaryText)
+                .frame(width: 60, alignment: .trailing)
+            
+            // Event Content Area
+            VStack(spacing: 8) {
+                if events.isEmpty {
+                    // Empty time slot
                     Rectangle()
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 1)
+                        .fill(Color.clear)
+                        .frame(height: max(hourHeight - 16, 44))
+                        .overlay(
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.15))
+                                .frame(height: 1),
+                            alignment: .top
+                        )
+                } else {
+                    // Events for this hour
+                    ForEach(events) { event in
+                        ModernEventBlockView(event: event)
+                    }
                 }
-                .frame(height: hourHeight) // Set height for the hour block
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .padding(.vertical, 4)
     }
-
+    
     private func hourLabel(_ hour: Int) -> String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "h a" // Format like "7 AM", "1 PM"
+        formatter.dateFormat = "h:mm"
         if let date = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date()) {
             return formatter.string(from: date)
         } else {
-            return "\(hour):00" // Fallback
+            return "\(hour):00"
         }
     }
 }
-// -------------------------------
 
-// --- View for a Single Event Block ---
-struct EventBlockView: View {
+// --- Modern Event Block View ---
+struct ModernEventBlockView: View {
     let event: CalendarEvent
-
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(event.summary ?? "(No Title)")
-                .font(.system(.footnote, design: .rounded))
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
+        HStack(spacing: 12) {
+            // Color accent bar
+            Rectangle()
+                .fill(eventColor)
+                .frame(width: 4)
+                .cornerRadius(2)
             
-            // Add time if available
-            if let startDate = event.startDate, let endDate = event.endDate {
-                HStack {
-                    Text("\(timeString(from: startDate)) - \(timeString(from: endDate))")
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundColor(.white.opacity(0.8))
-                    Spacer()
+            // Event content
+            VStack(alignment: .leading, spacing: 4) {
+                Text(event.summary ?? "(No Title)")
+                    .font(.system(.subheadline, design: .rounded))
+                    .fontWeight(.medium)
+                    .foregroundColor(Color.theme.titleText)
+                    .lineLimit(2)
+                
+                if let startDate = event.startDate, let endDate = event.endDate {
+                    Text("\(timeString(from: startDate)) • \(durationString(from: startDate, to: endDate))")
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundColor(Color.theme.secondaryText)
                 }
             }
+            
+            Spacer()
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
         .background(
-            LinearGradient(
-                gradient: Gradient(colors: [Color.theme.accent, Color.theme.accent.opacity(0.8)]),
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            RoundedRectangle(cornerRadius: 12)
+                .fill(eventBackgroundColor)
+                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
         )
-        .cornerRadius(8)
-        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+    }
+    
+    private var eventColor: Color {
+        // Use different colors based on event characteristics
+        if let summary = event.summary?.lowercased() {
+            if summary.contains("meeting") || summary.contains("standup") {
+                return Color("Indigo500")
+            } else if summary.contains("suggested") || summary.contains("task") {
+                return Color.gray
+            }
+        }
+        return Color("Indigo500")
+    }
+    
+    private var eventBackgroundColor: Color {
+        if let summary = event.summary?.lowercased() {
+            if summary.contains("meeting") || summary.contains("standup") {
+                return Color("Indigo500").opacity(0.15)
+            } else if summary.contains("suggested") || summary.contains("task") {
+                return Color("Gray50")
+            }
+        }
+        return Color("Indigo500").opacity(0.15)
     }
     
     private func timeString(from date: Date) -> String {
@@ -282,8 +343,25 @@ struct EventBlockView: View {
         formatter.dateFormat = "h:mm a"
         return formatter.string(from: date)
     }
+    
+    private func durationString(from start: Date, to end: Date) -> String {
+        let duration = end.timeIntervalSince(start)
+        let minutes = Int(duration / 60)
+        if minutes < 60 {
+            return "\(minutes) min"
+        } else {
+            let hours = minutes / 60
+            let remainingMinutes = minutes % 60
+            if remainingMinutes == 0 {
+                return "\(hours) hour"
+            } else {
+                return "\(hours)h \(remainingMinutes)m"
+            }
+        }
+    }
 }
-// ----------------------------------
+// -------------------------------
+
 
 #Preview {
     // Provide a dummy service for the preview

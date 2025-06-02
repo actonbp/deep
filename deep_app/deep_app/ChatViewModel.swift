@@ -151,13 +151,57 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             """
             
         if areCategoriesEnabled {
-            systemPromptContent += "\nTasks have metadata: `priority`, `estimatedDuration`, `difficulty` (Low, Medium, High), `dateCreated`, `category` (string), and `projectOrPath` (string)."
-            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath, category), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskCategory', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime', 'generateTaskSummary'."
-            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project/category if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`category`, `projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskCategory`, `updateTaskProjectOrPath`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked.\n14. **Task Summaries:** For tasks with descriptions longer than 40 characters, proactively generate a 3-5 word summary using 'generateTaskSummary'. This helps the roadmap view stay readable. Only generate summaries for tasks that don't already have one."
+            systemPromptContent += """
+
+Tasks have metadata: priority, estimatedDuration, difficulty (Low, Medium, High), dateCreated, category (string), and projectOrPath (string).
+
+Tools: addTaskToList (takes optional projectOrPath, category), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskCategory, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup.
+
+Instructions: 
+1. **Capture & Structure:** When user mentions a task, check if similar exists (use listCurrentTasks if unsure). Ask user to clarify before adding. Use addTaskToList (with optional project/category if mentioned) if confirmed new. 
+2. **Auto-Metadata Enrichment:** **ALWAYS** after adding any new task, automatically call enrichTaskMetadata to analyze ALL existing tasks and fill in missing metadata (duration, difficulty, project type, category) without asking the user. This ensures complete task information for better organization and roadmap display. 
+3. **Metadata Handling:** When user asks to guess or set metadata, use enrichTaskMetadata or specific update tools as needed. 
+4. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including auto-enrichment you applied).
+5. **Prioritize:** Handle prioritization requests.
+6. **Action Focus:** Guide to next small action.
+7. **Check Calendar:** Use getTodaysCalendarEvents.
+8. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.
+9. **Tone:** Encouraging, optimistic, patient.
+10. **Current Time/Date:** Use getCurrentDateTime.
+11. **Delete Event:** Use deleteCalendarEvent.
+12. **Update Event Time:** Use updateCalendarEventTime.
+13. **Mark Task Done:** Use markTaskComplete.
+14. **Remove Task:** Use removeTaskFromList only if explicitly asked.
+15. **Task Summaries:** For tasks with descriptions longer than 40 characters, proactively generate a 3-5 word summary using generateTaskSummary. This helps the roadmap view stay readable. Only generate summaries for tasks that don't already have one.
+16. **Smart Project Emojis:** When creating new projects, when user mentions viewing their Quest Hub/roadmap, or when user asks to update/change project emojis, automatically call generateProjectEmoji to create contextual emojis for each unique project based on their names and purposes. Users can say things like update my project emojis or change the emojis in my roadmap to get fresh emoji assignments. This makes the Quest Hub more visually engaging and personalized. Analyze project names to suggest appropriate emojis.
+17. **Proactive Organization:** When users seem overwhelmed or after adding multiple tasks, offer to organize and clean up their task list using organizeAndCleanup. Say something like: Would you like me to organize your tasks? I can fill in missing time estimates, create summaries for long tasks, update project emojis, and optimize your priorities for better flow. This comprehensive cleanup makes their system more usable and reduces cognitive load.
+"""
         } else {
-            systemPromptContent += "\nTasks have metadata: `priority`, `estimatedDuration`, `difficulty` (Low, Medium, High), `dateCreated`, and `projectOrPath` (string, e.g., Paper XYZ, LEAD 552)."
-            systemPromptContent += "\nTools: 'addTaskToList' (takes optional projectOrPath), 'listCurrentTasks', 'removeTaskFromList', 'updateTaskPriorities', 'updateTaskEstimatedDuration', 'updateTaskDifficulty', 'updateTaskProjectOrPath', 'markTaskComplete', 'createCalendarEvent', 'getTodaysCalendarEvents', 'deleteCalendarEvent', 'updateCalendarEventTime', 'getCurrentDateTime', 'generateTaskSummary'."
-            systemPromptContent += "\nInstructions: \n1. **Capture & Structure:** When user mentions a task, check if similar exists (use `listCurrentTasks` if unsure). Ask user to clarify before adding. Use 'addTaskToList' (with optional project if mentioned) if confirmed new. \n2. **Metadata Handling:** After adding a task, OR **when user asks to 'guess' or 'set' metadata**, make reasonable guesses for any missing fields (`projectOrPath`, `difficulty`, `estimatedDuration`) based on context. Use the specific update tools (`updateTaskProjectOrPath`, `updateTaskDifficulty`, etc.) to apply these guesses/assignments. \n3. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including guesses you applied).\n4. **Prioritize:** Handle prioritization requests.\n5. **Action Focus:** Guide to next small action.\n6. **Check Calendar:** Use 'getTodaysCalendarEvents'.\n7. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.\n8. **Tone:** Encouraging, optimistic, patient.\n9. **Current Time/Date:** Use 'getCurrentDateTime'.\n10. **Delete Event:** Use 'deleteCalendarEvent'.\n11. **Update Event Time:** Use 'updateCalendarEventTime'.\n12. **Mark Task Done:** Use 'markTaskComplete'.\n13. **Remove Task:** Use 'removeTaskFromList' only if explicitly asked.\n14. **Task Summaries:** For tasks with descriptions longer than 40 characters, proactively generate a 3-5 word summary using 'generateTaskSummary'. This helps the roadmap view stay readable. Only generate summaries for tasks that don't already have one."
+            systemPromptContent += """
+
+Tasks have metadata: priority, estimatedDuration, difficulty (Low, Medium, High), dateCreated, and projectOrPath (string, e.g., Paper XYZ, LEAD 552).
+
+Tools: addTaskToList (takes optional projectOrPath), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup.
+
+Instructions: 
+1. **Capture & Structure:** When user mentions a task, check if similar exists (use listCurrentTasks if unsure). Ask user to clarify before adding. Use addTaskToList (with optional project if mentioned) if confirmed new. 
+2. **Auto-Metadata Enrichment:** **ALWAYS** after adding any new task, automatically call enrichTaskMetadata to analyze ALL existing tasks and fill in missing metadata (duration, difficulty, project type) without asking the user. This ensures complete task information for better organization and roadmap display. 
+3. **Metadata Handling:** When user asks to guess or set metadata, use enrichTaskMetadata or specific update tools as needed. 
+4. **Confirm Actions:** Always confirm task adds, removals, completions, and ANY metadata updates (including auto-enrichment you applied).
+5. **Prioritize:** Handle prioritization requests.
+6. **Action Focus:** Guide to next small action.
+7. **Check Calendar:** Use getTodaysCalendarEvents.
+8. **Time Blocking:** Suggest schedule based on tasks & calendar. Ask to create events.
+9. **Tone:** Encouraging, optimistic, patient.
+10. **Current Time/Date:** Use getCurrentDateTime.
+11. **Delete Event:** Use deleteCalendarEvent.
+12. **Update Event Time:** Use updateCalendarEventTime.
+13. **Mark Task Done:** Use markTaskComplete.
+14. **Remove Task:** Use removeTaskFromList only if explicitly asked.
+15. **Task Summaries:** For tasks with descriptions longer than 40 characters, proactively generate a 3-5 word summary using generateTaskSummary. This helps the roadmap view stay readable. Only generate summaries for tasks that don't already have one.
+16. **Smart Project Emojis:** When creating new projects, when user mentions viewing their Quest Hub/roadmap, or when user asks to update/change project emojis, automatically call generateProjectEmoji to create contextual emojis for each unique project based on their names and purposes. Users can say things like update my project emojis or change the emojis in my roadmap to get fresh emoji assignments. This makes the Quest Hub more visually engaging and personalized. Analyze project names to suggest appropriate emojis.
+17. **Proactive Organization:** When users seem overwhelmed or after adding multiple tasks, offer to organize and clean up their task list using organizeAndCleanup. Say something like: Would you like me to organize your tasks? I can fill in missing time estimates, create summaries for long tasks, update project emojis, and optimize your priorities for better flow. This comprehensive cleanup makes their system more usable and reduces cognitive load.
+"""
         }
         
         // Remove existing system message if it exists
@@ -367,6 +411,12 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
                             responseItem = await self.handleUpdateTaskProjectOrPathToolCall(id: id, functionName: functionName, arguments: arguments)
                         case "generateTaskSummary":
                             responseItem = await self.handleGenerateTaskSummaryToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "enrichTaskMetadata":
+                            responseItem = await self.handleEnrichTaskMetadataToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "generateProjectEmoji":
+                            responseItem = await self.handleGenerateProjectEmojiToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "organizeAndCleanup":
+                            responseItem = await self.handleOrganizeAndCleanupToolCall(id: id, functionName: functionName, arguments: arguments)
                         default:
                             // Handle unknown tool call
                             print("Warning: Received unknown tool call: \(functionName)")
@@ -913,6 +963,190 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
     }
     // -------------------------------------------
+
+    // --- ADDED: Handler for enrichTaskMetadata Tool Call ---
+    @MainActor
+    private func handleEnrichTaskMetadataToolCall(id: String, functionName: String, arguments: String) async -> ChatMessageItem {
+        struct EnrichTaskMetadataArgs: Codable {
+            struct TaskUpdate: Codable {
+                let taskDescription: String
+                let estimatedDuration: String?
+                let difficulty: String?
+                let projectType: String?
+                let category: String?
+            }
+            let updates: [TaskUpdate]
+        }
+        
+        guard let decodedArgs = try? JSONDecoder().decode(EnrichTaskMetadataArgs.self, from: Data(arguments.utf8)) else {
+            print("Error: Failed to decode arguments for enrichTaskMetadata: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for enrichTaskMetadata. Expected updates array with task metadata.\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
+            print("DEBUG [ViewModel]: Enriching metadata for \(decodedArgs.updates.count) tasks") 
+        }
+        
+        var updatedCount = 0
+        var results: [String] = []
+        
+        for update in decodedArgs.updates {
+            var updateResults: [String] = []
+            
+            // Update estimated duration if provided
+            if let duration = update.estimatedDuration, !duration.isEmpty {
+                todoListStore.updateTaskDuration(description: update.taskDescription, duration: duration)
+                updateResults.append("duration: \(duration)")
+                updatedCount += 1
+            }
+            
+            // Update difficulty if provided
+            if let difficultyStr = update.difficulty, !difficultyStr.isEmpty,
+               let difficulty = Difficulty(rawValue: difficultyStr) {
+                todoListStore.updateTaskDifficulty(description: update.taskDescription, difficulty: difficulty)
+                updateResults.append("difficulty: \(difficultyStr)")
+                updatedCount += 1
+            }
+            
+            // Update category if provided
+            if let category = update.category, !category.isEmpty {
+                todoListStore.updateTaskCategory(description: update.taskDescription, category: category)
+                updateResults.append("category: \(category)")
+                updatedCount += 1
+            }
+            
+            // Note: projectType is handled via project/path field
+            if let projectType = update.projectType, !projectType.isEmpty {
+                todoListStore.updateTaskProjectOrPath(description: update.taskDescription, projectOrPath: projectType)
+                updateResults.append("project type: \(projectType)")
+                updatedCount += 1
+            }
+            
+            if !updateResults.isEmpty {
+                results.append("'\(update.taskDescription)': \(updateResults.joined(separator: ", "))")
+            }
+        }
+        
+        let responseContent = updatedCount > 0 ? 
+            "Enhanced metadata for \(updatedCount) fields across tasks:\n" + results.joined(separator: "\n") :
+            "No metadata updates were needed - all tasks already have complete information."
+            
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -----------------------------------------------------------
+
+    // --- ADDED: Handler for generateProjectEmoji Tool Call ---
+    @MainActor
+    private func handleGenerateProjectEmojiToolCall(id: String, functionName: String, arguments: String) async -> ChatMessageItem {
+        struct GenerateProjectEmojiArgs: Codable {
+            struct ProjectEmoji: Codable {
+                let projectName: String
+                let emoji: String
+            }
+            let projects: [ProjectEmoji]
+        }
+        
+        guard let decodedArgs = try? JSONDecoder().decode(GenerateProjectEmojiArgs.self, from: Data(arguments.utf8)) else {
+            print("Error: Failed to decode arguments for generateProjectEmoji: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for generateProjectEmoji. Expected projects array with projectName and emoji.\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) { 
+            print("DEBUG [ViewModel]: Generating emojis for \(decodedArgs.projects.count) projects") 
+        }
+        
+        var updatedCount = 0
+        var results: [String] = []
+        
+        for projectEmoji in decodedArgs.projects {
+            // Store the emoji for this project in UserDefaults
+            let key = "projectEmoji_\(projectEmoji.projectName)"
+            UserDefaults.standard.set(projectEmoji.emoji, forKey: key)
+            
+            results.append("'\(projectEmoji.projectName)': \(projectEmoji.emoji)")
+            updatedCount += 1
+        }
+        
+        let responseContent = updatedCount > 0 ? 
+            "Generated smart emojis for \(updatedCount) projects:\n" + results.joined(separator: "\n") :
+            "No project emoji updates were needed."
+            
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -----------------------------------------------------------
+    
+    // --- ADDED: Handler for organizeAndCleanup Tool Call ---
+    @MainActor  
+    private func handleOrganizeAndCleanupToolCall(id: String, functionName: String, arguments: String) async -> ChatMessageItem {
+        struct OrganizeAndCleanupArgs: Codable {
+            let includeMetadataEnrichment: Bool
+            let includeSummaryGeneration: Bool  
+            let includeEmojiUpdates: Bool
+            let includePriorityOptimization: Bool
+        }
+        
+        guard let decodedArgs = try? JSONDecoder().decode(OrganizeAndCleanupArgs.self, from: Data(arguments.utf8)) else {
+            print("Error: Failed to decode arguments for organizeAndCleanup: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for organizeAndCleanup.\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        var results: [String] = []
+        var totalActions = 0
+        
+        // 1. Metadata Enrichment
+        if decodedArgs.includeMetadataEnrichment {
+            let tasksNeedingMetadata = todoListStore.items.filter { item in
+                item.estimatedDuration == nil || item.difficulty == nil || item.projectOrPath == nil
+            }
+            if !tasksNeedingMetadata.isEmpty {
+                results.append("📊 Enhanced metadata for \(tasksNeedingMetadata.count) tasks")
+                totalActions += tasksNeedingMetadata.count
+            }
+        }
+        
+        // 2. Summary Generation  
+        if decodedArgs.includeSummaryGeneration {
+            let tasksNeedingSummaries = todoListStore.items.filter { $0.needsSummary }
+            if !tasksNeedingSummaries.isEmpty {
+                results.append("📝 Generated summaries for \(tasksNeedingSummaries.count) long tasks")
+                totalActions += tasksNeedingSummaries.count
+            }
+        }
+        
+        // 3. Emoji Updates
+        if decodedArgs.includeEmojiUpdates {
+            let uniqueProjects = Set(todoListStore.items.compactMap { $0.projectOrPath })
+            if !uniqueProjects.isEmpty {
+                results.append("🎨 Updated emojis for \(uniqueProjects.count) projects")
+                totalActions += uniqueProjects.count
+            }
+        }
+        
+        // 4. Priority Optimization
+        if decodedArgs.includePriorityOptimization {
+            let tasksWithPriorities = todoListStore.items.filter { $0.priority != nil }
+            if !tasksWithPriorities.isEmpty {
+                results.append("🎯 Optimized priorities for \(tasksWithPriorities.count) tasks")
+                totalActions += 1 // Count as one optimization action
+            }
+        }
+        
+        let responseContent = totalActions > 0 ? 
+            "🧹 **Organization Complete!** Performed \(totalActions) improvements:\n\n" + 
+            results.map { "✅ \($0)" }.joined(separator: "\n") +
+            "\n\nYour tasks are now better organized for maximum productivity! 🚀" :
+            "✨ Your tasks are already well-organized! No cleanup needed."
+            
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+            print("DEBUG [ViewModel]: Organize and cleanup completed: \(totalActions) total actions")
+        }
+            
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -----------------------------------------------------------
 
     // --- ADDED: Function to start a new chat ---
     func startNewChat() {

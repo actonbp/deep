@@ -332,6 +332,50 @@ class OpenAIService {
             required: ["taskDescription", "summary"]
         )
     )
+    
+    private let enrichTaskMetadataToolDefinition = FunctionDefinition(
+        name: "enrichTaskMetadata",
+        description: "Automatically analyzes all tasks and fills in missing metadata (duration, difficulty, project type) to ensure complete task information. Called automatically when new tasks are added.",
+        parameters: .init(
+            properties: [
+                "updates": .init(
+                    type: "array", 
+                    description: "Array of metadata updates to apply to tasks. Each update should have taskDescription (required), and optionally: estimatedDuration, difficulty, projectType, category.",
+                    items: .init(type: "object")
+                )
+            ],
+            required: ["updates"]
+        )
+    )
+    
+    private let generateProjectEmojiToolDefinition = FunctionDefinition(
+        name: "generateProjectEmoji",
+        description: "Analyzes project names and generates appropriate emojis that represent the project's theme or purpose.",
+        parameters: .init(
+            properties: [
+                "projects": .init(
+                    type: "array",
+                    description: "Array of project emoji assignments. Each should have projectName and emoji.",
+                    items: .init(type: "object")
+                )
+            ],
+            required: ["projects"]
+        )
+    )
+    
+    private let organizeAndCleanupToolDefinition = FunctionDefinition(
+        name: "organizeAndCleanup",
+        description: "Performs comprehensive organization and cleanup of all tasks: fills missing metadata, generates summaries, updates project emojis, and optimizes task organization for better productivity.",
+        parameters: .init(
+            properties: [
+                "includeMetadataEnrichment": .init(type: "boolean", description: "Whether to fill in missing duration, difficulty, and project metadata for all tasks.", items: nil),
+                "includeSummaryGeneration": .init(type: "boolean", description: "Whether to generate short summaries for long task descriptions.", items: nil),
+                "includeEmojiUpdates": .init(type: "boolean", description: "Whether to update project emojis with smart, contextual ones.", items: nil),
+                "includePriorityOptimization": .init(type: "boolean", description: "Whether to suggest priority reordering for better task flow.", items: nil)
+            ],
+            required: ["includeMetadataEnrichment", "includeSummaryGeneration", "includeEmojiUpdates", "includePriorityOptimization"]
+        )
+    )
     // ----------------------------------------------
 
     // Combined list of all available tools (now as Tool structs)
@@ -352,7 +396,10 @@ class OpenAIService {
             // --- ADDED Roadmap Tools ---
             .init(function: updateTaskCategoryToolDefinition),
             .init(function: updateTaskProjectOrPathToolDefinition),
-            .init(function: generateTaskSummaryToolDefinition)
+            .init(function: generateTaskSummaryToolDefinition),
+            .init(function: enrichTaskMetadataToolDefinition), // <-- ADDED metadata enrichment tool
+            .init(function: generateProjectEmojiToolDefinition), // <-- ADDED smart emoji tool
+            .init(function: organizeAndCleanupToolDefinition) // <-- ADDED comprehensive cleanup tool
             // -------------------------
         ]
     }
