@@ -11,6 +11,10 @@ struct TodayCalendarView: View {
     @State private var events: [CalendarEvent] = []
     @State private var isLoading: Bool = false
     @State private var errorMessage: String? = nil
+    
+    // State for day navigation (0 = today, 1 = tomorrow, 2 = day after tomorrow)
+    @State private var currentDayOffset: Int = 0
+    @State private var dragOffset: CGFloat = 0
 
     // --- Timeline Configuration ---
     let startHour = 7 // 7 AM
@@ -21,45 +25,65 @@ struct TodayCalendarView: View {
     // Consistent title styling
     let titleFontSize: CGFloat = 22 
     let sciFiFont = "Orbitron"
-
-    var body: some View {
-        NavigationView { // For title and potential future toolbar items
-            VStack {
-                if authService.isSignedIn {
-                    // User is signed in, show events or loading/error state
-                    if isLoading {
-                        ProgressView("Loading today's events...")
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let errorMsg = errorMessage {
-                        VStack { // Wrap error message for better layout
-                            Text("Error loading calendar: \(errorMsg)")
-                                .foregroundColor(.red)
-                                .padding()
-                            Button("Retry") { loadEvents() } // Add retry button
-                                .buttonStyle(.bordered)
-                        }.frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if events.isEmpty {
-                        Text("No events scheduled for today.")
-                            .foregroundColor(.gray)
-                            .padding()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .refreshable { loadEvents() } // Allow refresh even when empty
-                    } else {
+    
+    @ViewBuilder
+    private var signedInContent: some View {
+        if isLoading {
+            ProgressView("Loading today's events...")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if let errorMsg = errorMessage {
+            VStack { // Wrap error message for better layout
+                Text("Error loading calendar: \(errorMsg)")
+                    .foregroundColor(.red)
+                    .padding()
+                Button("Retry") { loadEvents() } // Add retry button
+                    .buttonStyle(.bordered)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if events.isEmpty {
+            Text("No events scheduled for today.")
+                .foregroundColor(.gray)
+                .padding()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .refreshable { loadEvents() } // Allow refresh even when empty
+        } else {
                         // --- Modern Timeline View ---
                         VStack(spacing: 0) {
-                            // Date Header
-                            HStack {
-                                Text("Today • \(formattedDate())")
-                                    .font(.system(.title3, design: .rounded))
-                                    .fontWeight(.semibold)
-                                    .foregroundColor(Color.theme.titleText)
-                                Spacer()
+                            // Date Header with Navigation
+                            VStack(spacing: 8) {
+                                HStack {
+                                    Text(dayLabel())
+                                        .font(.system(.title3, design: .rounded))
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(Color.theme.titleText)
+                                    Spacer()
+                                }
+                                
+                                // Day Navigation Indicators
+                                HStack(spacing: 12) {
+                                    ForEach(0..<3, id: \.self) { dayIndex in
+                                        Circle()
+                                            .fill(currentDayOffset == dayIndex ? Color("Indigo500") : Color.gray.opacity(0.3))
+                                            .frame(width: 8, height: 8)
+                                            .animation(.spring(response: 0.3), value: currentDayOffset)
+                                    }
+                                    Spacer()
+                                    
+                                    if currentDayOffset > 0 {
+                                        Button("Today") {
+                                            withAnimation(.spring(response: 0.4)) {
+                                                currentDayOffset = 0
+                                            }
+                                        }
+                                        .font(.system(.caption, design: .rounded))
+                                        .foregroundColor(Color("Indigo500"))
+                                    }
+                                }
                             }
                             .padding(.horizontal)
                             .padding(.top, 8)
                             .padding(.bottom, 16)
                             
-                            // Timeline
+                            // Timeline with Swipe Gesture
                             ScrollView {
                                 LazyVStack(spacing: 0) {
                                     ForEach(startHour..<endHour, id: \.self) { hour in
@@ -71,11 +95,71 @@ struct TodayCalendarView: View {
                                     }
                                 }
                                 .padding(.horizontal)
+                                .offset(x: dragOffset)
+                                .animation(.spring(response: 0.3), value: dragOffset)
                             }
                             .refreshable { loadEvents() }
+                            .gesture(
+                                DragGesture(minimumDistance: 20)
+                                    .onChanged { value in
+                                        // Only respond to mostly horizontal swipes
+                                        if abs(value.translation.width) > abs(value.translation.height) {
+                                            dragOffset = max(-50, min(50, value.translation.width * 0.5))
+                                        }
+                                    }
+                                    .onEnded { value in
+                                        let threshold: CGFloat = 80
+                                        
+                                        // Only process if it's a horizontal swipe
+                                        guard abs(value.translation.width) > abs(value.translation.height) else {
+                                            withAnimation(.spring(response: 0.3)) {
+                                                dragOffset = 0
+                                            }
+                                            return
+                                        }
+                                        
+                                        if value.translation.width > threshold {
+                                            // Swiped right - go to previous day
+                                            if currentDayOffset > 0 {
+                                                withAnimation(.spring(response: 0.4)) {
+                                                    currentDayOffset -= 1
+                                                    dragOffset = 0
+                                                }
+                                            } else {
+                                                withAnimation(.spring(response: 0.3)) {
+                                                    dragOffset = 0
+                                                }
+                                            }
+                                        } else if value.translation.width < -threshold {
+                                            // Swiped left - go to next day
+                                            if currentDayOffset < 2 {
+                                                withAnimation(.spring(response: 0.4)) {
+                                                    currentDayOffset += 1
+                                                    dragOffset = 0
+                                                }
+                                            } else {
+                                                withAnimation(.spring(response: 0.3)) {
+                                                    dragOffset = 0
+                                                }
+                                            }
+                                        } else {
+                                            // Not enough swipe distance - snap back
+                                            withAnimation(.spring(response: 0.3)) {
+                                                dragOffset = 0
+                                            }
+                                        }
+                                    }
+                            )
                         }
                         // ---------------------
-                    }
+        }
+    }
+    
+    var body: some View {
+        NavigationView { // For title and potential future toolbar items
+            VStack {
+                if authService.isSignedIn {
+                    signedInContent
                 } else {
                     // User is not signed in
                     VStack {
@@ -92,7 +176,7 @@ struct TodayCalendarView: View {
                 }
             }
             .background(Color.white.ignoresSafeArea())
-            .navigationTitle("Today's Calendar")
+            .navigationTitle(navigationTitle())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -112,6 +196,12 @@ struct TodayCalendarView: View {
                     // User just signed out, clear events and error
                     self.events = []
                     self.errorMessage = nil
+                }
+            }
+            // --- React to day offset changes ---
+            .onChange(of: currentDayOffset) { oldValue, newValue in
+                if oldValue != newValue {
+                    loadEvents()
                 }
             }
             // -----------------------------------------
@@ -161,10 +251,39 @@ struct TodayCalendarView: View {
     }
     
     // Helper functions for the modern calendar view
+    private func currentDisplayDate() -> Date {
+        let calendar = Calendar.current
+        return calendar.date(byAdding: .day, value: currentDayOffset, to: Date()) ?? Date()
+    }
+    
+    private func dayLabel() -> String {
+        let date = currentDisplayDate()
+        let formatter = DateFormatter()
+        
+        if currentDayOffset == 0 {
+            formatter.dateFormat = "MMMM d, yyyy"
+            return "Today • \(formatter.string(from: date))"
+        } else if currentDayOffset == 1 {
+            formatter.dateFormat = "MMMM d, yyyy"
+            return "Tomorrow • \(formatter.string(from: date))"
+        } else {
+            formatter.dateFormat = "EEEE • MMMM d, yyyy"
+            return formatter.string(from: date)
+        }
+    }
+    
     private func formattedDate() -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMMM d, yyyy"
-        return formatter.string(from: Date())
+        return formatter.string(from: currentDisplayDate())
+    }
+    
+    private func navigationTitle() -> String {
+        switch currentDayOffset {
+        case 0: return "Today's Calendar"
+        case 1: return "Tomorrow's Calendar"
+        default: return "Calendar"
+        }
     }
     
     private func eventsForHour(_ hour: Int) -> [CalendarEvent] {
@@ -193,7 +312,7 @@ struct TodayCalendarView: View {
         self.isLoading = true
         self.errorMessage = nil
         
-        calendarService.fetchTodaysEvents { fetchedEvents, error in
+        calendarService.fetchEventsForDate(date: currentDisplayDate()) { fetchedEvents, error in
             // Ensure UI updates are on the main thread
             DispatchQueue.main.async {
                 self.isLoading = false

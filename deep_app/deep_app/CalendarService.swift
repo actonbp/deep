@@ -18,9 +18,17 @@ class CalendarService {
     // Define the base URL for the Calendar API v3
     private let calendarApiBaseUrl = "https://www.googleapis.com/calendar/v3/calendars/"
     
-    // Function to fetch events for today
+    // Function to fetch events for today (convenience method)
     func fetchTodaysEvents(completion: @escaping ([CalendarEvent]?, Error?) -> Void) {
-        print("CalendarService: Attempting to fetch today's events...")
+        fetchEventsForDate(date: Date(), completion: completion)
+    }
+    
+    // Generic function to fetch events for any specific date
+    func fetchEventsForDate(date: Date, completion: @escaping ([CalendarEvent]?, Error?) -> Void) {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        print("CalendarService: Attempting to fetch events for \(dateString)...")
         
         // 1. Check for signed-in user
         guard let user = GIDSignIn.sharedInstance.currentUser else {
@@ -50,16 +58,16 @@ class CalendarService {
             // 3. Prepare API request parameters
             let calendarId = "primary"
             let timeZone = TimeZone.current.identifier
-            let today = Calendar.current.startOfDay(for: Date())
-            guard let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: today) else {
-                print("CalendarService: ERROR - Could not calculate tomorrow's date.")
+            let startOfDay = Calendar.current.startOfDay(for: date)
+            guard let endOfDay = Calendar.current.date(byAdding: .day, value: 1, to: startOfDay) else {
+                print("CalendarService: ERROR - Could not calculate end of day.")
                 DispatchQueue.main.async { completion(nil, NSError(domain: "CalendarServiceError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Date calculation error"])) }
                 return
             }
             let dateFormatter = ISO8601DateFormatter()
             dateFormatter.formatOptions = [.withInternetDateTime]
-            let timeMin = dateFormatter.string(from: today)
-            let timeMax = dateFormatter.string(from: tomorrow)
+            let timeMin = dateFormatter.string(from: startOfDay)
+            let timeMax = dateFormatter.string(from: endOfDay)
             
             // Construct the URL
             guard var urlComponents = URLComponents(string: "\(self.calendarApiBaseUrl)\(calendarId)/events") else {

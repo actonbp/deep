@@ -52,26 +52,94 @@ With our **Apple Developer Program membership** ($99/year), we now have access t
   - Users can rewrite, proofread, and summarize
   - No code changes needed if using standard SwiftUI
 
-### Coming Soon: On-Device LLM Access (iOS 19/26 - Expected June 2025) 🎯
+### 🎯 Apple Foundation Models - The Game Changer (June 2025)
 
-Apple is reportedly planning to open up their on-device LLMs to developers:
+Apple has officially announced the **Foundation Models framework** - a revolutionary on-device AI solution:
 
-1. **New SDK for Developers**
-   - Direct access to Apple's smaller on-device language models
-   - Build custom AI features using Apple's foundation models
-   - Expected announcement at WWDC 2025 (June 9)
+**Official Documentation**: https://developer.apple.com/documentation/foundationmodels
 
-2. **What This Means for Bryan's Brain**
-   - Could replace OpenAI API with fully on-device AI agent
-   - Complete privacy - no data leaves the device
-   - No API costs or internet requirement
-   - Instant responses with ~3B parameter models
+#### What Apple is Providing
 
-3. **Migration Strategy**
-   - Continue using OpenAI API for now
-   - Prepare modular architecture to swap AI providers
-   - Test with MLX framework for proof-of-concept
-   - Adopt Apple's SDK when available in 2025
+1. **On-Device Model (~3B Parameters)**
+   - Runs entirely on iPhone/iPad/Mac
+   - No internet connection required
+   - Complete privacy - data never leaves device
+   - Optimized for Apple Silicon performance
+
+2. **Perfect for Bryan's Brain's Use Case**
+   - **Task-Oriented AI** ✅ Exactly what we need
+   - **Tool Calling** ✅ Native support for our task/calendar tools
+   - **Guided Generation** ✅ Structured outputs for task creation
+   - **Swift Integration** ✅ As simple as 3 lines of code
+
+3. **Key Capabilities**
+   - Summarization and text understanding
+   - Entity extraction (dates, tasks, projects)
+   - Creative content generation
+   - Short dialog and conversational AI
+   - 15 language support
+   - 65K token context window
+
+#### 💸 The Big Win: FREE AI for ADHD Users
+
+**Current State (OpenAI)**:
+- ~$0.002 per conversation turn
+- Costs add up for daily users
+- Requires API key management
+- Internet connection mandatory
+
+**Future State (Apple Foundation Models)**:
+- **$0 per conversation** - Completely free!
+- No API keys needed
+- Works offline on airplanes, subways, anywhere
+- Instant responses with no network latency
+
+This means we can offer Bryan's Brain **completely free on the App Store**, removing all financial barriers for ADHD users to access AI-powered productivity assistance.
+
+#### Implementation Timeline
+
+**June 2025**:
+- Developer access begins
+- Start prototyping with Foundation Models
+- Test ADHD-specific use cases
+
+**July-August 2025**:
+- Beta testing via TestFlight
+- Refine tool calling integration
+- Train custom adapters for ADHD guidance
+
+**Fall 2025**:
+- Public release with iOS 18.x
+- Full transition from OpenAI
+- Free app on App Store!
+
+#### Migration Strategy
+
+1. **Modular Architecture** (Do Now)
+   ```swift
+   protocol AIService {
+       func chat(messages: [Message]) async -> Response
+       func callTool(name: String, params: [String: Any]) async -> ToolResult
+   }
+   
+   // Easy to swap implementations
+   class OpenAIService: AIService { }
+   class AppleFoundationService: AIService { } // Coming 2025
+   ```
+
+2. **Feature Parity Checklist**
+   - ✅ Conversational AI
+   - ✅ Tool calling (task/calendar operations)
+   - ✅ Structured outputs
+   - ✅ Multi-turn conversations
+   - ⚠️ Limited world knowledge (but fine for our use case)
+
+3. **ADHD-Specific Enhancements**
+   - Train custom adapters for:
+     - "Getting unstuck" guidance
+     - Task breakdown suggestions
+     - Time estimation patterns
+     - Gentle encouragement tone
 
 ### Alternative On-Device Options (Available Now)
 
@@ -124,37 +192,80 @@ struct AddTaskIntent: AppIntent {
 }
 ```
 
-## 3. Migration Strategy
+## 3. Migration Strategy - Updated for Foundation Models
 
-### Phase 1: CloudKit (Immediate)
-- Can implement now
-- Huge user benefit
-- Relatively straightforward
+### Phase 1: CloudKit (✅ Complete)
+- Already implemented!
+- Cross-device sync working
+- Foundation for multi-device AI experience
 
-### Phase 2: Hybrid AI (iOS 18.2+)
-- Keep OpenAI for coaching
-- Use Apple Intelligence for:
-  - Text rewriting
-  - Basic summarization
-  - Grammar checking
+### Phase 2: Prepare for Foundation Models (Now - June 2025)
+- Create modular AI service interface
+- Abstract tool calling logic
+- Build comprehensive test suite
+- Join Apple Developer Program beta
 
-### Phase 3: Full Apple Intelligence (Future)
-- As Apple adds more capabilities
-- Potentially replace more OpenAI features
-- Always maintain ADHD-specific features
+### Phase 3: Foundation Models Integration (June - Fall 2025)
+- Beta test with developer preview
+- Implement AppleFoundationService
+- Train ADHD-specific adapters
+- A/B test with select users
 
-## 4. Privacy & Cost Benefits
+### Phase 4: Full Transition (Fall 2025)
+- Complete migration from OpenAI
+- Release as free app on App Store
+- Open source the ADHD adapter training
 
-### Current (OpenAI Only)
-- 💰 API costs per request
-- 🌐 Internet required
-- 🔒 Data sent to OpenAI
+## 🎯 Why This Changes Everything for ADHD Users
 
-### Future (Hybrid)
-- ✅ Reduced API costs (50-70%)
-- ✅ Many features work offline
-- ✅ Enhanced privacy
-- ✅ Faster response times
+### The Cost Barrier Problem
+Many ADHD individuals struggle with:
+- Forgetting to cancel subscriptions
+- Anxiety about accumulating costs
+- Decision paralysis about "is this worth it?"
+- Guilt about spending on "productivity tools"
+
+**Apple Foundation Models eliminate ALL of these barriers.**
+
+### The Always-Available Assistant
+- **Airport Mode**: Works on flights without WiFi
+- **Subway Commutes**: No connection needed
+- **Rural Areas**: Full functionality everywhere
+- **Data Caps**: Zero data usage for AI
+- **International Travel**: No roaming concerns
+
+### The Privacy Win
+- **Sensitive Thoughts**: Never leave your device
+- **Work Tasks**: Complete confidentiality
+- **Personal Struggles**: No cloud logging
+- **Medical Info**: Stays completely private
+
+### The Speed Advantage
+- **Instant Responses**: No network round-trip
+- **Zero Latency**: Thoughts captured immediately
+- **No Timeouts**: Always responsive
+- **Smooth Experience**: Reduces ADHD frustration
+
+## 4. Privacy & Cost Benefits - The Foundation Models Advantage
+
+### Current State (OpenAI)
+- 💰 ~$5-20/month per active user in API costs
+- 🌐 Internet required for every interaction
+- 🔒 Data sent to OpenAI servers
+- ⏱️ Network latency (200-500ms)
+- 🔑 API key management complexity
+
+### Future State (Apple Foundation Models)
+- 💸 **$0/month** - Completely FREE!
+- ✈️ Works offline everywhere
+- 🔐 100% private - data never leaves device
+- ⚡ Instant responses (<50ms)
+- 🎯 No API keys or configuration
+
+### Impact on App Distribution
+- **Current**: Need to charge for app or eat API costs
+- **Future**: Can offer 100% free on App Store
+- **Result**: Maximum accessibility for ADHD community
 
 ## 5. Technical Requirements
 
@@ -184,11 +295,87 @@ struct AddTaskIntent: AppIntent {
 - Works without internet
 - Deeply integrated with iOS
 
-## Next Steps
+## 7. Minimal Push Notifications - Quick Win! 🔔
 
-1. **Immediate**: Implement CloudKit sync
-2. **Short-term**: Add App Intents for Siri
-3. **Medium-term**: Hybrid AI approach
-4. **Long-term**: Evaluate new Apple Intelligence features as released
+### ADHD-Focused Local Notifications (No Server Needed)
 
-This positions Bryan's Brain as a premium, privacy-focused ADHD app that leverages the best of both Apple's ecosystem and specialized AI coaching. 
+Perfect for users who "don't even open apps" - gentle reminders to capture thoughts:
+
+#### Smart Reminder Types:
+- **Capture Mode**: "Quick thought? Add it to your list 🧠"
+- **Check-ins**: "Feeling stuck? Check your next small step"
+- **Celebration**: "Celebrate what you completed today ✅"
+
+#### Implementation Benefits:
+- ✅ **No internet required** - Local notifications only
+- ✅ **No API costs** - Built into iOS
+- ✅ **Weekend project** - Simple UNUserNotificationCenter
+- ✅ **Immediate value** - Helps users who forget to open apps
+- ✅ **ADHD-specific** - Timed for capture moments, not overwhelm
+
+#### Code Outline:
+```swift
+import UserNotifications
+
+// Gentle ADHD-friendly reminders
+func scheduleADHDNotifications() {
+    // Morning: "What's important today?"
+    // Mid-day: "Something on your mind? Capture it"
+    // Evening: "How did today go?"
+}
+```
+
+#### Future Evolution:
+1. **Phase 1**: Basic local reminders (immediate)
+2. **Phase 2**: Smart timing based on usage patterns
+3. **Phase 3**: CloudKit push for real-time sync
+
+## Next Steps - Foundation Models Priority
+
+### Immediate (Now - June 2025)
+1. **Refactor AI Service Architecture**
+   - Create protocol-based AI service interface
+   - Decouple tool calling from OpenAI specifics
+   - Add comprehensive test coverage
+
+2. **Join Apple Beta Programs**
+   - Sign up for Foundation Models developer preview
+   - Prepare test devices with latest betas
+   - Review Apple's migration guidelines
+
+3. **Quick Wins While Waiting**
+   - Local notifications for ADHD reminders
+   - App Intents for Siri integration
+   - Performance optimizations
+
+### June 2025 - Developer Preview
+1. **Immediate Testing**
+   - Port core chat functionality
+   - Test tool calling capabilities
+   - Benchmark response quality
+
+2. **ADHD Adapter Development**
+   - Train custom models for:
+     - Task breakdown
+     - Getting unstuck guidance
+     - Time estimation
+     - Encouragement tone
+
+### Fall 2025 - Public Release
+1. **Complete Migration**
+   - Full transition from OpenAI
+   - Extensive beta testing via TestFlight
+   - Performance optimization
+
+2. **Free App Launch**
+   - Release on App Store at $0
+   - Marketing: "Free AI for ADHD"
+   - Open source adapter training data
+
+## Vision: Democratizing ADHD Support
+
+With Apple Foundation Models, Bryan's Brain becomes the first **completely free, fully-featured AI productivity assistant** designed specifically for ADHD. No subscriptions, no API keys, no barriers - just instant, private, intelligent support for everyone who needs it.
+
+**The Future is Free, Private, and Always Available.** 🚀
+
+Learn more: https://developer.apple.com/documentation/foundationmodels 

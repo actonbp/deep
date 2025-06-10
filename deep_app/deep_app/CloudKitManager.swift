@@ -216,7 +216,7 @@ class CloudKitManager: ObservableObject {
             var items: [TodoItem] = []
             
             switch result {
-            case .success(let cursor):
+            case .success(_):
                 // Process all matched records
                 operation.recordMatchedBlock = { recordID, recordResult in
                     switch recordResult {
@@ -229,8 +229,7 @@ class CloudKitManager: ObservableObject {
                     }
                 }
                 
-                // If there's more data, we'd handle cursor here
-                // For now, complete with what we have
+                // Complete with what we have
                 DispatchQueue.main.async {
                     // Sort locally by priority
                     let sortedItems = items.sorted { (item1, item2) in
@@ -288,31 +287,45 @@ class CloudKitManager: ObservableObject {
         
         let query = CKQuery(recordType: todoItemType, predicate: NSPredicate(value: true))
         
-        privateDatabase.perform(query, inZoneWith: nil) { records, error in
-            if let error = error {
+        privateDatabase.fetch(withQuery: query) { result in
+            switch result {
+            case .success(let (matchResults, _)):
+                let records = matchResults.compactMap { (_, result) in
+                    switch result {
+                    case .success(let record):
+                        return record
+                    case .failure:
+                        return nil
+                    }
+                }
+                self.handleSimpleQuerySuccess(records: records, completion: completion)
+            case .failure(let error):
                 print("☁️ Simple query failed: \(error)")
                 DispatchQueue.main.async {
                     completion([])
                 }
-                return
             }
-            
-            var items: [TodoItem] = []
-            for record in records ?? [] {
-                if let item = self.todoItemFromRecord(record) {
-                    items.append(item)
-                }
+        }
+    }
+    
+    private func handleSimpleQuerySuccess(records: [CKRecord], completion: @escaping ([TodoItem]) -> Void) {
+        print("☁️ Simple query returned \(records.count) records")
+        
+        var items: [TodoItem] = []
+        for record in records {
+            if let item = self.todoItemFromRecord(record) {
+                items.append(item)
             }
-            
-            DispatchQueue.main.async {
-                // Sort locally
-                let sortedItems = items.sorted { (item1, item2) in
-                    let p1 = item1.priority ?? Int.max
-                    let p2 = item2.priority ?? Int.max
-                    return p1 < p2
-                }
-                completion(sortedItems)
+        }
+        
+        DispatchQueue.main.async {
+            // Sort locally
+            let sortedItems = items.sorted { (item1, item2) in
+                let p1 = item1.priority ?? Int.max
+                let p2 = item2.priority ?? Int.max
+                return p1 < p2
             }
+            completion(sortedItems)
         }
     }
     

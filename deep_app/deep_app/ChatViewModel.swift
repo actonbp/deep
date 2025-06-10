@@ -155,7 +155,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
 
 Tasks have metadata: priority, estimatedDuration, difficulty (Low, Medium, High), dateCreated, category (string), and projectOrPath (string).
 
-Tools: addTaskToList (takes optional projectOrPath, category), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskCategory, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup.
+Tools: addTaskToList (takes optional projectOrPath, category), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskCategory, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup, breakDownTask.
 
 Instructions: 
 1. **Capture & Structure:** When user mentions a task, check if similar exists (use listCurrentTasks if unsure). Ask user to clarify before adding. Use addTaskToList (with optional project/category if mentioned) if confirmed new. 
@@ -175,13 +175,14 @@ Instructions:
 15. **Task Summaries:** For tasks with descriptions longer than 40 characters, proactively generate a 3-5 word summary using generateTaskSummary. This helps the roadmap view stay readable. Only generate summaries for tasks that don't already have one.
 16. **Smart Project Emojis:** When creating new projects, when user mentions viewing their Quest Hub/roadmap, or when user asks to update/change project emojis, automatically call generateProjectEmoji to create contextual emojis for each unique project based on their names and purposes. Users can say things like update my project emojis or change the emojis in my roadmap to get fresh emoji assignments. This makes the Quest Hub more visually engaging and personalized. Analyze project names to suggest appropriate emojis.
 17. **Proactive Organization:** When users seem overwhelmed or after adding multiple tasks, offer to organize and clean up their task list using organizeAndCleanup. Say something like: Would you like me to organize your tasks? I can fill in missing time estimates, create summaries for long tasks, update project emojis, and optimize your priorities for better flow. This comprehensive cleanup makes their system more usable and reduces cognitive load.
+18. **Task Breakdown for ADHD:** When users have large, overwhelming tasks or say things like "this is too big" or "I don't know where to start on this", automatically use breakDownTask to break the complex task into smaller, 15-30 minute actionable subtasks. This is ESSENTIAL for ADHD users who struggle with executive function. Each subtask should be specific and achievable. Ask if they want to replace the original task or keep both.
 """
         } else {
             systemPromptContent += """
 
 Tasks have metadata: priority, estimatedDuration, difficulty (Low, Medium, High), dateCreated, and projectOrPath (string, e.g., Paper XYZ, LEAD 552).
 
-Tools: addTaskToList (takes optional projectOrPath), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup.
+Tools: addTaskToList (takes optional projectOrPath), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup, breakDownTask.
 
 Instructions: 
 1. **Capture & Structure:** When user mentions a task, check if similar exists (use listCurrentTasks if unsure). Ask user to clarify before adding. Use addTaskToList (with optional project if mentioned) if confirmed new. 
@@ -367,12 +368,14 @@ Instructions:
             }
             
             // --- Execute ALL requested tool calls using TaskGroup --- 
-            var toolResponseItems: [ChatMessageItem] = [] // Array to hold results
             
             // Use TaskGroup to handle potential concurrency and collect results safely
-            await withTaskGroup(of: ChatMessageItem.self) { group in
+            let toolResponseItems = await withTaskGroup(of: ChatMessageItem.self) { group in
                 for toolCall in toolCalls {
-                    group.addTask { // Add each tool call handler as a task
+                    group.addTask { [weak self] in // Add each tool call handler as a task
+                        guard let self = self else {
+                            return ChatMessageItem(content: "{\"error\": \"ChatViewModel deallocated\"}", role: .tool, toolCallId: "", functionName: "")
+                        }
                         let id = toolCall.id
                         let functionName = toolCall.function.name
                         let arguments = toolCall.function.arguments
@@ -417,6 +420,8 @@ Instructions:
                             responseItem = await self.handleGenerateProjectEmojiToolCall(id: id, functionName: functionName, arguments: arguments)
                         case "organizeAndCleanup":
                             responseItem = await self.handleOrganizeAndCleanupToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "breakDownTask":
+                            responseItem = await self.handleBreakDownTaskToolCall(id: id, functionName: functionName, arguments: arguments)
                         default:
                             // Handle unknown tool call
                             print("Warning: Received unknown tool call: \(functionName)")
@@ -427,10 +432,11 @@ Instructions:
                 }
                 
                 // Collect results from all tasks in the group
+                var results: [ChatMessageItem] = []
                 for await result in group {
-                    // No MainActor needed here as we collect results *after* tasks complete
-                    toolResponseItems.append(result)
+                    results.append(result)
                 }
+                return results
             }
             // --------------------------------------------------------
             
@@ -1144,6 +1150,71 @@ Instructions:
             print("DEBUG [ViewModel]: Organize and cleanup completed: \(totalActions) total actions")
         }
             
+        return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -----------------------------------------------------------
+    
+    // --- ADDED: Task Breakdown Handler ---
+    private func handleBreakDownTaskToolCall(id: String, functionName: String = "breakDownTask", arguments: String) async -> ChatMessageItem {
+        // Decode the arguments JSON string
+        guard let argsData = arguments.data(using: .utf8),
+              let decodedArgs = try? JSONDecoder().decode(OpenAIService.BreakDownTaskArguments.self, from: argsData) else {
+            print("Error: Failed to decode arguments for breakDownTask: \(arguments)")
+            let errorContent = "{\"error\": \"Invalid arguments for breakDownTask\"}"
+            return ChatMessageItem(content: errorContent, role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        let originalTaskDescription = decodedArgs.originalTaskDescription
+        let subtasks = decodedArgs.subtasks
+        let replaceOriginal = decodedArgs.replaceOriginal ?? true
+        
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+            print("DEBUG [ViewModel]: Breaking down task: \(originalTaskDescription) into \(subtasks.count) subtasks")
+        }
+        
+        // Find the original task
+        guard let originalTask = await MainActor.run(body: { 
+            todoListStore.items.first { $0.text == originalTaskDescription }
+        }) else {
+            return ChatMessageItem(content: "{\"error\": \"Original task not found: \(originalTaskDescription)\"}", role: .tool, toolCallId: id, functionName: functionName)
+        }
+        
+        await MainActor.run {
+            // Get the original task's metadata for inheritance
+            let originalCategory = originalTask.category
+            let originalProject = originalTask.projectOrPath
+            
+            // Add all subtasks with inherited metadata
+            for (index, subtask) in subtasks.enumerated() {
+                let subtaskText = "[\(index + 1)/\(subtasks.count)] \(subtask)"
+                todoListStore.addItem(
+                    text: subtaskText,
+                    category: originalCategory,
+                    projectOrPath: originalProject
+                )
+            }
+            
+            // Replace original task if requested
+            if replaceOriginal {
+                if let originalIndex = todoListStore.items.firstIndex(where: { $0.id == originalTask.id }) {
+                    todoListStore.items.remove(at: originalIndex)
+                }
+            }
+        }
+        
+        let responseContent = """
+        🎯 **Task Breakdown Complete!**
+        
+        Original task: "\(originalTaskDescription)"
+        
+        Broken into \(subtasks.count) actionable subtasks:
+        \(subtasks.enumerated().map { "✅ [\($0.offset + 1)/\(subtasks.count)] \($0.element)" }.joined(separator: "\n"))
+        
+        \(replaceOriginal ? "The original task has been replaced with these smaller steps." : "The original task is still in your list alongside these subtasks.")
+        
+        Each subtask is designed to be completable in 15-30 minutes! 🚀
+        """
+        
         return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
     }
     // -----------------------------------------------------------

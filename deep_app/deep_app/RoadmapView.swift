@@ -869,10 +869,10 @@ struct EmptyQuestState: View {
 extension ProjectType {
     var color: Color {
         switch self {
-        case .work: return Color("ProjectBlue", bundle: nil) ?? .blue
-        case .personal: return Color("ProjectPurple", bundle: nil) ?? .purple
-        case .health: return Color("ProjectGreen", bundle: nil) ?? .green
-        case .learning: return Color("ProjectYellow", bundle: nil) ?? .orange
+        case .work: return Color("ProjectBlue")
+        case .personal: return Color("ProjectPurple")
+        case .health: return Color("ProjectGreen")
+        case .learning: return Color("ProjectYellow")
         }
     }
 }

@@ -147,6 +147,13 @@ class OpenAIService {
         let endTimeToday: String   // e.g., "10:30 AM", "15:00"
         let description: String? // Optional
     }
+    
+    // Arguments for breakDownTask function
+    struct BreakDownTaskArguments: Decodable {
+        let originalTaskDescription: String
+        let subtasks: [String]
+        let replaceOriginal: Bool?
+    }
 
     // --- Tool Definitions using Explicit Structs ---
     
@@ -376,6 +383,24 @@ class OpenAIService {
             required: ["includeMetadataEnrichment", "includeSummaryGeneration", "includeEmojiUpdates", "includePriorityOptimization"]
         )
     )
+    
+    // --- ADDED: breakDownTask Tool Definition ---
+    private let breakDownTaskToolDefinition = FunctionDefinition(
+        name: "breakDownTask",
+        description: "Breaks down a large, complex task into smaller, more manageable subtasks. Essential for ADHD users who struggle with overwhelming tasks. Each subtask should be actionable and completable in 15-30 minutes.",
+        parameters: .init(
+            properties: [
+                "originalTaskDescription": .init(type: "string", description: "The description of the large task to break down.", items: nil),
+                "subtasks": .init(
+                    type: "array",
+                    description: "Array of smaller, actionable subtasks. Each subtask should be specific, measurable, and completable in 15-30 minutes.",
+                    items: .init(type: "string")
+                ),
+                "replaceOriginal": .init(type: "boolean", description: "Whether to replace the original task with the subtasks (true) or keep both (false). Default is true.", items: nil)
+            ],
+            required: ["originalTaskDescription", "subtasks"]
+        )
+    )
     // ----------------------------------------------
 
     // Combined list of all available tools (now as Tool structs)
@@ -399,7 +424,8 @@ class OpenAIService {
             .init(function: generateTaskSummaryToolDefinition),
             .init(function: enrichTaskMetadataToolDefinition), // <-- ADDED metadata enrichment tool
             .init(function: generateProjectEmojiToolDefinition), // <-- ADDED smart emoji tool
-            .init(function: organizeAndCleanupToolDefinition) // <-- ADDED comprehensive cleanup tool
+            .init(function: organizeAndCleanupToolDefinition), // <-- ADDED comprehensive cleanup tool
+            .init(function: breakDownTaskToolDefinition) // <-- ADDED task breakdown tool for ADHD users
             // -------------------------
         ]
     }

@@ -68,6 +68,22 @@ This allows for a seamless experience where task capture, planning, and calendar
     *   AI can mark tasks as complete.
 *   **Secure API Key Handling (Debug):** Uses `Secrets.plist`.
 
+## 🚀 Future: Free On-Device AI (Coming 2025)
+
+**Bryan's Brain is planning to transition from OpenAI to Apple's Foundation Models**, enabling:
+
+- **💸 FREE AI Chat** - No API costs, everything runs on-device
+- **🔒 Complete Privacy** - Your data never leaves your device
+- **✈️ Offline Support** - Works without internet connection
+- **⚡ Instant Responses** - No network latency
+- **🎯 ADHD-Optimized** - Fast, friction-free interaction
+
+This means Bryan's Brain could be offered **completely free on the App Store**, removing all barriers for ADHD users to access AI-powered task management assistance.
+
+**Timeline:** Developer access begins June 2025, with general release expected Fall 2025.
+
+Learn more: https://developer.apple.com/documentation/foundationmodels
+
 ## Planned Features / Roadmap
 
 *   **Enhanced CloudKit Sync:**

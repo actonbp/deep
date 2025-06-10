@@ -146,6 +146,36 @@ guard let data = data else {
 }
 ```
 
+## 🚀 Future Direction: Apple Foundation Models
+
+### Transition to On-Device AI (Coming June 2025)
+
+Bryan's Brain is planning to transition from OpenAI to Apple's Foundation Models framework, which will enable:
+
+- **Free AI Chat**: No API costs - everything runs on-device
+- **Privacy-First**: User data never leaves their device
+- **Offline Support**: Works without internet connection
+- **Native Performance**: Optimized for Apple Silicon
+- **Instant Responses**: No network latency
+
+**Why This Matters for ADHD Users:**
+- Zero cost barrier to access AI assistance
+- Always available, even without internet
+- Fast, immediate responses reduce friction
+- Complete privacy for sensitive thoughts/tasks
+
+**Technical Details:**
+- Apple's on-device model (~3B parameters) excels at task-oriented AI
+- Native Swift integration with tool calling support
+- Guided generation for structured task creation
+- Custom adapters can be trained for ADHD-specific behaviors
+
+**Timeline:**
+- June 2025: Developer access begins
+- Fall 2025: Expected general release with iOS 18.x
+
+For more information: https://developer.apple.com/documentation/foundationmodels
+
 ## AI Tool Development
 
 ### Adding New Tools

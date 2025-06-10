@@ -34,6 +34,7 @@ struct SettingsView: View {
     // ---------------------
     // --- ADDED Setting --- 
     @AppStorage(AppSettings.enableCategoriesKey) var areCategoriesEnabled: Bool = false // Default to off
+    @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true // Default to on
     // ---------------------
 
     // --- Use shared Authentication Service from Environment --- 
@@ -114,6 +115,16 @@ struct SettingsView: View {
                         .foregroundColor(.gray)
                 }
                 // -----------------------------
+                
+                Section("Notifications") {
+                    Toggle("ADHD Reminders", isOn: $notificationsEnabled)
+                        .onChange(of: notificationsEnabled) { _, newValue in
+                            NotificationManager.shared.toggleNotifications(enabled: newValue)
+                        }
+                    Text("Gentle reminders to capture thoughts and check in with your tasks. Scheduled at 9 AM, 2 PM, and 6 PM daily.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
                 
                 Section("Demonstration") {
                     Toggle("Enable Demo Mode", isOn: $isDemonstrationModeEnabled)
