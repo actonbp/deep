@@ -15,7 +15,9 @@ struct AppSettings {
     static let demonstrationModeEnabledKey = "demonstrationModeEnabled"
     // --- ADDED Key ---
     static let enableCategoriesKey = "enableCategories"
-    // -----------------
+    // --- NEW Key: toggle for future on-device model ---
+    static let useLocalModelKey = "useLocalModel"
+    // --------------------------------------------------
 }
 
 struct SettingsView: View {
@@ -34,6 +36,8 @@ struct SettingsView: View {
     // ---------------------
     // --- ADDED Setting --- 
     @AppStorage(AppSettings.enableCategoriesKey) var areCategoriesEnabled: Bool = false // Default to off
+    // Toggle for future local LLM mode (placeholder)
+    @AppStorage(AppSettings.useLocalModelKey) var useLocalModel: Bool = false // Default to off
     @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true // Default to on
     // ---------------------
 
@@ -132,6 +136,15 @@ struct SettingsView: View {
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
+                
+                // --- NEW: Local Model Preview Section ---
+                Section("On-Device AI (Preview)") {
+                    Toggle("Use On-Device Model (Free)", isOn: $useLocalModel)
+                    Text("When enabled, Bryan's Brain will run the assistant entirely on your device using Apple's upcoming Foundation Models. This is a **preview toggle** – no functional change yet, but stay tuned!")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                // ----------------------------------------
                 
                 Section("About") {
                     Text("App Version: 1.0.0") // Example

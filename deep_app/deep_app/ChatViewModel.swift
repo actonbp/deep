@@ -6,6 +6,11 @@ import SwiftUI
 class ChatViewModel: ObservableObject, @unchecked Sendable {
     // The OpenAI service for API calls
     private let openAIService = OpenAIService()
+    // We'll create the local service dynamically to avoid compile-time type references
+    private var _localService: Any?
+    
+    // Toggle from Settings to choose on-device model.
+    @AppStorage(AppSettings.useLocalModelKey) private var useLocalModel: Bool = false
     // Use the shared singleton TodoListStore instance
     private var todoListStore = TodoListStore.shared
     
@@ -329,13 +334,43 @@ Instructions:
 
         // --- Logging before API Call ---
         if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
-            print("DEBUG [ViewModel]: Sending \(apiMessages.count) messages to API...")
-            // Optionally print the messages themselves if needed for deeper debugging
-            // print(apiMessages)
+            print("DEBUG [ViewModel]: Sending \(apiMessages.count) messages to API… (useLocalModel=\(useLocalModel))")
         }
         // ------------------------------
 
-        let result = await openAIService.processConversation(messages: apiMessages)
+        // Decide which service to use
+        let result: OpenAIService.APIResult
+        if useLocalModel {
+#if canImport(FoundationModels)
+            if #available(iOS 26.0, *) {
+                // Create service instance if needed
+                if _localService == nil {
+                    _localService = AppleFoundationService()
+                }
+                
+                // Cast and use the service
+                if let service = _localService as? AppleFoundationService {
+                    switch await service.processConversation(messages: apiMessages) {
+                    case .success(let text):
+                        result = .success(text: text)
+                    case .failure(let error):
+                        result = .failure(error: error)
+                    }
+                } else {
+                    // Fallback if cast fails
+                    result = await openAIService.processConversation(messages: apiMessages)
+                }
+            } else {
+                // Fallback to OpenAI if OS not supported
+                result = await openAIService.processConversation(messages: apiMessages)
+            }
+#else
+            // Framework not present – fallback to OpenAI
+            result = await openAIService.processConversation(messages: apiMessages)
+#endif
+        } else {
+            result = await openAIService.processConversation(messages: apiMessages)
+        }
         
         // --- Logging after API Call ---
         if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
