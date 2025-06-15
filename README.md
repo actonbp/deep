@@ -84,6 +84,42 @@ This means Bryan's Brain could be offered **completely free on the App Store**, 
 
 Learn more: https://developer.apple.com/documentation/foundationmodels
 
+### 📅 June 11, 2025 Update: Local Model Integration Progress
+
+**✅ Successfully Implemented:**
+- **Settings Toggle** - Users can switch between OpenAI and on-device Foundation Models
+- **Basic Chat Functionality** - Text conversations work perfectly with the local model
+- **Task Creation** - "Add task: [description]" works reliably
+- **Privacy-First Architecture** - All processing happens on-device when local model is enabled
+- **Graceful Fallbacks** - App automatically handles unavailable models with clear user guidance
+- **Tool Calling Infrastructure** - 22 tools implemented and ready for full functionality
+
+**🚧 Known Issues (iOS 26 Beta):**
+- **Tool Response Recognition Bug** - The local model can call tools but doesn't properly interpret responses that return data
+  - ✅ Creating tasks works (e.g., "Add task: Buy groceries")
+  - ❌ Retrieving tasks fails (e.g., "Show my tasks" - model says it can't see them)
+  - This is a Foundation Models framework beta issue, not our implementation
+- **IPC Crashes** - Occasional crashes when using complex tool sets (workaround: progressive tool degradation)
+- **Content Filter False Positives** - Some prompts trigger safety filters unnecessarily (workaround: simplified prompts)
+
+**🔧 Technical Implementation:**
+- `AppleFoundationService` mirrors `OpenAIService` API for seamless switching
+- Tools use Apple's `Tool` protocol with `@Generable` structs
+- Progressive degradation: All tools → Essential tools → Text-only mode
+- Comprehensive error handling and retry logic
+
+**📊 Current Status:**
+- Basic conversational AI: **WORKING** ✅
+- Task creation: **WORKING** ✅
+- Task retrieval/viewing: **BETA BUG** ❌
+- Calendar integration: **BETA BUG** ❌
+- Scratchpad operations: **BETA BUG** ❌
+
+**🎯 Recommendation for Users:**
+- For full functionality: Keep using OpenAI (Settings → disable "Use On-Device Model")
+- For testing/basic chat: Try the local model (it's free and private!)
+- Check back after iOS 26 stable release for full tool support
+
 ## Planned Features / Roadmap
 
 *   **Enhanced CloudKit Sync:**

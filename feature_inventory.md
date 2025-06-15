@@ -139,4 +139,71 @@ Must mention: "Feeling stuck or don't know where to start? Just ask"
 
 ## Missing Any of These = Incomplete Recovery!
 
-If ANY of the above features are missing after a recovery operation, the recovery is incomplete and the app will not function as designed. 
+If ANY of the above features are missing after a recovery operation, the recovery is incomplete and the app will not function as designed.
+
+## 📅 June 11, 2025 Update: Local Model Integration Features
+
+### SettingsView.swift (Updated)
+- **New Toggle**: "Use On-Device Model (Free)" with descriptive text
+- `@AppStorage("useLocalModel")` binding
+
+### ChatViewModel.swift (Updated)
+- `@AppStorage("useLocalModel")` property at line ~12
+- Service switching logic in `continueConversation()`
+- `_localService: Any?` stored property for iOS 26+ compatibility
+
+### New Files Required
+
+#### AppleFoundationService.swift (~200 lines)
+```swift
+@available(iOS 26.0, *)
+final class AppleFoundationService {
+    func processConversation(messages:) async -> APIResult
+    // Progressive degradation (3 attempts)
+    // Timeout protection
+    // Retry logic
+}
+```
+
+#### FoundationModelTools.swift (~1000 lines)
+- 22 tool implementations using `Tool` protocol
+- `@Generable` structs for arguments
+- `FoundationModelTools.all()` and `.essential()`
+- `DiagnosticTool` for testing
+
+#### Documentation Files
+- `FoundationModelsCrashWorkaround.md`
+- `FoundationModelsToolResponseIssue.md`
+- `LOCAL_MODEL_ARCHITECTURE.md`
+
+### Critical Availability Checks
+```swift
+// In views using local model
+#if canImport(FoundationModels)
+if #available(iOS 26.0, *) {
+    // Local model code
+}
+#endif
+```
+
+### Required Imports
+```swift
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
+```
+
+### Tool Names Must Match
+OpenAI tools → Foundation Model tools mapping:
+- `addTaskToList` → `addTaskToList` ✅
+- `listCurrentTasks` → `listCurrentTasks` ✅
+- `markTaskComplete` → `markTaskComplete` ✅
+- etc.
+
+### Debug Logging
+All tools must include:
+```swift
+print("DEBUG [ToolName]: Message")
+```
+
+⚠️ **CRITICAL**: If local model toggle exists but these files/features are missing, the app will crash on iOS 26 devices! 

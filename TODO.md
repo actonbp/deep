@@ -47,6 +47,46 @@ This file tracks the planned features and improvements for the AI-powered deep w
 - [x] "Getting unstuck" guidance for ADHD users
 - [x] Task completion via AI command
 
+## 📅 June 11, 2025 Update: Apple Foundation Models Integration
+
+### ✅ Successfully Implemented
+- [x] **Settings Toggle** - Switch between OpenAI and local Foundation Models
+- [x] **AppleFoundationService** - Complete service implementation mirroring OpenAI API
+- [x] **Basic Chat** - Text conversations work perfectly with local model
+- [x] **Task Creation Tool** - "Add task: [description]" works reliably
+- [x] **Tool Protocol Implementation** - 22 tools using Apple's `Tool` protocol
+- [x] **@Generable Structs** - All tool arguments properly annotated
+- [x] **Availability Checks** - Graceful handling of model unavailability
+- [x] **Error Handling** - Comprehensive retry logic and user-friendly messages
+- [x] **Progressive Degradation** - All tools → Essential tools → Text-only fallback
+- [x] **Debug Infrastructure** - Logging and diagnostic tools
+
+### 🚧 Known Issues (iOS 26 Beta Bugs)
+- [ ] **Tool Response Recognition** - Model doesn't interpret tool responses that return data
+  - Creating tasks (addTaskToList) ✅ WORKS
+  - Retrieving tasks (listCurrentTasks) ❌ FAILS
+  - Calendar queries ❌ FAILS
+  - Scratchpad operations ❌ FAILS
+- [ ] **IPC Crashes** - "Underlying connection interrupted" with complex tool sets
+- [ ] **Content Filter Issues** - False positives on ADHD/mental health terminology
+- [ ] **Session Cancellation** - "Attempting to send message using a canceled session"
+
+### 🔧 Technical Workarounds Implemented
+- [x] Retry logic with exponential backoff
+- [x] Session prewarming
+- [x] Timeout handling (30 seconds)
+- [x] Content filter workarounds (simplified prompts)
+- [x] Tool set reduction on failure
+- [x] Diagnostic tool for testing
+
+### 📊 Next Steps for Local Model
+- [ ] Monitor iOS 26 beta releases for framework fixes
+- [ ] Test with each new beta/RC version
+- [ ] Document any API changes in Foundation Models framework
+- [ ] Update tool implementations when Apple provides guidance
+- [ ] Consider temporary hardcoded responses for demos
+- [ ] Prepare migration path for when bugs are fixed
+
 ## 🚧 In Progress / High Priority
 
 ### CloudKit Enhancements

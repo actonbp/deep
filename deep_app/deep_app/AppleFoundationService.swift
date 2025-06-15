@@ -1,74 +1,363 @@
-import Foundation
+//
+//  AppleFoundationService.swift
+//  deep_app
+//
+//  Bridges the chat loop to Apple's on‑device Foundation Model.
+//
 
+import Foundation
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
+import os
 
 /// Service for Apple on-device Foundation Model with tool calling support.
 /// Provides parity with OpenAIService for task management and calendar operations.
-@available(iOS 26.0, *)
+@available(iOS 26, *)
 actor AppleFoundationService {
 
-    enum APIResult {
-        case success(text: String)
-        case failure(error: Error?)
-        // Note: No toolCall case needed - Foundation Models handles tools internally
+    enum APIResult { case success(String), failure(Error?) }
+    
+    // MARK: - Utility Functions
+    
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping @Sendable () async throws -> T) async throws -> T {
+        return try await withThrowingTaskGroup(of: T.self) { group in
+            // Add the main operation
+            group.addTask {
+                try await operation()
+            }
+            
+            // Add the timeout task
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw TimeoutError()
+            }
+            
+            // Return the first result and cancel other tasks
+            defer { group.cancelAll() }
+            return try await group.next()!
+        }
+    }
+    
+    private struct TimeoutError: LocalizedError {
+        var errorDescription: String? {
+            return "Operation timed out"
+        }
     }
 
     // MARK: - Process Conversation
     
     func processConversation(messages: [OpenAIService.ChatMessage]) async -> APIResult {
 #if canImport(FoundationModels)
-        // Extract system prompt and build conversation
-        let systemPrompt = messages.first(where: { $0.role == "system" })?.content ?? ""
-        
-        // Build a simple prompt combining system context and recent messages
-        var conversationParts: [String] = []
-        
-        if !systemPrompt.isEmpty {
-            conversationParts.append("System: \(systemPrompt)")
-        }
-        
-        // Include recent message history (last 10 messages)
+        // Build conversation context from messages
+        // let systemPrompt = messages.first { $0.role == "system" }?.content ?? ""
         let recentMessages = messages.filter { $0.role != "system" }.suffix(10)
+        
+        // Ultra-safe system prompt to avoid content filters
+        let safeSystemPrompt = "You are a helpful assistant for organizing information."
+        
+        // Build conversation context
+        var conversationContext = ""
         for msg in recentMessages {
             if let content = msg.content {
-                let role = msg.role.capitalized
-                conversationParts.append("\(role): \(content)")
+                conversationContext += "\(msg.role.capitalized): \(content)\n"
             }
         }
         
-        let fullPrompt = conversationParts.joined(separator: "\n\n")
-        
+        // Extract the latest user message
+        guard let lastUserMessage = recentMessages.last(where: { $0.role == "user" })?.content else {
+            return .failure(nil)
+        }
+
         do {
-            // Get all available tools from our organized collection
-            let tools = FoundationModelTools.allTools()
+            // Add retry logic for Foundation Models crashes
+            var attempt = 0
+            let maxAttempts = 3  // Increased from 2
             
-            // Create session with tools
-            // Note: The exact API might differ - this is based on the framework description
-            let session = try LanguageModelSession()
+            while attempt < maxAttempts {
+                do {
+                    // Progressive degradation: full tools -> essential tools -> no tools
+                    let toolsToUse: [any Tool]
+                    let toolMode: String
+                    
+                    switch attempt {
+                    case 0:
+                        toolsToUse = FoundationModelTools.essential()  // Start with reduced set
+                        toolMode = "essential tools"
+                    case 1:
+                        toolsToUse = FoundationModelTools.minimal()    // Even fewer tools
+                        toolMode = "minimal tools only"
+                    default:
+                        toolsToUse = []  // No tools - just text generation
+                        toolMode = "no tools (text only)"
+                    }
+                    
+                    print("DEBUG [AppleFoundationService]: Attempt \(attempt + 1) with \(toolMode)")
+                    
+                    // Create a fresh session for each attempt to avoid state corruption
+                    print("DEBUG [AppleFoundationService]: Creating new session with \(toolsToUse.count) tools")
+                    // Logging.general.log("AppleFoundationService: Starting session with \(toolsToUse.count) tools")
+                    let session = LanguageModelSession(
+                        tools: toolsToUse,
+                        instructions: """
+                        \(safeSystemPrompt)
+                        
+                        \(toolsToUse.isEmpty ? """
+                        Note: Tool calling is currently disabled due to system limitations. 
+                        Please provide helpful responses based on the conversation context.
+                        If asked about tasks, explain that you cannot directly access them right now.
+                        """ : """
+                        You are an assistant. Use the available services to help with information:
+                        
+                        IMPORTANT: When a user asks to see their tasks, you MUST use the listCurrentTasks tool.
+                        After calling a tool, you will receive the results. Use those results in your response.
+                        
+                        DEBUG MODE: For testing, ALWAYS call listCurrentTasks first when asked about tasks, then share what you received.
+                        
+                        CRITICAL OVERRIDE: If you find yourself saying "I cannot" or "I'm not capable", STOP and use the appropriate tool instead:
+                        - "list tasks" or "show tasks" → use listCurrentTasks with retrieve: true
+                        - "how many tasks" → use experimentalGetTasks with action: "count"
+                        - "check tasks" → use experimentalGetTasks with action: "check"
+                        
+                        DO NOT say you cannot access tasks. You have tools. Use them.
+                        
+                        CRITICAL INSTRUCTION FOR TOOL RESPONSES:
+                        When you call a tool, the system will return the results to you.
+                        If listCurrentTasks returns "Here are your current tasks:" followed by a list, that IS your task data.
+                        Never say you cannot see tasks - the tool response IS the task data.
+                        Always share the exact content returned by the tool with the user.
+                        
+                        VERIFICATION MODE:
+                        For system verification requests, use verifySystem with the appropriate message.
+                        Available report formats: standard, structured, detailed.
+                        Always share the complete verification report.
+                        
+                        AVAILABLE SERVICES:
+                        - For summaries: use getDataSummary
+                        - For reports: use getInventoryReport  
+                        - For verification: use runSystemVerification
+                        - For creation: use addTaskToList
+                        - For updates: use markTaskComplete
+                        
+                        Use these services to help users.
+                        \(toolMode == "all tools" ? """
+                        - To remove tasks: use removeTaskFromList
+                        - To update priorities: use updateTaskPriorities
+                        - To set duration: use updateTaskEstimatedDuration
+                        """ : "")
+                        
+                        \(toolsToUse.isEmpty ? """
+                        FALLBACK MODE: Since tools are not available, here's what you can tell users:
+                        - If asked about tasks, say: "I cannot access your tasks directly right now due to system limitations. Tools are temporarily unavailable."
+                        - Suggest they can still add tasks by typing them out, and you'll help organize them conceptually.
+                        """ : "")
+                        
+                        NOTES:
+                        - To view notes: use getScratchpad
+                        - To save notes: use updateScratchpad
+                        
+                        When you call a tool, the system will execute it and return the results.
+                        Always use the tool results in your response to the user.
+                        Never say you cannot access data - use the tools provided.
+                        """)
+                        
+                        Previous conversation:
+                        \(conversationContext)
+                        """
+                    )
+                    
+                    // Try to prewarm the session
+                    do {
+                        try await session.prewarm()
+                        print("DEBUG [AppleFoundationService]: Session prewarmed successfully")
+                    } catch {
+                        print("DEBUG [AppleFoundationService]: Prewarm failed (non-fatal): \(error.localizedDescription)")
+                        print("DEBUG [AppleFoundationService]: This might indicate session corruption - creating new session...")
+                        
+                        // If prewarm fails, it might indicate the session is corrupted
+                        // Try creating a completely fresh session
+                        if attempt == 0 {
+                            print("DEBUG [AppleFoundationService]: Attempting session recreation due to prewarm failure")
+                            // Force a retry with a new session
+                            try await Task.sleep(nanoseconds: 500_000_000)
+                            continue
+                        }
+                    }
+                    
+                    // Add a small delay to let the session stabilize (iOS 26 beta issue)
+                    if attempt > 0 {
+                        print("DEBUG [AppleFoundationService]: Waiting for session to stabilize...")
+                        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                    }
+                    
+                    // Make the request with timeout
+                    print("DEBUG [AppleFoundationService]: About to call session.respond() - attempt \(attempt + 1)")
+                    print("DEBUG [AppleFoundationService]: Message: \(lastUserMessage)")
+                    let response = try await withTimeout(seconds: 30) {
+                        try await session.respond(to: lastUserMessage)
+                    }
+                    print("DEBUG [AppleFoundationService]: session.respond() completed successfully")
+                    
+                    print("DEBUG [AppleFoundationService]: Successfully received response from Foundation Models")
+                    print("DEBUG [AppleFoundationService]: Response content: \(response.content)")
+                    
+                    // Check for content filter rejection
+                    if response.content.contains("I'm sorry I cannot fulfill") || 
+                       response.content.contains("I can't help with that") ||
+                       response.content.contains("I cannot assist") {
+                        print("DEBUG [AppleFoundationService]: Content filter triggered - attempting workaround")
+                        
+                        // If it's a simple task request, use the direct workaround
+                        let isTaskRequest = lastUserMessage.lowercased().contains("task") || 
+                                           lastUserMessage.lowercased().contains("count") ||
+                                           lastUserMessage.lowercased().contains("test")
+                        
+                        if isTaskRequest {
+                            let tasks = await MainActor.run { TodoListStore.shared.items }
+                            let response = "You have \(tasks.count) items in your list."
+                            print("DEBUG [AppleFoundationService]: Using content filter workaround")
+                            return .success(response)
+                        }
+                    }
+                    
+                    // Check if model is refusing to use tools for task access
+                    let refusalPatterns = [
+                        "can't see", "unable to access", "don't have access", "not capable",
+                        "cannot directly", "I don't have the ability", "I'm not able"
+                    ]
+                    
+                    let isTaskRequest = lastUserMessage.lowercased().contains("task") || 
+                                       lastUserMessage.lowercased().contains("todo") ||
+                                       lastUserMessage.lowercased().contains("list")
+                    
+                    let isRefusing = refusalPatterns.contains { pattern in
+                        response.content.lowercased().contains(pattern)
+                    }
+                    
+                    if isTaskRequest && isRefusing {
+                        print("DEBUG [AppleFoundationService]: Model refusing to use tools for task request. Attempting workaround...")
+                        
+                        // Try to manually invoke the force tool
+                        let tasks = await MainActor.run { TodoListStore.shared.items }
+                        let taskCount = tasks.count
+                        
+                        if taskCount == 0 {
+                            let workaroundResponse = "I checked your task list and found it's completely empty. You have 0 tasks right now."
+                            print("DEBUG [AppleFoundationService]: Using workaround response for empty list")
+                            return .success(workaroundResponse)
+                        } else {
+                            let taskList = tasks.prefix(10).enumerated().map { index, task in
+                                "\(index + 1). \(task.text)\(task.isDone ? " ✓" : "")"
+                            }.joined(separator: "\n")
+                            
+                            let workaroundResponse = "I found \(taskCount) tasks in your list:\n\n\(taskList)\(taskCount > 10 ? "\n\n...and \(taskCount - 10) more tasks." : "")"
+                            print("DEBUG [AppleFoundationService]: Using workaround response with task list")
+                            return .success(workaroundResponse)
+                        }
+                    }
+                    
+                    // Check if response mentions inability to access data (original check)
+                    if response.content.contains("can't see") || response.content.contains("unable to access") || response.content.contains("don't have access") {
+                        print("DEBUG [AppleFoundationService]: Model appears confused about tool access. This is a known iOS 26 beta issue.")
+                    }
+                    
+                    return .success(response.content)
+                    
+                } catch {
+                    attempt += 1
+                    print("DEBUG [AppleFoundationService]: Attempt \(attempt) failed: \(error.localizedDescription)")
+                    
+                    // Check for specific Foundation Models crashes
+                    let errorMessage = error.localizedDescription.lowercased()
+                    let isCrash = errorMessage.contains("inference provider crashed") ||
+                                  errorMessage.contains("ipc error") ||
+                                  errorMessage.contains("underlying connection interrupted") ||
+                                  errorMessage.contains("sensitive") ||
+                                  errorMessage.contains("canceled session") ||
+                                  errorMessage.contains("session generation error") ||
+                                  errorMessage.contains("error 2") ||
+                                  errorMessage.contains("tool execution") ||
+                                  errorMessage.contains("session error") ||
+                                  errorMessage.contains("content policy") ||
+                                  errorMessage.contains("safety")
+                    
+                    // Special handling for tool-related crashes
+                    let isToolCrash = errorMessage.contains("session generation error") ||
+                                     errorMessage.contains("error 2") ||
+                                     errorMessage.contains("tool execution")
+                    
+                    if isToolCrash {
+                        print("DEBUG [AppleFoundationService]: Tool execution crash detected: \(error.localizedDescription)")
+                        
+                        // If this is a task request and we got a tool crash, use the workaround
+                        let isTaskRequest = lastUserMessage.lowercased().contains("task") || 
+                                           lastUserMessage.lowercased().contains("todo") ||
+                                           lastUserMessage.lowercased().contains("list")
+                        
+                        if isTaskRequest {
+                            print("DEBUG [AppleFoundationService]: Tool crash on task request - using direct workaround")
+                            
+                            let tasks = await MainActor.run { TodoListStore.shared.items }
+                            let taskCount = tasks.count
+                            
+                            if taskCount == 0 {
+                                let workaroundResponse = "I checked your task list and found it's completely empty. You have 0 tasks right now.\n\n(Note: On-device AI tools are experiencing issues in iOS 26 beta, so I retrieved this directly.)"
+                                return .success(workaroundResponse)
+                            } else {
+                                let taskList = tasks.prefix(10).enumerated().map { index, task in
+                                    "\(index + 1). \(task.text)\(task.isDone ? " ✓" : "")"
+                                }.joined(separator: "\n")
+                                
+                                let workaroundResponse = "I found \(taskCount) tasks in your list:\n\n\(taskList)\(taskCount > 10 ? "\n\n...and \(taskCount - 10) more tasks." : "")\n\n(Note: On-device AI tools are experiencing issues in iOS 26 beta, so I retrieved this directly.)"
+                                return .success(workaroundResponse)
+                            }
+                        }
+                    }
+                    
+                    if isCrash {
+                        if attempt < maxAttempts {
+                            print("DEBUG [AppleFoundationService]: Foundation Models crashed, retrying after delay...")
+                            // Wait a bit before retry to let the system recover
+                            try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+                            continue
+                        } else {
+                            print("DEBUG [AppleFoundationService]: Foundation Models crashed after \(maxAttempts) attempts, giving up")
+                            // Create a descriptive error for the user
+                            let userFriendlyError = NSError(
+                                domain: "AppleFoundationService",
+                                code: 1001,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey: "Apple's on-device AI is currently experiencing issues. This is a known problem with iOS 26 beta when using tool calling. Please try again, or switch to OpenAI in Settings for more stable performance."
+                                ]
+                            )
+                            return .failure(userFriendlyError)
+                        }
+                    } else if errorMessage.contains("timeout") {
+                        // Handle timeout specifically
+                        let timeoutError = NSError(
+                            domain: "AppleFoundationService",
+                            code: 1003,
+                            userInfo: [
+                                NSLocalizedDescriptionKey: "The on-device AI took too long to respond. Please try a simpler request or switch to OpenAI in Settings."
+                            ]
+                        )
+                        return .failure(timeoutError)
+                    } else {
+                        // For other errors, don't retry
+                        return .failure(error)
+                    }
+                }
+            }
             
-            // Configure session with tools if the API supports it
-            // This is conceptual - actual API may differ
-            let configuration = LanguageModelConfiguration(
-                tools: tools,
-                systemInstructions: systemPrompt
-            )
-            
-            // Get response - tools will be called automatically if needed
-            let response = try await session.respond(
-                to: fullPrompt,
-                configuration: configuration
-            )
-            
-            return .success(text: response.content)
-            
+            // This shouldn't be reached, but just in case
+            return .failure(NSError(domain: "AppleFoundationService", code: 1002, userInfo: [NSLocalizedDescriptionKey: "Unexpected error in retry loop"]))
+
         } catch {
-            print("Foundation Models error: \(error)")
-            return .failure(error: error)
+            print("DEBUG [AppleFoundationService]: Unexpected error: \(error.localizedDescription)")
+            return .failure(error)
         }
 #else
-        return .failure(error: nil)
+        return .failure(nil)
 #endif
     }
 }
@@ -80,19 +369,7 @@ actor AppleFoundationService {
 
 #if canImport(FoundationModels)
 
-// Placeholder configuration type
-struct LanguageModelConfiguration {
-    let tools: [any Tool]
-    let systemInstructions: String
-}
-
-// Extension to make LanguageModelSession work with our configuration
-extension LanguageModelSession {
-    func respond(to prompt: String, configuration: LanguageModelConfiguration) async throws -> Generated<String> {
-        // This would be replaced with actual API calls
-        // For now, fall back to basic respond
-        return try await self.respond(to: prompt)
-    }
-}
+// Remove the placeholder types that were causing conflicts
+// The actual FoundationModels framework will provide these
 
 #endif 

@@ -1,0 +1,122 @@
+# Bryan's Brain (deep_app) Cursor Rules
+
+## Project Overview
+Bryan's Brain is an iOS app for ADHD productivity that combines AI chat with task management, calendar integration, and gamification. The app supports both OpenAI and Apple's on-device Foundation Models.
+
+## Core Architecture
+
+### Services
+- **OpenAIService**: Production-ready service using GPT-4o-mini with 22+ tool functions
+- **AppleFoundationService**: New local model service (iOS 26+) with matching API surface
+- **CalendarService**: Google Calendar integration with OAuth
+- **CloudKitManager**: Cross-device sync for tasks
+
+### Key Features
+1. **Conversational AI** - Natural language task management
+2. **Tool Calling** - AI can add/update/complete tasks, manage calendar
+3. **Gamified Roadmap** - Visual quest map with islands, XP, and achievements
+4. **CloudKit Sync** - Tasks sync across all Apple devices
+5. **Local Model Toggle** - Switch between OpenAI and on-device AI
+
+## June 11, 2025 Status: Local Model Integration
+
+### ✅ What Works
+- Basic chat conversations
+- Task creation ("Add task: buy milk")
+- Settings toggle for model switching
+- Graceful fallbacks and error handling
+
+### ❌ Known iOS 26 Beta Issues
+- **Tool Response Bug**: Model calls tools but doesn't recognize returned data
+  - Creating data: WORKS ✅
+  - Retrieving data: FAILS ❌
+- **IPC Crashes**: Connection interrupted errors
+- **Content Filters**: False positives on ADHD terminology
+
+### Important Files
+- `AppleFoundationService.swift` - Local model implementation
+- `FoundationModelTools.swift` - 22 tools using Apple's Tool protocol
+- `FoundationModelsCrashWorkaround.md` - Detailed issue documentation
+- `FoundationModelsToolResponseIssue.md` - Tool response bug analysis
+
+## Development Guidelines
+
+### When Working with Local Models
+1. **Check availability** - Model may not be available/ready
+2. **Test with diagnostic tool** - "Run diagnostic test hello"
+3. **Use progressive degradation** - All tools → Essential → None
+4. **Expect beta issues** - Framework is unstable in iOS 26 beta
+
+### Tool Development Pattern
+```swift
+@available(iOS 26.0, *)
+struct MyTool: Tool {
+    let name = "myTool"
+    let description = "What this tool does"
+    
+    @Generable
+    struct Arguments {
+        @Guide(description: "Parameter description")
+        let param: String
+    }
+    
+    func call(arguments: Arguments) async throws -> ToolOutput {
+        // Implementation
+        return ToolOutput("Result")
+    }
+}
+```
+
+### Testing Local Models
+1. Enable in Settings → "Use On-Device Model (Free)"
+2. Check Xcode console for DEBUG logs
+3. Use Foundation Models Instrument for profiling
+4. Test on physical device (not simulator) for accurate performance
+
+## Critical Warnings
+
+### ⚠️ Feature Preservation
+Before ANY git operations, verify:
+1. Expandable task metadata UI works
+2. Gamified roadmap displays correctly
+3. CloudKit sync functions
+4. All 5 tabs load properly
+
+See `.cursor/rules/feature_verification.mdc` for full checklist.
+
+### ⚠️ API Keys
+- OpenAI key in `Secrets.plist` (gitignored)
+- Never commit API keys
+- Use DEBUG-only key handling
+
+### ⚠️ Beta Limitations
+- Tool responses don't work properly (iOS 26 beta bug)
+- Recommend OpenAI for production use
+- Local model for testing/basic chat only
+
+## Common Tasks
+
+### Add New Tool
+1. Add to `FoundationModelTools.swift`
+2. Conform to `Tool` protocol
+3. Use `@Generable` for arguments
+4. Add to `all()` and optionally `essential()` collections
+5. Mirror functionality in `OpenAIService` for consistency
+
+### Debug Tool Issues
+1. Enable debug logging in Settings
+2. Look for "DEBUG [ToolName]:" in console
+3. Check if tool is being called
+4. Verify response format
+5. Test with diagnostic tool
+
+### Switch Models
+```swift
+// In Settings
+@AppStorage("useLocalModel") var useLocalModel = false
+```
+
+## Resources
+- [Apple Foundation Models Docs](https://developer.apple.com/documentation/foundationmodels)
+- [WWDC25 Sessions](https://developer.apple.com/videos/wwdc2025/)
+- Internal docs in `/deep_app/deep_app/` directory 

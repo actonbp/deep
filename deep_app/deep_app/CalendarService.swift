@@ -4,6 +4,9 @@ import GoogleSignIn
 // Service to interact with the Google Calendar API
 class CalendarService {
     
+    // Shared singleton instance
+    static let shared = CalendarService()
+    
     // --- Structs for URLSession Decoding ---
     struct EventItem: Decodable { 
         let id: String? 

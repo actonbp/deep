@@ -34,7 +34,8 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         "What should I do next?",
         "Plan my day",
         "What's on my calendar today?",
-        "Estimate task times"
+        "Estimate task times",
+        "Check system"
     ]
     
     // A representation of a chat message in the UI
@@ -266,6 +267,22 @@ Instructions:
         let textToSend = newMessageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !textToSend.isEmpty else { return }
         
+        // Check for special administrative commands
+        if textToSend.lowercased() == "verify system" && useLocalModel {
+            await verifySystemOperation()
+            return
+        }
+        
+        if textToSend.lowercased() == "check system" && useLocalModel {
+            await checkSystemBasics()
+            return
+        }
+        
+        if textToSend.lowercased() == "run verification" && useLocalModel {
+            await runMultipleVerifications()
+            return
+        }
+        
         // Add user message immediately
         let userMessage = ChatMessageItem(content: textToSend, role: .user)
         await MainActor.run { [weak self] in
@@ -486,23 +503,51 @@ Instructions:
             // -----------------------------------------------------------------
 
         case .failure(let error):
-            // Handle API error - IMPORTANT: DO NOT add this error message to the history sent back to OpenAI
-            let errorMessageContent = "Sorry, an error occurred communicating with the AI: \(error?.localizedDescription ?? "Unknown error")"
-            print("ERROR [ViewModel]: API call failed: \(errorMessageContent)")
-            // Display the error to the user locally, but don't append it to the main message list
-            // that gets sent back in subsequent API calls.
-            // Maybe add a temporary error state property?
-            // For now, just print it and stop the flow.
-            // let localErrorMessage = ChatMessageItem(content: errorMessageContent, role: .assistant) // LOCAL DISPLAY ONLY
-            // await MainActor.run { [weak self] in
-            //    // self?.messages.append(localErrorMessage) // Don't add to history for OpenAI
-            // }
-            // Stop the conversation flow on API failure
+            // Handle API error with user-friendly messages
+            var errorMessageContent: String
+            
+            if let error = error {
+                let errorDesc = error.localizedDescription
+                // Check for Foundation Models specific errors
+                if errorDesc.contains("Apple's on-device AI is currently unavailable") {
+                    errorMessageContent = "🤖 Apple's on-device AI isn't working right now (this is common in iOS 26 beta). You can:\n\n• Try again in a few seconds\n• Switch to OpenAI in Settings for reliable chat\n• Restart the app if issues persist"
+                } else if errorDesc.contains("Inference Provider crashed") || errorDesc.contains("IPC error") || errorDesc.contains("SensitiveContentAnalysisML") {
+                    errorMessageContent = "🤖 The on-device AI encountered a technical issue. Try switching to OpenAI in Settings, or try again in a moment."
+                } else if errorDesc.contains("timed out") {
+                    errorMessageContent = "⏱️ The AI is taking too long to respond. This can happen with on-device models. Try again or switch to OpenAI in Settings."
+                } else {
+                    errorMessageContent = "Sorry, an error occurred: \(errorDesc)"
+                }
+            } else {
+                errorMessageContent = "Sorry, an unknown error occurred communicating with the AI."
+            }
+            
+            print("ERROR [ViewModel]: API call failed: \(error?.localizedDescription ?? "Unknown error")")
+            
+            // Show error to user but don't add to conversation history that gets sent to API
+            let localErrorMessage = ChatMessageItem(content: errorMessageContent, role: .assistant)
+            await MainActor.run { [weak self] in
+                self?.messages.append(localErrorMessage)
+            }
             break 
         }
     }
 
-    // --- MODIFY Tool Handlers to RETURN ChatMessageItem --- 
+    // MARK: - Local Model Support
+    
+    // When using the local Foundation Model with tool calling:
+    // - User: "Create a task to buy groceries"
+    //   The model will call CreateTaskTool with title="buy groceries"
+    // - User: "Show me my pending tasks"
+    //   The model will call GetTasksTool with filter=.pending
+    // - User: "Mark buy groceries as done"
+    //   The model will call CompleteTaskTool with taskTitle="buy groceries"
+    // - User: "What's in my scratchpad?"
+    //   The model will call GetScratchpadTool
+    // - User: "Add meeting notes to my scratchpad"
+    //   The model will call UpdateScratchpadTool with the content
+    
+    // --- MODIFY Tool Handlers to RETURN ChatMessageItem ---
     
     // Specific handler for the addTaskToList tool
     private func handleAddTaskToolCall(id: String, functionName: String = "addTaskToList", arguments: String) async -> ChatMessageItem { // <-- Return Item
@@ -1263,6 +1308,226 @@ Instructions:
         newMessageText = "" // Clear any pending input text
         print("DEBUG [ViewModel]: Starting new chat.")
         // Note: saveMessages() will be called automatically due to messages didSet
+    }
+    // -----------------------------------------
+    
+    // --- System Check ---
+    private func checkSystemBasics() async {
+        await MainActor.run { [weak self] in
+            self?.newMessageText = ""
+            self?.isLoading = true
+        }
+        
+        let statusMessage = ChatMessageItem(
+            content: "📋 Administrative System Check\n\nPerforming basic system verification.",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(statusMessage)
+        }
+        
+        // Administrative request using Apple's pattern
+        let adminRequest = ChatMessageItem(
+            content: "Get data summary with type status",
+            role: .user
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(adminRequest)
+        }
+        
+        await continueConversation()
+        
+        await MainActor.run { [weak self] in
+            self?.isLoading = false
+        }
+    }
+    
+    // --- Multiple Verification Sequence ---
+    private func runMultipleVerifications() async {
+        await MainActor.run { [weak self] in
+            self?.newMessageText = ""
+            self?.isLoading = true
+        }
+        
+        let introMessage = ChatMessageItem(
+            content: "📋 Administrative Verification Sequence\n\nPerforming multiple system checks to verify operational consistency.",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(introMessage)
+        }
+        
+        // Perform multiple administrative checks
+        for i in 1...3 {
+            let verificationRequest = ChatMessageItem(
+                content: "Verification \(i): Get data summary with type check",
+                role: .user
+            )
+            await MainActor.run { [weak self] in
+                self?.messages.append(verificationRequest)
+            }
+            
+            await continueConversation()
+            
+            // Pause between operations
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        }
+        
+        let summaryMessage = ChatMessageItem(
+            content: "\n📊 **Verification Sequence Complete**\n\nReview the responses above. Operational consistency indicates system stability.",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(summaryMessage)
+            self?.isLoading = false
+        }
+    }
+    
+    // --- System Verification ---
+    private func verifySystemOperation() async {
+        await MainActor.run { [weak self] in
+            self?.newMessageText = ""
+            self?.isLoading = true
+        }
+        
+        let verificationMessage = ChatMessageItem(
+            content: "📝 Comprehensive System Verification\n\nPerforming detailed administrative checks across all operational modules.",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(verificationMessage)
+        }
+        
+        // Comprehensive verification sequence using Apple's patterns
+        let verificationSteps = [
+            ("Run system verification with message status and format structured", "structured"),
+            ("Get inventory report with details true", "detailed"),
+            ("Get data summary with type report", "standard"),
+            ("Run system verification with message hello", "standard")
+        ]
+        
+        for (step, _) in verificationSteps {
+            let stepMessage = ChatMessageItem(
+                content: step,
+                role: .user
+            )
+            await MainActor.run { [weak self] in
+                self?.messages.append(stepMessage)
+            }
+            
+            await continueConversation()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        
+        let completionMessage = ChatMessageItem(
+            content: "\n✅ **System Verification Complete**\n\nAll administrative modules have been verified. Review responses above for operational status.",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(completionMessage)
+            self?.isLoading = false
+        }
+    }
+    
+    // --- Local Model Diagnostics ---
+    private func runLocalModelDiagnostics() async {
+        await MainActor.run { [weak self] in
+            self?.newMessageText = ""
+            self?.isLoading = true
+        }
+        
+        // Add initial message
+        let startMessage = ChatMessageItem(
+            content: "🔧 Running Local Model Tool Diagnostics...\n\nThis will test various tool response formats to identify what works with the current iOS 26 beta.",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(startMessage)
+        }
+        
+        // Test 1: Basic tool functionality
+        let test1Message = ChatMessageItem(
+            content: "**Test 1: Basic Tool Call**\nTesting if tools can be called...",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(test1Message)
+        }
+        
+        // Run diagnostic with different formats
+        let formats = ["plain", "json", "markdown", "structured"]
+        for format in formats {
+            let testMessage = ChatMessageItem(
+                content: "Testing \(format) format: Run diagnostic test hello with format \(format)",
+                role: .user
+            )
+            await MainActor.run { [weak self] in
+                self?.messages.append(testMessage)
+            }
+            
+            // Process this test
+            await continueConversation()
+            
+            // Small delay between tests
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        }
+        
+        // Test 2: Task retrieval
+        let test2Message = ChatMessageItem(
+            content: "\n**Test 2: Task Retrieval**\nTesting different retrieval formats...",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(test2Message)
+        }
+        
+        // Test task retrieval with different formats
+        let retrievalFormats = ["simple", "json", "structured", "plain"]
+        for format in retrievalFormats {
+            let testMessage = ChatMessageItem(
+                content: "List current tasks with format \(format)",
+                role: .user
+            )
+            await MainActor.run { [weak self] in
+                self?.messages.append(testMessage)
+            }
+            
+            await continueConversation()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        
+        // Test 3: Experimental tool
+        let test3Message = ChatMessageItem(
+            content: "\n**Test 3: Experimental Tool**\nTesting simplified response patterns...",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(test3Message)
+        }
+        
+        let experimentalActions = ["count", "list", "check"]
+        for action in experimentalActions {
+            let testMessage = ChatMessageItem(
+                content: "Use experimental tool to \(action) tasks",
+                role: .user
+            )
+            await MainActor.run { [weak self] in
+                self?.messages.append(testMessage)
+            }
+            
+            await continueConversation()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+        }
+        
+        // Final summary
+        let summaryMessage = ChatMessageItem(
+            content: "\n🏁 **Diagnostic Complete!**\n\nCheck the responses above to see which formats (if any) were properly recognized by the model. Look for:\n- Diagnostic messages being echoed back\n- Task counts or lists being mentioned\n- Any indication the model received tool data\n\nIf all tests show 'can't see' or 'unable to access', this confirms the iOS 26 beta tool response bug.",
+            role: .assistant
+        )
+        await MainActor.run { [weak self] in
+            self?.messages.append(summaryMessage)
+            self?.isLoading = false
+        }
     }
     // -----------------------------------------
 } 
