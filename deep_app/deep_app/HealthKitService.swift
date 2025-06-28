@@ -59,21 +59,17 @@ class HealthKitService: ObservableObject {
             return "Health data access not authorized. Enable in Settings to get ADHD-specific insights."
         }
         
-        do {
-            let sleepSummary = await getSleepSummary()
-            let activitySummary = await getActivitySummary()
-            
-            return """
-            📊 Health Summary (Last 24 Hours):
-            
-            💤 Sleep: \(sleepSummary)
-            🚶‍♂️ Activity: \(activitySummary)
-            
-            💡 This data can help tailor ADHD task recommendations based on your current physical state.
-            """
-        } catch {
-            return "Unable to retrieve health data: \(error.localizedDescription)"
-        }
+        let sleepSummary = await getSleepSummary()
+        let activitySummary = await getActivitySummary()
+        
+        return """
+        📊 Health Summary (Last 24 Hours):
+        
+        💤 Sleep: \(sleepSummary)
+        🚶‍♂️ Activity: \(activitySummary)
+        
+        💡 This data can help tailor ADHD task recommendations based on your current physical state.
+        """
     }
     
     // Get sleep summary for the last night

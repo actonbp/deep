@@ -52,7 +52,8 @@ struct GetHealthSummaryFoundationTool: Tool {
     
     @Generable
     struct Arguments {
-        // No arguments needed
+        @Guide(description: "Set to true to retrieve health summary for ADHD insights")
+        let getHealthData: Bool
     }
     
     func call(arguments: Arguments) async throws -> ToolOutput {

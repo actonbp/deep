@@ -18,7 +18,8 @@ struct DirectTaskTool: Tool {
     
     @Generable
     struct Arguments {
-        // No arguments needed - always shows tasks directly
+        @Guide(description: "Set to true to show current tasks and productivity goals")
+        let showTasks: Bool
     }
     
     func call(arguments: Arguments) async -> ToolOutput {

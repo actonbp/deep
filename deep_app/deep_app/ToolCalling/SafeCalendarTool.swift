@@ -60,11 +60,6 @@ struct SafeCalendarTool: Tool {
                         output = "Schedule Summary: Your day is completely open! Perfect time to focus on personal productivity goals or enjoy some flexibility."
                     } else {
                         let totalEvents = events.count
-                        let currentHour = Calendar.current.component(.hour, from: Date())
-                        let upcomingEvents = events.filter { event in
-                            // Simple check for upcoming events (this could be enhanced)
-                            return !event.startTimeString.isEmpty
-                        }
                         
                         output = "Schedule Summary: \(totalEvents) appointments planned today. You're doing excellent work managing your time and commitments!"
                     }
