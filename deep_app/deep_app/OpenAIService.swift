@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 // Service class to interact with the OpenAI API
 class OpenAIService {
@@ -84,10 +85,64 @@ class OpenAIService {
     }
     // ----------------------------------------------------
     
+    // Vision API support structures
+    enum MessageContent: Codable {
+        case text(String)
+        case array([ContentItem])
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.singleValueContainer()
+            switch self {
+            case .text(let string):
+                try container.encode(string)
+            case .array(let items):
+                try container.encode(items)
+            }
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if let string = try? container.decode(String.self) {
+                self = .text(string)
+            } else if let items = try? container.decode([ContentItem].self) {
+                self = .array(items)
+            } else {
+                throw DecodingError.typeMismatch(MessageContent.self, DecodingError.Context(codingPath: decoder.codingPath, debugDescription: "Invalid message content"))
+            }
+        }
+    }
+    
+    struct ContentItem: Codable {
+        let type: String
+        let text: String?
+        let imageUrl: ImageURL?
+        
+        enum CodingKeys: String, CodingKey {
+            case type, text
+            case imageUrl = "image_url"
+        }
+        
+        init(type: String, text: String) {
+            self.type = type
+            self.text = text
+            self.imageUrl = nil
+        }
+        
+        init(type: String, imageUrl: ImageURL) {
+            self.type = type
+            self.text = nil
+            self.imageUrl = imageUrl
+        }
+    }
+    
+    struct ImageURL: Codable {
+        let url: String
+    }
+    
     // Represents a single message in the chat conversation
     struct ChatMessage: Codable {
         let role: String // "user", "assistant", "system", or "tool"
-        let content: String?
+        let content: MessageContent?
         let tool_calls: [ToolCall]? // Optional: AI requests tool usage
         let tool_call_id: String? // Optional: ID for tool response message
         let name: String? // Added: Name of the function for tool role messages
@@ -95,16 +150,35 @@ class OpenAIService {
         // Initializer for simple text messages
         init(role: String, content: String) {
             self.role = role
-            self.content = content
+            self.content = .text(content)
             self.tool_calls = nil
             self.tool_call_id = nil
             self.name = nil // Ensure name is nil for non-tool messages
         }
         
+        // Initializer for messages with images
+        init(role: String, text: String, images: [UIImage]) {
+            self.role = role
+            var contentItems: [ContentItem] = [ContentItem(type: "text", text: text)]
+            
+            // Add image content items
+            for image in images {
+                if let base64String = image.toBase64String() {
+                    let imageUrl = "data:image/jpeg;base64,\(base64String)"
+                    contentItems.append(ContentItem(type: "image_url", imageUrl: ImageURL(url: imageUrl)))
+                }
+            }
+            
+            self.content = .array(contentItems)
+            self.tool_calls = nil
+            self.tool_call_id = nil
+            self.name = nil
+        }
+        
         // Initializer for tool response messages (now includes name)
         init(tool_call_id: String, name: String, content: String?) {
             self.role = "tool"
-            self.content = content
+            self.content = content != nil ? .text(content!) : nil
             self.tool_calls = nil
             self.tool_call_id = tool_call_id
             self.name = name // Set the function name
@@ -113,10 +187,33 @@ class OpenAIService {
         // ** NEW ** Initializer for assistant messages requesting tool calls
         init(role: String = "assistant", content: String? = nil, tool_calls: [ToolCall]?) {
             self.role = role
-            self.content = content
+            self.content = content != nil ? .text(content!) : nil
             self.tool_calls = tool_calls
             self.tool_call_id = nil
             self.name = nil // Ensure name is nil
+        }
+        
+        // Helper method to extract text content for display
+        func textContent() -> String? {
+            switch content {
+            case .text(let string):
+                return string
+            case .array(let items):
+                // Extract text from content items
+                return items.compactMap { $0.text }.joined(separator: " ")
+            case .none:
+                return nil
+            }
+        }
+        
+        // Helper method to extract images for display
+        func imageContent() -> [String] {
+            switch content {
+            case .array(let items):
+                return items.compactMap { $0.imageUrl?.url }
+            default:
+                return []
+            }
         }
     }
 

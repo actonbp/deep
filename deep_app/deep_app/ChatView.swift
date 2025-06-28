@@ -33,6 +33,8 @@ struct MarkdownText: View {
 struct ChatView: View {
     @StateObject private var viewModel = ChatViewModel()
     @State private var showingSettingsSheet = false // State to control settings sheet
+    @State private var selectedImages: [UIImage] = [] // Selected images for upload
+    @State private var showingImagePicker = false // Show image picker sheet
     // @State private var showScrollToBottomButton = false // <-- State for button visibility (COMMENTED OUT)
     // let sciFiFont = "Orbitron" // Font only used for title now
     // let bodyFontSize: CGFloat = 15 // No longer needed
@@ -126,6 +128,36 @@ struct ChatView: View {
                 }
                 // --- End ZStack ---
                 
+                // --- Image Preview Area ---
+                if !selectedImages.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                                ZStack(alignment: .topTrailing) {
+                                    Image(uiImage: image)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: 80, height: 80)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                    
+                                    // Remove button
+                                    Button {
+                                        selectedImages.remove(at: index)
+                                    } label: {
+                                        Image(systemName: "xmark.circle.fill")
+                                            .foregroundColor(.white)
+                                            .background(Color.black.opacity(0.7), in: Circle())
+                                    }
+                                    .offset(x: 4, y: -4)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .padding(.bottom, 8)
+                }
+                // -------------------------
+                
                 // --- Suggested Prompts --- 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 10) {
@@ -153,6 +185,16 @@ struct ChatView: View {
                 
                 // Input area at bottom
                 HStack {
+                    // Image picker button
+                    Button {
+                        showingImagePicker = true
+                    } label: {
+                        Image(systemName: "camera.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(selectedImages.isEmpty ? Color.theme.accent.opacity(0.6) : Color.theme.accent)
+                    }
+                    .padding(.leading, 16)
+                    
                     // Message input field
                     TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
                         .font(.system(.body, design: .rounded))
@@ -164,7 +206,8 @@ struct ChatView: View {
                     // Send button with enhanced glass styling
                     Button {
                         Task {
-                            await viewModel.processUserInput() 
+                            await viewModel.processUserInput(with: selectedImages) 
+                            selectedImages.removeAll() // Clear images after sending
                         }
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
@@ -180,7 +223,7 @@ struct ChatView: View {
                                     .frame(width: 32, height: 32)
                             )
                     }
-                    .disabled(viewModel.newMessageText.isEmpty || viewModel.isLoading)
+                    .disabled((viewModel.newMessageText.isEmpty && selectedImages.isEmpty) || viewModel.isLoading)
                     .padding(.trailing, 16)
                 }
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
@@ -233,6 +276,9 @@ struct ChatView: View {
                 SettingsView()
                     .environmentObject(authService) // Pass the shared authService if Settings needs it
             }
+            .sheet(isPresented: $showingImagePicker) {
+                ImagePicker(selectedImages: $selectedImages, selectionLimit: 5)
+            }
         }
     }
     
@@ -281,17 +327,37 @@ struct MessageBubble: View {
             }
             
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                // Use markdown formatting for assistant messages, plain text for user
-                Group {
-                    if message.role == .assistant {
-                        MarkdownText(message.content ?? "")
-                            .font(.system(.callout, design: .rounded))
-                    } else {
-                        Text(message.content ?? "")
-                            .font(.system(.callout, design: .rounded))
+                VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 8) {
+                    // Display images if they exist (user messages only for now)
+                    if let imageData = message.images, !imageData.isEmpty {
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: min(imageData.count, 2)), spacing: 4) {
+                            ForEach(Array(imageData.enumerated()), id: \.offset) { index, data in
+                                if let uiImage = UIImage(data: data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(maxWidth: 150, maxHeight: 150)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
+                        }
+                        .padding(8)
+                    }
+                    
+                    // Use markdown formatting for assistant messages, plain text for user
+                    if !(message.content?.isEmpty ?? true) {
+                        Group {
+                            if message.role == .assistant {
+                                MarkdownText(message.content ?? "")
+                                    .font(.system(.callout, design: .rounded))
+                            } else {
+                                Text(message.content ?? "")
+                                    .font(.system(.callout, design: .rounded))
+                            }
+                        }
+                        .padding(message.images?.isEmpty ?? true ? 16 : 8)
                     }
                 }
-                .padding(16)
                 .background(
                     message.role == .user ? 
                     Color.theme.accent : 

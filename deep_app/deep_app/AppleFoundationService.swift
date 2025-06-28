@@ -59,13 +59,14 @@ actor AppleFoundationService {
         // Build conversation context
         var conversationContext = ""
         for msg in recentMessages {
-            if let content = msg.content {
+            if let content = msg.textContent() {
                 conversationContext += "\(msg.role.capitalized): \(content)\n"
             }
         }
         
         // Extract the latest user message
-        guard let lastUserMessage = recentMessages.last(where: { $0.role == "user" })?.content else {
+        guard let lastUserChatMessage = recentMessages.last(where: { $0.role == "user" }),
+              let lastUserMessage = lastUserChatMessage.textContent() else {
             return .failure(nil)
         }
 

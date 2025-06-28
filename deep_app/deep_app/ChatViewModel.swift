@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 
 // ChatViewModel to manage the state of the chat interface
 @available(iOS 16.0, *)
@@ -48,9 +49,10 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
         let toolCallId: String?
         let functionName: String?
         let toolCalls: [OpenAIService.ToolCall]?
+        let images: [Data]? // Store image data for persistence
 
         enum CodingKeys: String, CodingKey {
-            case id, content, role, timestamp, toolCallId, functionName, toolCalls
+            case id, content, role, timestamp, toolCallId, functionName, toolCalls, images
         }
         
         init(from decoder: Decoder) throws {
@@ -62,6 +64,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             toolCallId = try container.decodeIfPresent(String.self, forKey: .toolCallId)
             functionName = try container.decodeIfPresent(String.self, forKey: .functionName)
             toolCalls = try container.decodeIfPresent([OpenAIService.ToolCall].self, forKey: .toolCalls)
+            images = try container.decodeIfPresent([Data].self, forKey: .images)
         }
 
         func encode(to encoder: Encoder) throws {
@@ -73,9 +76,10 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             try container.encodeIfPresent(toolCallId, forKey: .toolCallId)
             try container.encodeIfPresent(functionName, forKey: .functionName)
             try container.encodeIfPresent(toolCalls, forKey: .toolCalls)
+            try container.encodeIfPresent(images, forKey: .images)
         }
 
-        init(id: UUID = UUID(), content: String, role: MessageRole, timestamp: Date = Date()) {
+        init(id: UUID = UUID(), content: String, role: MessageRole, timestamp: Date = Date(), images: [UIImage]? = nil) {
             self.id = id
             self.content = content
             self.role = role
@@ -83,6 +87,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             self.toolCallId = nil
             self.toolCalls = nil
             self.functionName = nil
+            self.images = images?.compactMap { $0.jpegData(compressionQuality: 0.8) }
         }
 
         init(id: UUID = UUID(), content: String? = nil, role: MessageRole = .assistant, toolCalls: [OpenAIService.ToolCall], timestamp: Date = Date()) {
@@ -93,6 +98,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             self.toolCallId = nil
             self.toolCalls = toolCalls
             self.functionName = nil
+            self.images = nil
         }
 
         init(id: UUID = UUID(), content: String, role: MessageRole = .tool, toolCallId: String, functionName: String, timestamp: Date = Date()) {
@@ -103,6 +109,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
             self.toolCallId = toolCallId
             self.functionName = functionName
             self.toolCalls = nil
+            self.images = nil
         }
         
         static func == (lhs: ChatMessageItem, rhs: ChatMessageItem) -> Bool {
@@ -117,7 +124,15 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
                 return OpenAIService.ChatMessage(tool_call_id: toolCallId, name: functionName, content: content) 
             case .assistant:
                 return OpenAIService.ChatMessage(role: role.rawValue, content: content, tool_calls: toolCalls)
-            default: // .user, .system
+            case .user:
+                // Handle user messages with images
+                if let imageData = images, !imageData.isEmpty {
+                    let uiImages = imageData.compactMap { UIImage(data: $0) }
+                    return OpenAIService.ChatMessage(role: role.rawValue, text: content ?? "", images: uiImages)
+                } else {
+                    return OpenAIService.ChatMessage(role: role.rawValue, content: content ?? "")
+                }
+            default: // .system
                 return OpenAIService.ChatMessage(role: role.rawValue, content: content ?? "")
             }
         }
@@ -287,6 +302,25 @@ Instructions:
         
         // Add user message immediately
         let userMessage = ChatMessageItem(content: textToSend, role: .user)
+        await MainActor.run { [weak self] in
+            self?.messages.append(userMessage)
+            self?.newMessageText = ""
+            self?.isLoading = true
+        }
+        
+        // Start the conversation processing loop
+        await continueConversation() 
+    }
+    
+    // Function to send a message with images and process response
+    func processUserInput(with images: [UIImage]) async {
+        let textToSend = newMessageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Allow empty text if images are provided
+        guard !textToSend.isEmpty || !images.isEmpty, !isLoading else { return }
+        
+        // Add user message with images immediately
+        let userMessage = ChatMessageItem(content: textToSend.isEmpty ? "Attached images" : textToSend, role: .user, images: images)
         await MainActor.run { [weak self] in
             self?.messages.append(userMessage)
             self?.newMessageText = ""
