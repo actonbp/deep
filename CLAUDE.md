@@ -6,6 +6,36 @@
 - Break down complex changes into small steps
 - Test after each change before proceeding
 
+## 🚦 Current Development Status (December 28, 2024)
+
+### Active Development
+The project is currently in active development with two major features being worked on:
+
+1. **ChatGPT-Style Image Upload** - Adding ability to upload images in chat for AI analysis
+2. **Enhanced ADHD Roadmap** - Improving the roadmap tab with task dependencies and visual paths
+
+### Git Branch Structure
+```
+main (stable)
+├── feature/image-upload      ← Current branch for image functionality
+└── feature/enhanced-roadmap  ← Branch for roadmap improvements
+```
+
+**Important**: Always check which branch you're on before making changes!
+- `main`: Stable, production-ready code with all warnings fixed
+- `feature/*`: Experimental branches for new features
+
+### Recent Checkpoint
+- **Commit**: `f6dd888` - Fixed all Xcode warnings (December 28, 2024)
+- **Status**: Clean build, no warnings, ready for feature development
+- **Safety**: Main branch is stable and can be returned to if features break
+
+### Next Steps
+1. **Image Upload**: Implement PHPickerViewController for ChatGPT-style image selection
+2. **Roadmap Enhancement**: Add task dependency visualization and ADHD-specific path features
+
+**Note for AI Agents**: If you're picking up development, check `git status` and `git branch` first to understand the current state. The main branch is always safe to return to. See [BRANCH_GUIDE.md](BRANCH_GUIDE.md) for detailed branch workflow instructions.
+
 ## Project Overview
 
 **Bryan's Brain** is an iOS productivity app specifically designed for ADHD users. The app focuses on reducing cognitive friction, providing action-oriented guidance, and helping users maintain momentum through "next small step" philosophy.

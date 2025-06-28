@@ -1,5 +1,11 @@
 # Bryan's Brain (deep_app)
 
+## 🚦 Development Status
+- **Stable Branch**: `main` (warning-free, production-ready)
+- **Active Features**: Image upload (`feature/image-upload`), Enhanced roadmap (`feature/enhanced-roadmap`)
+- **Last Checkpoint**: December 28, 2024 - All Xcode warnings fixed
+- **📖 Branch Guide**: See [BRANCH_GUIDE.md](BRANCH_GUIDE.md) for detailed git workflow
+
 An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o`, `gpt-4o-mini`, and `o3` models) with a functional to-do list and Google Calendar integration. The core motivation is to provide a **fluid, conversational interface for task management and planning**, specifically designed to reduce friction for users with ADHD.
 
 ## Core Concept: Conversational & Agentic Productivity
