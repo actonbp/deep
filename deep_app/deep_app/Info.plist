@@ -23,6 +23,8 @@
 	</array>
 	<key>GIDClientID</key>
 	<string>465431758387-1mebcrput7vpo6srtvmtrdrp40pfhudf.apps.googleusercontent.com</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Bryan's Brain uses your health data to provide ADHD-specific task recommendations based on your sleep quality, activity levels, and heart rate patterns. This helps optimize your productivity based on your current physical state.</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Orbitron-VariableFont_wght.ttf</string>

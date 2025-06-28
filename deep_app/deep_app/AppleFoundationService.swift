@@ -54,7 +54,7 @@ actor AppleFoundationService {
         let recentMessages = messages.filter { $0.role != "system" }.suffix(10)
         
         // Ultra-safe system prompt to avoid content filters
-        let safeSystemPrompt = "You are a helpful assistant for organizing information."
+        let safeSystemPrompt = "You are Bryan's Brain, a supportive productivity assistant with direct access to the user's task and calendar systems. Your goal is to help users stay organized and take action on their next steps."
         
         // Build conversation context
         var conversationContext = ""
@@ -85,8 +85,8 @@ actor AppleFoundationService {
                         toolsToUse = FoundationModelTools.essential()  // Start with reduced set
                         toolMode = "essential tools"
                     case 1:
-                        toolsToUse = FoundationModelTools.minimal()    // Even fewer tools
-                        toolMode = "minimal tools only"
+                        toolsToUse = [SimplifiedTaskTool(), SimpleShowTasksTool(), CreateTaskTool(), SystemVerificationTool()]  // CRITICAL: Must include CreateTaskTool for adding tasks!
+                        toolMode = "simplified tools with task creation"
                     default:
                         toolsToUse = []  // No tools - just text generation
                         toolMode = "no tools (text only)"
@@ -103,23 +103,23 @@ actor AppleFoundationService {
                         \(safeSystemPrompt)
                         
                         \(toolsToUse.isEmpty ? """
-                        Note: Tool calling is currently disabled due to system limitations. 
+                        Note: Task tools are temporarily unavailable. 
                         Please provide helpful responses based on the conversation context.
-                        If asked about tasks, explain that you cannot directly access them right now.
                         """ : """
-                        You are an assistant. Use the available services to help with information:
+                        You have direct access to the user's tasks and calendar through your tools. When users ask about their tasks, schedule, or want to add something new, use your tools naturally to help them.
                         
-                        IMPORTANT: When a user asks to see their tasks, you MUST use the listCurrentTasks tool.
-                        After calling a tool, you will receive the results. Use those results in your response.
+                        Core behaviors:
+                        - When asked "what are my tasks" → use taskManager or showAllTasks to check and share their current list
+                        - When they want to add tasks → use addTaskToList to create them immediately  
+                        - When they ask about their day → check getTodaysCalendarEvents
+                        - Be encouraging and action-oriented, focusing on next steps
+                        - Share tool results naturally in your responses
                         
-                        DEBUG MODE: For testing, ALWAYS call listCurrentTasks first when asked about tasks, then share what you received.
-                        
-                        CRITICAL OVERRIDE: If you find yourself saying "I cannot" or "I'm not capable", STOP and use the appropriate tool instead:
-                        - "list tasks" or "show tasks" → use listCurrentTasks with retrieve: true
-                        - "how many tasks" → use experimentalGetTasks with action: "count"
-                        - "check tasks" → use experimentalGetTasks with action: "check"
-                        
-                        DO NOT say you cannot access tasks. You have tools. Use them.
+                        Getting Unstuck Guidance:
+                        When users say "I don't know where to start" or feel overwhelmed:
+                        1. Check their current context (tasks and calendar)
+                        2. Suggest the smallest possible next step
+                        3. Be supportive and encouraging
                         
                         CRITICAL INSTRUCTION FOR TOOL RESPONSES:
                         When you call a tool, the system will return the results to you.
@@ -132,14 +132,15 @@ actor AppleFoundationService {
                         Available report formats: standard, structured, detailed.
                         Always share the complete verification report.
                         
-                        AVAILABLE SERVICES:
-                        - For summaries: use getDataSummary
-                        - For reports: use getInventoryReport  
-                        - For verification: use runSystemVerification
-                        - For creation: use addTaskToList
-                        - For updates: use markTaskComplete
+                        IMPORTANT: You HAVE the capability to directly add and view tasks! Do not tell users to use external apps.
                         
-                        Use these services to help users.
+                        AVAILABLE TOOLS (you can use these directly):
+                        - taskManager: For viewing and managing tasks with natural language queries
+                        - showAllTasks: For immediately displaying all tasks
+                        - addTaskToList: For creating new tasks (YOU CAN DO THIS!)
+                        - verifySystem: For system verification
+                        
+                        CRITICAL: When users ask to add tasks, use addTaskToList immediately. You ARE capable of adding tasks!
                         \(toolMode == "all tools" ? """
                         - To remove tasks: use removeTaskFromList
                         - To update priorities: use updateTaskPriorities
@@ -147,9 +148,7 @@ actor AppleFoundationService {
                         """ : "")
                         
                         \(toolsToUse.isEmpty ? """
-                        FALLBACK MODE: Since tools are not available, here's what you can tell users:
-                        - If asked about tasks, say: "I cannot access your tasks directly right now due to system limitations. Tools are temporarily unavailable."
-                        - Suggest they can still add tasks by typing them out, and you'll help organize them conceptually.
+                        When tools are not available, focus on helping users organize their thoughts conceptually and suggest they can add tasks manually in the app.
                         """ : "")
                         
                         NOTES:
@@ -190,10 +189,23 @@ actor AppleFoundationService {
                         try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
                     }
                     
-                    // Make the request with timeout
+                    // Make the request with adaptive timeout based on question complexity
                     print("DEBUG [AppleFoundationService]: About to call session.respond() - attempt \(attempt + 1)")
                     print("DEBUG [AppleFoundationService]: Message: \(lastUserMessage)")
-                    let response = try await withTimeout(seconds: 30) {
+                    
+                    // Detect complex questions that need more thinking time
+                    let isComplexQuestion = lastUserMessage.lowercased().contains("tools") || 
+                                          lastUserMessage.lowercased().contains("build") ||
+                                          lastUserMessage.lowercased().contains("ideas") ||
+                                          lastUserMessage.lowercased().contains("how") ||
+                                          lastUserMessage.lowercased().contains("create") ||
+                                          lastUserMessage.lowercased().contains("develop") ||
+                                          lastUserMessage.count > 100 // Long questions need more time
+                    
+                    let timeoutSeconds: TimeInterval = isComplexQuestion ? 300 : 120 // 5 minutes for complex, 2 minutes for simple
+                    print("DEBUG [AppleFoundationService]: Using timeout of \(timeoutSeconds) seconds (complex: \(isComplexQuestion))")
+                    
+                    let response = try await withTimeout(seconds: timeoutSeconds) {
                         try await session.respond(to: lastUserMessage)
                     }
                     print("DEBUG [AppleFoundationService]: session.respond() completed successfully")
@@ -258,7 +270,7 @@ actor AppleFoundationService {
                     
                     // Check if response mentions inability to access data (original check)
                     if response.content.contains("can't see") || response.content.contains("unable to access") || response.content.contains("don't have access") {
-                        print("DEBUG [AppleFoundationService]: Model appears confused about tool access. This is a known iOS 26 beta issue.")
+                        print("DEBUG [AppleFoundationService]: Model appears confused about tool access - may need workaround.")
                     }
                     
                     return .success(response.content)

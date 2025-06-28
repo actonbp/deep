@@ -34,12 +34,19 @@ struct GetTasksTool: Tool {
         if tasks.isEmpty {
             output = "You have no tasks in your list."
         } else {
-            let taskList = tasks.enumerated().map { index, task in
+            // Limit to first 10 tasks to avoid token limit issues
+            let maxTasksToShow = 10
+            let tasksToShow = Array(tasks.prefix(maxTasksToShow))
+            let taskList = tasksToShow.enumerated().map { index, task in
                 let status = task.isDone ? "[COMPLETED]" : "[TODO]"
                 return "\(index + 1). \(status) \(task.text)"
             }.joined(separator: "\n")
             
-            output = "You have \(tasks.count) tasks:\n\(taskList)"
+            if tasks.count > maxTasksToShow {
+                output = "You have \(tasks.count) tasks (showing first \(maxTasksToShow)):\n\(taskList)\n\n...and \(tasks.count - maxTasksToShow) more tasks."
+            } else {
+                output = "You have \(tasks.count) tasks:\n\(taskList)"
+            }
         }
         
         Logging.general.log("GetTasksTool: Returning successful response")

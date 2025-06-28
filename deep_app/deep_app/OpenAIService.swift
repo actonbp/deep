@@ -402,6 +402,17 @@ class OpenAIService {
         )
     )
     // ----------------------------------------------
+    
+    // --- ADDED: Health Summary Tool Definition ---
+    private let getHealthSummaryToolDefinition = FunctionDefinition(
+        name: "getHealthSummary",
+        description: "Gets basic health data (sleep, activity, heart rate) to provide ADHD-specific task recommendations based on the user's current physical state.",
+        parameters: .init(
+            properties: [:], // No parameters needed
+            required: []
+        )
+    )
+    // ----------------------------------------------
 
     // Combined list of all available tools (now as Tool structs)
     private var allTools: [Tool] { 
@@ -425,7 +436,8 @@ class OpenAIService {
             .init(function: enrichTaskMetadataToolDefinition), // <-- ADDED metadata enrichment tool
             .init(function: generateProjectEmojiToolDefinition), // <-- ADDED smart emoji tool
             .init(function: organizeAndCleanupToolDefinition), // <-- ADDED comprehensive cleanup tool
-            .init(function: breakDownTaskToolDefinition) // <-- ADDED task breakdown tool for ADHD users
+            .init(function: breakDownTaskToolDefinition), // <-- ADDED task breakdown tool for ADHD users
+            .init(function: getHealthSummaryToolDefinition) // <-- ADDED health summary tool for ADHD insights
             // -------------------------
         ]
     }
@@ -485,7 +497,10 @@ class OpenAIService {
             return .failure(error: nil)
         }
         
-        let requestBody = ChatRequest(model: "gpt-4o-mini",
+        // Get user's selected model from settings
+        let selectedModel = UserDefaults.standard.string(forKey: AppSettings.selectedModelKey) ?? AppSettings.gpt4oMini
+        
+        let requestBody = ChatRequest(model: selectedModel,
                                       messages: messages,
                                       tools: allTools, // <-- Pass the [Tool] array directly
                                       tool_choice: "auto")
@@ -517,7 +532,12 @@ class OpenAIService {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = encodedBody
-        request.timeoutInterval = 30
+        // Set timeout based on model - o3 needs much more time for reasoning
+        if selectedModel == AppSettings.o3 {
+            request.timeoutInterval = 300 // 5 minutes for o3 reasoning
+        } else {
+            request.timeoutInterval = 30  // 30 seconds for other models
+        }
         
         do {
             let (data, response) = try await URLSession.shared.data(for: request)

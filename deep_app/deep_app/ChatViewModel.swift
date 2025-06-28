@@ -26,6 +26,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
     }
     @Published var newMessageText: String = ""
     @Published var isLoading: Bool = false
+    @Published var isThinking: Bool = false // For o3 reasoning phase
     
     // Add suggested prompts - prioritizing "getting started" guidance
     let suggestedPrompts: [String] = [
@@ -161,7 +162,7 @@ class ChatViewModel: ObservableObject, @unchecked Sendable {
 
 Tasks have metadata: priority, estimatedDuration, difficulty (Low, Medium, High), dateCreated, category (string), and projectOrPath (string).
 
-Tools: addTaskToList (takes optional projectOrPath, category), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskCategory, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup, breakDownTask.
+Tools: addTaskToList (takes optional projectOrPath, category), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskCategory, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup, breakDownTask, getHealthSummary.
 
 Instructions: 
 1. **Capture & Structure:** When user mentions a task, check if similar exists (use listCurrentTasks if unsure). Ask user to clarify before adding. Use addTaskToList (with optional project/category if mentioned) if confirmed new. 
@@ -182,13 +183,14 @@ Instructions:
 16. **Smart Project Emojis:** When creating new projects, when user mentions viewing their Quest Hub/roadmap, or when user asks to update/change project emojis, automatically call generateProjectEmoji to create contextual emojis for each unique project based on their names and purposes. Users can say things like update my project emojis or change the emojis in my roadmap to get fresh emoji assignments. This makes the Quest Hub more visually engaging and personalized. Analyze project names to suggest appropriate emojis.
 17. **Proactive Organization:** When users seem overwhelmed or after adding multiple tasks, offer to organize and clean up their task list using organizeAndCleanup. Say something like: Would you like me to organize your tasks? I can fill in missing time estimates, create summaries for long tasks, update project emojis, and optimize your priorities for better flow. This comprehensive cleanup makes their system more usable and reduces cognitive load.
 18. **Task Breakdown for ADHD:** When users have large, overwhelming tasks or say things like "this is too big" or "I don't know where to start on this", automatically use breakDownTask to break the complex task into smaller, 15-30 minute actionable subtasks. This is ESSENTIAL for ADHD users who struggle with executive function. Each subtask should be specific and achievable. Ask if they want to replace the original task or keep both.
+19. **Health-Aware Recommendations:** When appropriate (user asks about energy, focus, or mentions being tired/stressed), use getHealthSummary to get insights about their sleep, activity, and physical state. Provide ADHD-specific guidance based on their health data (e.g., "Your sleep was short last night, let's focus on easier tasks today").
 """
         } else {
             systemPromptContent += """
 
 Tasks have metadata: priority, estimatedDuration, difficulty (Low, Medium, High), dateCreated, and projectOrPath (string, e.g., Paper XYZ, LEAD 552).
 
-Tools: addTaskToList (takes optional projectOrPath), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup, breakDownTask.
+Tools: addTaskToList (takes optional projectOrPath), listCurrentTasks, removeTaskFromList, updateTaskPriorities, updateTaskEstimatedDuration, updateTaskDifficulty, updateTaskProjectOrPath, markTaskComplete, createCalendarEvent, getTodaysCalendarEvents, deleteCalendarEvent, updateCalendarEventTime, getCurrentDateTime, generateTaskSummary, enrichTaskMetadata, generateProjectEmoji, organizeAndCleanup, breakDownTask, getHealthSummary.
 
 Instructions: 
 1. **Capture & Structure:** When user mentions a task, check if similar exists (use listCurrentTasks if unsure). Ask user to clarify before adding. Use addTaskToList (with optional project if mentioned) if confirmed new. 
@@ -346,7 +348,12 @@ Instructions:
         await MainActor.run { [weak self] in 
             if self?.isLoading == false {
                  self?.isLoading = true
-            }    
+            }
+            // Check if using o3 model for thinking indicator
+            let selectedModel = UserDefaults.standard.string(forKey: AppSettings.selectedModelKey) ?? AppSettings.gpt4oMini
+            if selectedModel == AppSettings.o3 && !self!.useLocalModel {
+                self?.isThinking = true
+            }
         }
 
         // --- Logging before API Call ---
@@ -357,6 +364,13 @@ Instructions:
 
         // Decide which service to use
         let result: OpenAIService.APIResult
+        
+        // Debug logging to help diagnose service selection
+        if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
+            let selectedModel = UserDefaults.standard.string(forKey: AppSettings.selectedModelKey) ?? AppSettings.gpt4oMini
+            print("DEBUG [ViewModel]: useLocalModel=\(useLocalModel), selectedModel=\(selectedModel)")
+        }
+        
         if useLocalModel {
 #if canImport(FoundationModels)
             if #available(iOS 26.0, *) {
@@ -398,6 +412,7 @@ Instructions:
         // Stop loading indicator *before* processing result / potential next step
         await MainActor.run { [weak self] in
             self?.isLoading = false
+            self?.isThinking = false // Reset thinking state for o3
         }
 
         switch result {
@@ -474,6 +489,8 @@ Instructions:
                             responseItem = await self.handleOrganizeAndCleanupToolCall(id: id, functionName: functionName, arguments: arguments)
                         case "breakDownTask":
                             responseItem = await self.handleBreakDownTaskToolCall(id: id, functionName: functionName, arguments: arguments)
+                        case "getHealthSummary":
+                            responseItem = await self.handleGetHealthSummaryToolCall(id: id, functionName: functionName, arguments: arguments)
                         default:
                             // Handle unknown tool call
                             print("Warning: Received unknown tool call: \(functionName)")
@@ -514,7 +531,16 @@ Instructions:
                 } else if errorDesc.contains("Inference Provider crashed") || errorDesc.contains("IPC error") || errorDesc.contains("SensitiveContentAnalysisML") {
                     errorMessageContent = "🤖 The on-device AI encountered a technical issue. Try switching to OpenAI in Settings, or try again in a moment."
                 } else if errorDesc.contains("timed out") {
-                    errorMessageContent = "⏱️ The AI is taking too long to respond. This can happen with on-device models. Try again or switch to OpenAI in Settings."
+                    let selectedModel = UserDefaults.standard.string(forKey: AppSettings.selectedModelKey) ?? AppSettings.gpt4oMini
+                    if useLocalModel {
+                        if selectedModel == AppSettings.o3 {
+                            errorMessageContent = "⏱️ Complex question timed out on on-device AI. For O3 model's advanced reasoning, turn OFF 'Use On-Device Model' in Settings to get the full 5-minute thinking time."
+                        } else {
+                            errorMessageContent = "⏱️ The on-device AI is taking too long. Try a simpler question, or switch to OpenAI in Settings for better handling of complex requests."
+                        }
+                    } else {
+                        errorMessageContent = "⏱️ The AI request timed out. Complex questions may need more time. Try again or try a simpler question."
+                    }
                 } else {
                     errorMessageContent = "Sorry, an error occurred: \(errorDesc)"
                 }
@@ -1298,6 +1324,18 @@ Instructions:
         return ChatMessageItem(content: responseContent, role: .tool, toolCallId: id, functionName: functionName)
     }
     // -----------------------------------------------------------
+    
+    // --- ADDED: Health Summary Handler ---
+    private func handleGetHealthSummaryToolCall(id: String, functionName: String = "getHealthSummary", arguments: String) async -> ChatMessageItem {
+        print("DEBUG [ViewModel]: Health summary tool called")
+        
+        // Import the health tool and call it
+        let healthTool = GetHealthSummaryTool()
+        let healthSummary = await healthTool.call()
+        
+        return ChatMessageItem(content: healthSummary, role: .tool, toolCallId: id, functionName: functionName)
+    }
+    // -----------------------------------------------------------
 
     // --- ADDED: Function to start a new chat ---
     func startNewChat() {
@@ -1305,6 +1343,7 @@ Instructions:
         updateSystemMessage()
         addWelcomeMessage()
         isLoading = false // Ensure loading state is reset
+        isThinking = false // Reset thinking state as well
         newMessageText = "" // Clear any pending input text
         print("DEBUG [ViewModel]: Starting new chat.")
         // Note: saveMessages() will be called automatically due to messages didSet

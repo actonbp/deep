@@ -4,6 +4,16 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.developer.healthkit</key>
+	<true/>
+	<key>com.apple.developer.healthkit.access</key>
+	<array>
+		<string>health-records</string>
+	</array>
+	<key>com.apple.developer.healthkit.background-delivery</key>
+	<true/>
+	<key>com.apple.developer.healthkit.recalibrate-estimates</key>
+	<true/>
 	<key>com.apple.developer.icloud-container-identifiers</key>
 	<array>
 		<string>iCloud.bacton.deep-app</string>

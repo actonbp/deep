@@ -8,6 +8,27 @@ import GoogleSignInSwift // Needed for SettingsView presentation if that code is
 // Main View hosting the TabView (Moved to ContentView.swift)
 // struct ContentView: View { ... }
 
+
+// Markdown text view that renders basic markdown formatting
+struct MarkdownText: View {
+    let text: String
+    
+    init(_ text: String) {
+        self.text = text
+    }
+    
+    var body: some View {
+        if let attributedString = try? AttributedString(markdown: text, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+            Text(attributedString)
+                .textSelection(.enabled) // Make text selectable
+        } else {
+            // Fallback to plain text if markdown parsing fails
+            Text(text)
+                .textSelection(.enabled) // Make text selectable
+        }
+    }
+}
+
 // --- Restored ChatView Definition ---
 struct ChatView: View {
     @StateObject private var viewModel = ChatViewModel()
@@ -46,13 +67,16 @@ struct ChatView: View {
                                     HStack(spacing: 8) {
                                         ProgressView()
                                             .tint(.gray)
-                                        Text("...")
+                                        Text(viewModel.isThinking ? "🧠 Thinking deeply..." : "...")
                                             .font(.caption)
                                             .foregroundColor(.gray)
                                     }
-                                    .padding(10)
-                                    .background(Color(.systemGray6))
-                                    .cornerRadius(16)
+                                    .padding(12)
+                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 16)
+                                            .stroke(.white.opacity(0.2), lineWidth: 0.5)
+                                    )
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .id("loading")
                                 }
@@ -111,10 +135,13 @@ struct ChatView: View {
                                 .fontWeight(.medium)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 8)
-                                .background(Color.white)
-                                .clipShape(Capsule())
+                                .background(.regularMaterial, in: Capsule())
                                 .foregroundColor(.primary)
-                                .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+                                .overlay(
+                                    Capsule()
+                                        .stroke(.white.opacity(0.4), lineWidth: 0.5)
+                                )
+                                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
                                 .lineLimit(1) // Prevent wrapping
                                 .onTapGesture { viewModel.newMessageText = prompt }
                         }
@@ -134,7 +161,7 @@ struct ChatView: View {
                         .textFieldStyle(.plain)
                         .foregroundColor(.primary)
                     
-                    // Send button
+                    // Send button with enhanced glass styling
                     Button {
                         Task {
                             await viewModel.processUserInput() 
@@ -143,13 +170,25 @@ struct ChatView: View {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 28))
                             .foregroundColor(Color.theme.accent)
+                            .background(
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(.white.opacity(0.5), lineWidth: 0.5)
+                                    )
+                                    .frame(width: 32, height: 32)
+                            )
                     }
                     .disabled(viewModel.newMessageText.isEmpty || viewModel.isLoading)
                     .padding(.trailing, 16)
                 }
-                .background(Color.white)
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(.white.opacity(0.3), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .background(Color(UIColor.systemBackground)) // Use system background (adapts light/dark)
@@ -242,26 +281,34 @@ struct MessageBubble: View {
             }
             
             VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
-                Text(message.content ?? "")
-                    .font(.system(.callout, design: .rounded))
-                    .padding(16)
-                    .background(
-                        message.role == .user ? 
-                        Color.theme.accent : 
-                        Color.white
-                    )
-                    .foregroundColor(
-                        message.role == .user ? 
-                        .white : 
-                        .primary
-                    )
-                    .cornerRadius(12)
-                    .shadow(
-                        color: .black.opacity(message.role == .user ? 0.1 : 0.05), 
-                        radius: 3, 
-                        x: 0, 
-                        y: 1
-                    )
+                // Use markdown formatting for assistant messages, plain text for user
+                Group {
+                    if message.role == .assistant {
+                        MarkdownText(message.content ?? "")
+                            .font(.system(.callout, design: .rounded))
+                    } else {
+                        Text(message.content ?? "")
+                            .font(.system(.callout, design: .rounded))
+                    }
+                }
+                .padding(16)
+                .background(
+                    message.role == .user ? 
+                    Color.theme.accent : 
+                    Color.white
+                )
+                .foregroundColor(
+                    message.role == .user ? 
+                    .white : 
+                    .primary
+                )
+                .cornerRadius(12)
+                .shadow(
+                    color: .black.opacity(message.role == .user ? 0.1 : 0.05), 
+                    radius: 3, 
+                    x: 0, 
+                    y: 1
+                )
                 
                 Text(formattedTime)
                     .font(.system(.caption2, design: .rounded))

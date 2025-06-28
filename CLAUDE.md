@@ -52,19 +52,45 @@
 
 #### AI Integration
 - **`ChatViewModel`** (`ChatViewModel.swift`) - AI conversation management
-  - 13+ specialized tools for task and calendar operations
-  - Smart message history truncation
+  - 20+ specialized tools for task, calendar, and health operations
+  - Smart message history truncation with tool call preservation
   - Async tool execution with proper error handling
+  - **Dual AI Support**: OpenAI + Apple Foundation Models
+  - **O3 Model Support**: Advanced reasoning with 5-minute timeout
+  - **Health-aware recommendations**: Uses HealthKit data for ADHD insights
 - **`OpenAIService`** (`OpenAIService.swift`) - OpenAI API wrapper
-  - GPT-4o-mini/4o model selection
-  - Comprehensive tool definitions
+  - **Model Selection**: gpt-4o-mini, gpt-4o, **o3** with adaptive timeouts
+  - **Dynamic Model Selection**: Uses Settings preference instead of hardcoded
+  - Comprehensive tool definitions with health integration
   - Secure API key management (DEBUG only)
+- **`AppleFoundationService`** (`AppleFoundationService.swift`) - Apple on-device AI
+  - **iOS 26+ Support**: Foundation Models framework integration
+  - **Progressive Tool Degradation**: Falls back gracefully when tools fail
+  - **Safety Optimizations**: Workarounds for iOS 26 beta content filters
+  - **Complex Question Detection**: Adaptive 5-minute timeout for reasoning
+  - **Better Error Messages**: Clear guidance when conflicts occur
 
 #### UI Components
 - **Theme System** (`Theme.swift`) - Comprehensive design system with colors, typography, spacing
 - **Gamified Roadmap** (`RoadmapView.swift`) - Interactive project island visualization
-- **Settings Management** (`SettingsView.swift`) - App configuration
+- **Settings Management** (`SettingsView.swift`) - App configuration with health integration
 - **Authentication** (`AuthenticationService.swift`) - Google Sign-In
+- **Enhanced Chat UI** (`ChatView.swift`) - **Markdown support** and **Liquid Glass styling**
+  - **Markdown Rendering**: AI responses with **bold**, *italic*, lists, and formatting
+  - **Liquid Glass Effects**: Material backgrounds, glass overlays, enhanced depth
+  - **O3 Thinking Indicator**: Shows "🧠 Thinking deeply..." during reasoning
+  - **Selectable Text**: Copy-paste support for all messages
+
+#### Health Integration
+- **`HealthKitService`** (`HealthKitService.swift`) - Apple Health data access
+  - **Sleep Quality Tracking**: REM, core, deep sleep analysis
+  - **Activity Monitoring**: Steps, exercise, heart rate data
+  - **ADHD Correlation**: Links health metrics to productivity recommendations
+  - **Privacy-First**: All data stays on device
+- **`GetHealthSummaryTool`** (`ToolCalling/GetHealthSummaryTool.swift`) - Health data tool
+  - **Dual AI Support**: Works with both OpenAI and Foundation Models
+  - **Smart Recommendations**: "Your sleep was short, focus on easier tasks today"
+  - **Settings Integration**: Respects HealthKit toggle in Settings
 
 ## ADHD-Focused Design Patterns
 
@@ -175,6 +201,98 @@ Bryan's Brain is planning to transition from OpenAI to Apple's Foundation Models
 - Fall 2025: Expected general release with iOS 18.x
 
 For more information: https://developer.apple.com/documentation/foundationmodels
+
+### Foundation Models Best Practices (Based on Apple's Patterns)
+
+**Tool Design Patterns from Apple's Sample Code:**
+- **Simple, focused tools**: Each tool does one specific thing (e.g., CalendarTool only fetches calendar events, ContactsTool only fetches contacts)
+- **Clear verb-first naming**: `getCalendarEvents`, `getContacts` - immediately clear what the tool does
+- **Flexible response types**: Return simple strings for basic data, GeneratedContent for structured data
+- **Robust error handling**: Always wrap in try/catch, return sensible fallbacks or throw errors
+- **Concurrent execution**: Tools marked `async throws` to support parallel execution
+
+**Key Implementation Differences:**
+| Aspect | Current Implementation | Apple's Pattern |
+|--------|----------------------|-----------------|
+| Tool Names | `listCurrentTasks` | `getTasks` or `getTaskList` |
+| Arguments | `retrieve: Bool` | Specific parameters only |
+| Responses | Plain strings | Mixed: strings or GeneratedContent |
+| Error Handling | Basic logging | Try/catch with fallbacks |
+
+**Apple's 6-Phase Tool Process:**
+1. Present available tools to the model
+2. Submit prompt to the model
+3. Model generates tool arguments
+4. Tool executes with generated arguments
+5. Tool returns output to model
+6. Model produces final response using tool output
+
+For detailed improvement suggestions, see `FoundationModelsImprovementGuide.md`
+
+## 🌐 Future Direction: Vercel Functions Backend
+
+### Production Architecture for OpenAI Integration
+Bryan's Brain will use **Vercel Functions** for secure, scalable backend infrastructure:
+
+```
+iPhone App → Vercel Functions (Serverless) → OpenAI API
+```
+
+### Why Vercel Functions?
+- **Serverless**: No server management, scales automatically
+- **Pay-per-request**: Cost-effective for growing user base
+- **Easy deployment**: Git push → Automatic deployment
+- **Edge functions**: Fast response times globally
+- **Built-in monitoring**: Analytics and error tracking included
+
+### Implementation Plan
+1. **Authentication Layer**
+   - User accounts with secure token management
+   - Rate limiting per user to control costs
+   - Premium tier management for O3 access
+
+2. **API Endpoints**
+   ```javascript
+   // Example: /api/chat
+   export default async function handler(req, res) {
+     const { message, tools } = req.body;
+     const { userId } = req.auth;
+     
+     // Rate limiting check
+     // Forward to OpenAI with server-side API key
+     // Return response
+   }
+   ```
+
+3. **Cost Management**
+   - Free tier: Apple Foundation Models (on-device)
+   - Premium tier: OpenAI GPT-4o/O3 via Vercel
+   - Usage tracking and billing integration
+
+4. **Security Features**
+   - API keys stored in Vercel environment variables
+   - JWT authentication for all requests
+   - Request validation and sanitization
+
+### Hybrid AI Strategy
+```swift
+// In ChatViewModel
+if useLocalModel && appleFoundationAvailable {
+    // Free: Apple Foundation Models
+    return await processWithApple(message)
+} else if userHasPremiumAccess {
+    // Premium: OpenAI via Vercel
+    return await processWithVercel(message)
+} else {
+    // Prompt to upgrade
+    return "Upgrade to Premium for advanced AI features"
+}
+```
+
+### Timeline
+- **Phase 1** (Current): Direct OpenAI integration for development
+- **Phase 2** (Q2 2025): Vercel Functions MVP with authentication
+- **Phase 3** (Fall 2025): Full hybrid system with Apple Foundation Models
 
 ## AI Tool Development
 
@@ -469,3 +587,62 @@ let hasAchievement = completedTasks >= 5 || progress >= 0.8
 - Efficient SwiftUI rendering with proper view composition
 - Gesture handling optimized for smooth interactions
 - Color system integrated with existing theme architecture
+
+## Recent Enhancements (December 2024)
+
+### Enhanced AI Integration
+- **O3 Model Support**: Added OpenAI's advanced reasoning model to settings (`SettingsView.swift:9`)
+  - Extended timeout to 5 minutes for complex reasoning tasks (`OpenAIService.swift:536-540`)
+  - Added visual "🧠 Thinking deeply..." indicator during O3 processing (`ChatView.swift`)
+  - Fixed model selection routing to properly use user's choice (`OpenAIService.swift:501`)
+- **Adaptive Timeouts**: Dynamic timeout system based on question complexity
+- **Improved Error Messages**: Better distinction between OpenAI and Foundation Models errors
+- **Model Selection Warnings**: Visual indicators when on-device model overrides OpenAI selection (`SettingsView.swift:106-116`)
+
+### UI/UX Improvements
+- **Markdown Rendering**: AI chat messages now support rich formatting (`ChatView.swift`)
+  - Uses AttributedString for native SwiftUI rendering with `MarkdownText` view
+  - Preserves whitespace and inline formatting via `.inlineOnlyPreservingWhitespace`
+  - Fallback to plain text if markdown parsing fails
+- **Liquid Glass Enhancement**: Improved visual materials throughout the interface
+  - Enhanced chat bubbles with `.ultraThinMaterial` and `.regularMaterial`
+  - Better visual hierarchy and depth perception
+  - Automatic Liquid Glass effects already working in iOS 26
+
+### HealthKit Integration ✅ Working!
+- **Basic Health Data Access**: Successfully integrated with proper entitlements
+- **GetHealthSummaryTool**: AI tool for accessing sleep, activity, and heart rate data (`ToolCalling/GetHealthSummaryTool.swift`)
+- **HealthKitService**: New service for basic health data access (`HealthKitService.swift`)
+  - Sleep quality tracking (REM, core, deep sleep analysis)
+  - Activity monitoring (steps, exercise, heart rate data)
+  - ADHD correlation links health metrics to productivity recommendations
+- **Privacy-First**: All data stays on device, respects user permissions
+- **Info.plist Integration**: Added `NSHealthShareUsageDescription` for App Store compliance (`Info.plist:32-33`)
+- **Entitlements**: Properly configured with HealthKit capability (`deep_app.entitlements`)
+
+#### Future Health Features
+- **Workout Celebrations**: "🎉 Great job on that workout! Your body will thank you with better focus today."
+- **Sleep-Based Task Suggestions**: Adjust task difficulty recommendations based on sleep quality
+- **Heart Rate Variability**: Detect stress levels and suggest break times
+- **Activity Reminders**: "You've been sitting for 2 hours - time for a quick walk to reset your ADHD brain!"
+- **Medication Reminders**: Track ADHD medication timing with health metrics correlation
+
+### Foundation Models Improvements
+- **Token Limit Fixes**: Reduced response size in GetTasksTool and SimpleShowTasksTool to prevent overflow
+- **Extended Timeouts**: 5-minute timeout for complex questions vs 2 minutes for simple ones (`AppleFoundationService.swift`)
+- **Better Error Handling**: More descriptive error messages for troubleshooting
+- **System Prompt Optimization**: Enhanced prompts for more natural tool usage
+- **Complex Question Detection**: Automatic timeout extension for build/tool commands
+
+### Code Architecture Enhancements
+- **ChatView.swift**: Added MarkdownText view and enhanced UI materials
+- **SettingsView.swift**: Added O3 model option and HealthKit toggle with auto-permissions
+- **OpenAIService.swift**: Dynamic model selection and adaptive timeouts
+- **AppleFoundationService.swift**: Improved timeout handling and error messages
+- **ChatViewModel.swift**: Added `isThinking` state for O3 reasoning indicator
+
+### Technical Fixes
+- **Model Selection Bug**: Fixed hardcoded model to use user's Settings preference
+- **Timeout Conflicts**: Resolved confusion between OpenAI O3 and Foundation Models
+- **Markdown Parsing**: Robust error handling with graceful fallback to plain text
+- **Health Permissions**: Automatic HealthKit authorization flow with toggle feedback

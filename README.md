@@ -1,6 +1,6 @@
 # Bryan's Brain (deep_app)
 
-An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o-mini`) with a functional to-do list and Google Calendar integration. The core motivation is to provide a **fluid, conversational interface for task management and planning**, specifically designed to reduce friction for users with ADHD.
+An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o`, `gpt-4o-mini`, and `o3` models) with a functional to-do list and Google Calendar integration. The core motivation is to provide a **fluid, conversational interface for task management and planning**, specifically designed to reduce friction for users with ADHD.
 
 ## Core Concept: Conversational & Agentic Productivity
 
@@ -30,8 +30,9 @@ This allows for a seamless experience where task capture, planning, and calendar
 *   **iOS Application:** Built natively using SwiftUI.
 *   **Tabbed Interface:** Separate views for Chat, To-Do List, Calendar, Scratchpad, and Roadmap.
 *   **AI Chat:**
-    *   Connects to OpenAI's `gpt-4o-mini` model.
+    *   Connects to OpenAI models: `o3` (thinking model), `gpt-4o` (main), `gpt-4o-mini` (cost-effective).
     *   Conversation starter prompts.
+    *   Optional on-device Foundation Models (iOS 26+ beta).
 *   **To-Do List:**
     *   Add, toggle completion, delete, prioritize, drag-reorder items.
     *   Display estimated task durations.
@@ -133,7 +134,78 @@ Learn more: https://developer.apple.com/documentation/foundationmodels
 *   **Release Build Security:** Secure API key handling for release.
 *   **macOS Companion App:** Explore creating a companion app for macOS leveraging the shared SwiftUI codebase (lower priority currently).
 
-See `TODO.md` for more granular items.
+See `future_directions.md` for complete roadmap and planned features.
+
+## Solo Entrepreneur Philosophy
+
+**Build for yourself first, then find others like you.**
+
+Bryan's Brain is being developed with a clear philosophy:
+
+1. **Personal Utility First**: The app must be incredibly useful to me (Bryan) as someone with ADHD/executive function challenges
+2. **Daily Driver**: I use this app every day, ensuring rapid iteration based on real needs
+3. **No Premature Scaling**: Won't release to App Store until it's genuinely transformative for my own productivity
+4. **Find Your Tribe**: Once perfected for my needs, find other ADHD users who share similar challenges
+
+This approach ensures:
+- Deep understanding of the problem space
+- Authentic solutions that actually work
+- No feature bloat from imagined user needs
+- Passionate development driven by personal necessity
+
+## Vercel Backend Architecture (Coming Soon)
+
+### Moving Beyond Personal API Credits
+
+The next major technical evolution will implement a Vercel serverless backend:
+
+**Architecture:**
+```
+iPhone App → Vercel Functions → OpenAI API
+           ↓
+    Auth & Rate Limiting
+```
+
+**Benefits:**
+- **Scalable**: Serverless functions scale automatically
+- **Secure**: API keys stored server-side
+- **Cost-Effective**: Pay-per-request pricing
+- **User Management**: Authentication and premium tiers
+- **Rate Limiting**: Control costs per user
+
+**Implementation Plan:**
+1. JWT authentication system
+2. User accounts with usage tracking
+3. Free tier (Foundation Models) + Premium tier (OpenAI)
+4. Stripe integration for premium subscriptions
+5. Usage analytics and monitoring
+
+## AI-Powered Marketing Strategy
+
+### Leveraging AI for Solo Marketing
+
+As a solo entrepreneur, all marketing will be AI-augmented:
+
+**Content Creation:**
+- **Google VEO3**: Creating high-quality product demo videos
+- **AI Copywriting**: Social media posts optimized for ADHD community
+- **Automated Scheduling**: AI-driven content calendar
+
+**Channels:**
+- Twitter/X: Daily tips for ADHD productivity
+- TikTok/Reels: Short demos showing "aha" moments
+- YouTube: Longer tutorials and ADHD life hacks
+- Reddit: Authentic engagement in ADHD communities
+
+**Key Messages:**
+- "Built by someone with ADHD, for people with ADHD"
+- "Your AI coach that actually gets it"
+- "Stop fighting your brain, start working with it"
+
+**Metrics:**
+- Track which features resonate most
+- A/B test messaging with AI assistance
+- Focus on engagement over vanity metrics
 
 ## ⚠️ CRITICAL: Repository Recovery Warning
 

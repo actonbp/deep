@@ -6,8 +6,9 @@ struct AppSettings {
     // Use constants for model names to avoid typos
     static let gpt4oMini = "gpt-4o-mini"
     static let gpt4o = "gpt-4o"
+    static let o3 = "o3"
     
-    static let availableModels = [gpt4oMini, gpt4o]
+    static let availableModels = [gpt4oMini, gpt4o, o3]
     
     // Key for UserDefaults
     static let selectedModelKey = "selectedApiModel"
@@ -39,6 +40,7 @@ struct SettingsView: View {
     // Toggle for future local LLM mode (placeholder)
     @AppStorage(AppSettings.useLocalModelKey) var useLocalModel: Bool = false // Default to off
     @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true // Default to on
+    @AppStorage("healthKitEnabled") var healthKitEnabled: Bool = false // Default to off
     // ---------------------
 
     // --- Use shared Authentication Service from Environment --- 
@@ -98,10 +100,25 @@ struct SettingsView: View {
                             Text(modelName).tag(modelName) // Use model name as both text and tag
                         }
                     }
+                    .disabled(useLocalModel) // Disable when using local model
+                    
                     // Optional: Add description about models
-                    Text("gpt-4o-mini is faster and cheaper. gpt-4o is more powerful.")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    if useLocalModel {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("⚠️ OpenAI models are disabled while using on-device model below.")
+                                .font(.caption)
+                                .foregroundColor(.orange)
+                            if selectedModel == AppSettings.o3 {
+                                Text("💡 For O3's advanced reasoning (5-min thinking time), turn OFF on-device model.")
+                                    .font(.caption)
+                                    .foregroundColor(.blue)
+                            }
+                        }
+                    } else {
+                        Text("gpt-4o-mini: Fast and economical. gpt-4o: More powerful. o3: Advanced reasoning model.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
                 }
                 
                 Section("Debugging") { // New section for debug settings
@@ -126,6 +143,30 @@ struct SettingsView: View {
                             NotificationManager.shared.toggleNotifications(enabled: newValue)
                         }
                     Text("Gentle reminders to capture thoughts and check in with your tasks. Scheduled at 9 AM, 2 PM, and 6 PM daily.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
+                Section("Health Integration (Preview)") {
+                    Toggle("Enable HealthKit", isOn: $healthKitEnabled)
+                        .onChange(of: healthKitEnabled) { _, newValue in
+                            if newValue {
+                                // Request HealthKit permissions when enabled
+                                Task {
+                                    if #available(iOS 13.0, *) {
+                                        let healthService = HealthKitService.shared
+                                        let authorized = await healthService.requestAuthorization()
+                                        if !authorized {
+                                            // If authorization failed, turn the toggle back off
+                                            await MainActor.run {
+                                                healthKitEnabled = false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    Text("Connect Apple Health for ADHD-specific insights based on sleep, activity, and heart rate. This is a basic connection - full health dashboard coming soon!")
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
