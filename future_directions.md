@@ -1,20 +1,34 @@
 # Future Directions for Bryan's Brain
 
-## 🚧 Currently In Development (December 2024)
+## ✅ Recently Completed (June 2025)
 
-### Active Feature Development
-1. **Image Upload in Chat** (`feature/image-upload` branch)
-   - ChatGPT-style image selection using PHPickerViewController
-   - Support for OpenAI Vision API (gpt-4o)
-   - Image preview and removal before sending
+### Major Features Just Implemented
+1. **✅ Image Upload in Chat** (`feature/image-upload` branch)
+   - ✅ ChatGPT-style image selection using PHPickerViewController
+   - ✅ Support for OpenAI Vision API (gpt-4o)
+   - ✅ Image preview and removal before sending
+   - ✅ Mixed text/image content in chat messages
 
-2. **Enhanced ADHD Roadmap** (`feature/enhanced-roadmap` branch)
+2. **✅ AI Agent Mode** - Background task processing
+   - ✅ ADHD time-blocking analysis with cognitive load assessment
+   - ✅ Background task refinement using iOS BackgroundTasks framework
+   - ✅ Automatic metadata enrichment (duration, difficulty, category)
+   - ✅ Energy management and scheduling recommendations
+
+3. **✅ Enhanced To-Do List UI** - Complete redesign
+   - ✅ Separate sections for incomplete/completed tasks
+   - ✅ MetadataCardView component with elegant card-based layout
+   - ✅ Compact completed task display
+   - ✅ Time estimation calculations
+   - ✅ Improved project management with clean picker interface
+
+## 🚧 Next Up for Development
+
+### Priority: Enhanced ADHD Roadmap (`feature/enhanced-roadmap` branch)
    - Task dependency visualization with connecting paths
    - Individual task detail views with "Start This Task" focus
    - Visual quest chains showing task relationships
    - ADHD-specific enhancements for reduced cognitive load
-
-**Development Note**: These features are being developed on separate branches to maintain stability of the main branch.
 
 ## Current Status: Apple Developer Program Member 🎉
 

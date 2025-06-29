@@ -38,6 +38,38 @@ main (stable)
 2. **UI Polish**: Continue refinements based on user feedback
 3. **Performance**: Optimize background AI processing
 
+## 🤖 AI Agent Handoff Guide
+
+**If you're a new AI agent picking up this project, START HERE:**
+
+### Essential First Steps
+1. **Check current state**: `git status` and `git branch` (should be on `feature/image-upload`)
+2. **Review latest commit**: `6475d03` - All major features working and documented
+3. **Read this file**: CLAUDE.md contains all architecture and development guidelines
+4. **Review feature completeness**: See `feature_inventory.md` for critical component verification
+
+### Current Branch Status ✅
+- **Branch**: `feature/image-upload` 
+- **Status**: Stable, all features working
+- **Last tested**: June 29, 2025 by Bryan in Xcode
+- **Ready for**: Additional refinements or roadmap enhancement development
+
+### Key Files to Understand
+- `ContentView.swift` (~1100 lines) - Main to-do list with MetadataCardView
+- `ChatView.swift` - Image upload and AI chat interface  
+- `AIAgentManager.swift` - Background processing system
+- `ImagePicker.swift` - Photo selection component
+- `OpenAIService.swift` - API integration with Vision support
+
+### Development Guidelines
+- **NEVER break existing functionality** - Test every change in Xcode
+- **Incremental changes only** - Small, safe improvements
+- **Follow ADHD-first design** - Reduce cognitive load, minimize friction
+- **Use existing patterns** - Follow established code conventions
+
+### Emergency Recovery
+If anything breaks, the `main` branch is always safe to return to. See "CRITICAL: Git Recovery Operations" section in this file for detailed recovery procedures.
+
 **Note for AI Agents**: If you're picking up development, check `git status` and `git branch` first to understand the current state. The main branch is always safe to return to. See [BRANCH_GUIDE.md](BRANCH_GUIDE.md) for detailed branch workflow instructions.
 
 ## Project Overview
