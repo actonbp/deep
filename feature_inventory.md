@@ -3,14 +3,15 @@
 
 This document provides a definitive list of features that MUST exist in each file. Use this to verify completeness after any recovery operation.
 
-## ContentView.swift (~500+ lines)
+## ContentView.swift (~1100+ lines) ✅ **UPDATED JUNE 2025**
 
 ### State Variables Required
 - `@StateObject private var store = TodoListStore()`
 - `@State private var draggedItem: TodoItem?`
 - `@State private var expandedItemId: UUID? = nil` ⚠️ **CRITICAL**
 - `@State private var editingCategory: String = ""`
-- `@State private var editingProject: String? = nil`
+- `@State private var editingProject: String = ""`
+- `@State private var showCompletedTasks = true` ⚠️ **NEW**
 
 ### Key Features
 1. **5-Tab TabView Structure**
@@ -20,15 +21,29 @@ This document provides a definitive list of features that MUST exist in each fil
    - NotesView (note.text)
    - RoadmapView (map.fill)
 
-2. **Expandable Task Metadata** ⚠️ **MOST COMMONLY LOST**
+2. **Enhanced To-Do List UI** ⚠️ **MAJOR UPDATE**
+   - **Separate Sections**: `incompleteTasks` and `completedTasks` views
+   - **CompactTaskRowView**: Minimal display for completed items
+   - **Time Estimates**: `calculateTotalTime()` function for incomplete tasks
+   - **Collapsible Completed**: Toggle button with animation
+
+3. **Expandable Task Metadata with MetadataCardView** ⚠️ **COMPLETELY REDESIGNED**
    ```swift
    if expandedItemId == item.id {
-       // Category field (if enabled)
-       // Project/Path picker
-       // Difficulty display
-       // Creation date
+       LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())]) {
+           // Category Card (if categories enabled)
+           // Project Card with clean picker
+           // Difficulty Card (if available)
+           // Created Date Card
+       }
+       // Summary section (if needed)
    }
    ```
+
+4. **MetadataCardView Component** ⚠️ **NEW CRITICAL COMPONENT**
+   - Generic card component with icon, title, value
+   - Support for both read-only and interactive content
+   - Color-coded with opacity backgrounds and borders
 
 3. **Swipe Actions**
    - Mark done with haptic feedback
@@ -41,6 +56,48 @@ This document provides a definitive list of features that MUST exist in each fil
 5. **Drag & Drop Reordering**
    - `.onMove` handler
    - Priority updates
+
+## ChatView.swift ⚠️ **MAJOR UPDATE - IMAGE UPLOAD**
+
+### New Required Features ✅ **JUNE 2025**
+1. **Image Upload Support**
+   - `@State private var selectedImages: [UIImage] = []`
+   - `@State private var showingImagePicker = false`
+   - Camera button with SF Symbol `camera.fill`
+   - Image preview area with grid layout
+   - Integration with `ImagePicker` component
+
+2. **Enhanced Message Display**
+   - Support for `MessageContent` enum (text/image arrays)
+   - Grid layout for displaying multiple images
+   - Image resizing and aspect ratio handling
+
+## ImagePicker.swift ⚠️ **NEW FILE**
+
+### Required Components
+- `PHPickerViewController` wrapper for SwiftUI
+- `@Binding var selectedImages: [UIImage]`
+- Image compression and base64 conversion utilities
+- Multi-image selection with configurable limits
+
+## AIAgentManager.swift ⚠️ **NEW FILE**
+
+### Required Features
+1. **Background Task Registration**
+   - Static registration tracking to prevent duplicates
+   - `BGTaskScheduler` integration
+   - Task identifiers: `com.bryanbrain.ai.agent.refine`, `com.bryanbrain.ai.agent.daily`
+
+2. **ADHD Time-Blocking Analysis**
+   - Comprehensive system prompts for cognitive load assessment
+   - JSON response parsing for task refinements
+   - Metadata enrichment (duration, difficulty, category)
+   - Energy management recommendations
+
+3. **Settings Integration**
+   - `@AppStorage` for enable/disable toggle
+   - Last processing date tracking
+   - Insights persistence and display
 
 ## TodoListStore.swift (~400+ lines)
 

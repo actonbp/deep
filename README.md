@@ -1,9 +1,10 @@
 # Bryan's Brain (deep_app)
 
 ## 🚦 Development Status
-- **Stable Branch**: `main` (warning-free, production-ready)
-- **Active Features**: Image upload (`feature/image-upload`), Enhanced roadmap (`feature/enhanced-roadmap`)
-- **Last Checkpoint**: December 28, 2024 - All Xcode warnings fixed
+- **Current Branch**: `feature/image-upload` ✅ **Major improvements just pushed** (June 29, 2025)
+- **Stable Branch**: `main` (warning-free, production-ready)  
+- **Latest Commit**: `8ef7e9f` - Major UI/UX improvements and AI Agent Mode
+- **Previous**: `edb7e1f` - ChatGPT-style image upload feature
 - **📖 Branch Guide**: See [BRANCH_GUIDE.md](BRANCH_GUIDE.md) for detailed git workflow
 
 An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o`, `gpt-4o-mini`, and `o3` models) with a functional to-do list and Google Calendar integration. The core motivation is to provide a **fluid, conversational interface for task management and planning**, specifically designed to reduce friction for users with ADHD.
@@ -37,9 +38,14 @@ This allows for a seamless experience where task capture, planning, and calendar
 *   **Tabbed Interface:** Separate views for Chat, To-Do List, Calendar, Scratchpad, and Roadmap.
 *   **AI Chat:**
     *   Connects to OpenAI models: `o3` (thinking model), `gpt-4o` (main), `gpt-4o-mini` (cost-effective).
+    *   🖼️ **NEW: Image Upload** - ChatGPT-style multimodal AI with photo analysis
+    *   🤖 **NEW: AI Agent Mode** - Background task processing and ADHD time-blocking insights
     *   Conversation starter prompts.
     *   Optional on-device Foundation Models (iOS 26+ beta).
 *   **To-Do List:**
+    *   🎨 **NEW: Enhanced UI** - Separate incomplete/completed sections with compact design
+    *   📝 **NEW: Metadata Cards** - Elegant expandable task view with card-based layout
+    *   ⏱️ **NEW: Time Estimates** - Total time calculations for incomplete tasks
     *   Add, toggle completion, delete, prioritize, drag-reorder items.
     *   Display estimated task durations.
     *   Expandable task metadata (category, project/path, difficulty).
@@ -74,6 +80,35 @@ This allows for a seamless experience where task capture, planning, and calendar
     *   AI can create events in the user's primary Google Calendar upon request.
     *   AI can mark tasks as complete.
 *   **Secure API Key Handling (Debug):** Uses `Secrets.plist`.
+
+## 🎉 Recent Major Updates (June 2025)
+
+### 🖼️ ChatGPT-Style Image Upload
+- **Native Photo Selection**: PHPickerViewController integration with SwiftUI wrapper
+- **Vision AI Analysis**: OpenAI GPT-4o processes images with text for comprehensive understanding
+- **Seamless UI**: Camera button with image preview area, just like ChatGPT
+- **Mixed Content**: Chat messages support both text and images simultaneously
+
+### 🤖 AI Agent Mode - Your ADHD Time-Blocking Coach
+- **Background Processing**: Runs autonomously using iOS BackgroundTasks framework
+- **ADHD-Focused Analysis**: Comprehensive task analysis with cognitive load assessment
+- **Smart Metadata**: Automatic duration estimates, difficulty ratings, and categorization
+- **Energy Management**: Scheduling recommendations based on context switching costs
+- **Productivity Insights**: Detailed time-blocking strategies and quick wins identification
+
+### 🎨 Redesigned To-Do List Interface
+- **Visual Clarity**: Clean separation of incomplete vs completed tasks
+- **Compact Completed Items**: Minimal display to focus on what needs to be done
+- **Metadata Cards**: Beautiful 2x2 grid layout for task details (category, project, difficulty, date)
+- **Better Text Handling**: Smart truncation and improved overflow management
+- **Time Awareness**: Total time estimates help with daily planning
+- **Collapsible Sections**: Animated show/hide for completed tasks
+
+### 🔧 Enhanced Project Management
+- **Streamlined Interface**: Removed cramped buttons for cleaner project selection
+- **Hidden Functionality**: "Add New Project" seamlessly integrated into picker menu
+- **Full-Width Display**: Better space usage with elegant text truncation
+- **Smooth Interactions**: Automatic workflows for creating new projects
 
 ## 🚀 Future: Free On-Device AI (Coming 2025)
 

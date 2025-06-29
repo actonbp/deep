@@ -6,33 +6,37 @@
 - Break down complex changes into small steps
 - Test after each change before proceeding
 
-## 🚦 Current Development Status (December 28, 2024)
+## 🚦 Current Development Status (June 29, 2025)
 
-### Active Development
-The project is currently in active development with two major features being worked on:
+### Recently Completed ✅
+Major feature implementations just completed and pushed to GitHub:
 
-1. **ChatGPT-Style Image Upload** - Adding ability to upload images in chat for AI analysis
-2. **Enhanced ADHD Roadmap** - Improving the roadmap tab with task dependencies and visual paths
+1. **✅ ChatGPT-Style Image Upload** - Full multimodal AI with photo analysis capability
+2. **✅ AI Agent Mode** - Background task refinement with ADHD time-blocking insights
+3. **✅ Enhanced To-Do UI** - Compact, elegant metadata cards with improved visual hierarchy
+4. **✅ Advanced Project Management** - Clean picker interface with hidden "Add New" functionality
 
 ### Git Branch Structure
 ```
 main (stable)
-├── feature/image-upload      ← Current branch for image functionality
-└── feature/enhanced-roadmap  ← Branch for roadmap improvements
+├── feature/image-upload      ← ✅ CURRENT: Major improvements just pushed
+└── feature/enhanced-roadmap  ← Pending: Visual roadmap enhancements
 ```
 
 **Important**: Always check which branch you're on before making changes!
 - `main`: Stable, production-ready code with all warnings fixed
-- `feature/*`: Experimental branches for new features
+- `feature/image-upload`: ✅ **Active branch** with latest UI/AI improvements
 
 ### Recent Checkpoint
-- **Commit**: `f6dd888` - Fixed all Xcode warnings (December 28, 2024)
-- **Status**: Clean build, no warnings, ready for feature development
-- **Safety**: Main branch is stable and can be returned to if features break
+- **Latest Commit**: `8ef7e9f` - Major UI/UX improvements and AI Agent Mode (June 29, 2025)
+- **Previous**: `edb7e1f` - Implement ChatGPT-style image upload feature  
+- **Status**: ✅ **Stable build** with major feature additions, ready for next phase
+- **Safety**: All improvements tested and working in Xcode
 
 ### Next Steps
-1. **Image Upload**: Implement PHPickerViewController for ChatGPT-style image selection
-2. **Roadmap Enhancement**: Add task dependency visualization and ADHD-specific path features
+1. **Enhanced Roadmap**: Add task dependency visualization and ADHD-specific path features
+2. **UI Polish**: Continue refinements based on user feedback
+3. **Performance**: Optimize background AI processing
 
 **Note for AI Agents**: If you're picking up development, check `git status` and `git branch` first to understand the current state. The main branch is always safe to return to. See [BRANCH_GUIDE.md](BRANCH_GUIDE.md) for detailed branch workflow instructions.
 
@@ -110,6 +114,12 @@ main (stable)
   - **Liquid Glass Effects**: Material backgrounds, glass overlays, enhanced depth
   - **O3 Thinking Indicator**: Shows "🧠 Thinking deeply..." during reasoning
   - **Selectable Text**: Copy-paste support for all messages
+  - **🖼️ Image Upload**: ChatGPT-style multimodal AI with photo selection and analysis
+- **AI Agent Manager** (`AIAgentManager.swift`) - **Background task processing**
+  - **ADHD Time-Blocking Analysis**: Comprehensive task metadata enrichment
+  - **Background Processing**: iOS BackgroundTasks framework integration
+  - **Energy Management**: Cognitive load assessment and scheduling recommendations
+  - **Settings Integration**: Toggle with status indicators and manual testing
 
 #### Health Integration
 - **`HealthKitService`** (`HealthKitService.swift`) - Apple Health data access
@@ -676,3 +686,33 @@ let hasAchievement = completedTasks >= 5 || progress >= 0.8
 - **Timeout Conflicts**: Resolved confusion between OpenAI O3 and Foundation Models
 - **Markdown Parsing**: Robust error handling with graceful fallback to plain text
 - **Health Permissions**: Automatic HealthKit authorization flow with toggle feedback
+
+## Recent Major Updates (June 2025)
+
+### 🖼️ Image Upload Feature (`ChatView.swift` + `ImagePicker.swift`)
+- **PHPickerViewController Integration**: Native iOS photo selection with SwiftUI wrapper
+- **Vision API Support**: OpenAI GPT-4o with image analysis capabilities  
+- **Base64 Encoding**: Efficient image compression and transmission
+- **UI Integration**: Camera button with image preview area above text input
+- **MessageContent System**: Enhanced chat messages supporting mixed text/image content
+
+### 🤖 AI Agent Mode (`AIAgentManager.swift`)
+- **Background Task Refinement**: iOS BackgroundTasks framework for autonomous processing
+- **ADHD Time-Blocking Coach**: Comprehensive task analysis with cognitive load assessment
+- **Metadata Enrichment**: Automatic duration estimates, difficulty ratings, and categorization
+- **Energy Management**: Scheduling recommendations based on context switching costs
+- **Productivity Insights**: JSON-structured analysis with time-blocking strategies
+
+### 🎨 Enhanced To-Do List UI (`ContentView.swift`)
+- **Separate Sections**: Clear visual separation of incomplete vs completed tasks
+- **CompactTaskRowView**: Minimal display for completed items to reduce visual clutter  
+- **MetadataCardView**: Card-based expandable metadata with 2x2 grid layout
+- **Improved Text Handling**: Better truncation and overflow management
+- **Time Estimation Display**: Total time calculations for incomplete task planning
+- **Collapsible Completed**: Animated show/hide for completed tasks section
+
+### 🔧 Project Management Improvements
+- **Clean Picker Interface**: Removed cramped plus button from project selector
+- **Hidden Add Functionality**: "Add New Project" integrated into picker dropdown menu
+- **Better Space Usage**: Full-width project text display with elegant truncation
+- **Smooth Interactions**: Automatic alert triggering for new project creation
