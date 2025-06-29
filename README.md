@@ -81,7 +81,7 @@ This allows for a seamless experience where task capture, planning, and calendar
     *   AI can mark tasks as complete.
 *   **Secure API Key Handling (Debug):** Uses `Secrets.plist`.
 
-## 🎉 Recent Major Updates (June 2025)
+## 🎉 Recent Major Updates (June 29, 2025)
 
 ### 🖼️ ChatGPT-Style Image Upload
 - **Native Photo Selection**: PHPickerViewController integration with SwiftUI wrapper
