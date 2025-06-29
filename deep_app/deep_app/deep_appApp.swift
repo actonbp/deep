@@ -18,6 +18,9 @@ struct deep_appApp: App {
                 .onAppear {
                     // Check notification status when app launches
                     notificationManager.checkNotificationStatus()
+                    
+                    // Initialize AI Agent Manager (will register tasks if needed)
+                    AIAgentManager.shared.initializeIfNeeded()
                 }
         }
     }

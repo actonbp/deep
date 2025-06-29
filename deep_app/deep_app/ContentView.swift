@@ -371,8 +371,51 @@ struct TodoListView: View {
     
     private var taskList: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
-                ForEach(sortedItems) { item in
+            LazyVStack(spacing: 16) {
+                // INCOMPLETE TASKS - Main focus area
+                incompleteTasks
+                
+                // COMPLETED TASKS - Compact section
+                completedTasks
+                
+                // Add some bottom padding
+                Spacer(minLength: 100)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+        }
+        .background(Color(UIColor.systemGray6))
+    }
+    
+    private var incompleteTasks: some View {
+        VStack(spacing: 12) {
+            let incompleteItems = sortedItems.filter { !$0.isDone }
+            
+            if !incompleteItems.isEmpty {
+                // Section header with total time estimate
+                HStack {
+                    Text("What needs to be done?")
+                        .font(.system(.headline, design: .rounded))
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    if let totalTime = calculateTotalTime(for: incompleteItems) {
+                        Text(totalTime)
+                            .font(.system(.subheadline, design: .rounded))
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                }
+                .padding(.horizontal, 4)
+                
+                // Incomplete task rows
+                ForEach(incompleteItems) { item in
                     TaskRowView(
                         item: item,
                         expandedItemId: $expandedItemId,
@@ -390,11 +433,112 @@ struct TodoListView: View {
                     .cornerRadius(12)
                     .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
                 }
+            } else {
+                // Empty state
+                VStack(spacing: 16) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 48))
+                        .foregroundColor(.green)
+                    
+                    Text("All done! 🎉")
+                        .font(.system(.title2, design: .rounded))
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    
+                    Text("Take a moment to appreciate your progress.")
+                        .font(.system(.body, design: .rounded))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.vertical, 40)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
         }
-        .background(Color(UIColor.systemGray6))
+    }
+    
+    @State private var showCompletedTasks = true
+    
+    private var completedTasks: some View {
+        VStack(spacing: 8) {
+            let completedItems = sortedItems.filter { $0.isDone }
+            
+            if !completedItems.isEmpty {
+                // Completed section header with toggle
+                Button {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        showCompletedTasks.toggle()
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: showCompletedTasks ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(.secondary)
+                        
+                        Text("Completed (\(completedItems.count))")
+                            .font(.system(.subheadline, design: .rounded))
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text("Tap to \(showCompletedTasks ? "hide" : "show")")
+                            .font(.system(.caption, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+                
+                // Completed task rows (compact)
+                if showCompletedTasks {
+                    ForEach(completedItems) { item in
+                        CompactTaskRowView(
+                            item: item,
+                            dateFormatter: dateFormatter,
+                            todoListStore: todoListStore,
+                            playSound: playSound
+                        )
+                    }
+                }
+            }
+        }
+    }
+    
+    // Helper function to calculate total time for tasks
+    private func calculateTotalTime(for items: [TodoItem]) -> String? {
+        let timesWithEstimates = items.compactMap { item -> Int? in
+            guard let duration = item.estimatedDuration else { return nil }
+            
+            // Parse common time formats: "30 min", "1 hour", "45 minutes", etc.
+            let lowercased = duration.lowercased()
+            if lowercased.contains("min") {
+                let numbers = lowercased.components(separatedBy: CharacterSet.decimalDigits.inverted)
+                if let minutes = numbers.compactMap({ Int($0) }).first {
+                    return minutes
+                }
+            } else if lowercased.contains("hour") {
+                let numbers = lowercased.components(separatedBy: CharacterSet.decimalDigits.inverted)
+                if let hours = numbers.compactMap({ Int($0) }).first {
+                    return hours * 60
+                }
+            }
+            return nil
+        }
+        
+        guard !timesWithEstimates.isEmpty else { return nil }
+        
+        let totalMinutes = timesWithEstimates.reduce(0, +)
+        if totalMinutes < 60 {
+            return "\(totalMinutes) min total"
+        } else {
+            let hours = totalMinutes / 60
+            let minutes = totalMinutes % 60
+            if minutes == 0 {
+                return "\(hours)h total"
+            } else {
+                return "\(hours)h \(minutes)m total"
+            }
+        }
     }
     
     private var refreshButton: some View {
@@ -508,16 +652,24 @@ struct TaskRowView: View {
                             .cornerRadius(6)
                     }
                     
-                    // Duration badge
+                    // Duration badge - more prominent for ADHD time awareness
                     if let duration = item.estimatedDuration, !duration.isEmpty {
-                        Text(duration)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.gray.opacity(0.1))
-                            .foregroundColor(.secondary)
-                            .cornerRadius(6)
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.system(size: 10))
+                            Text(duration)
+                                .fontWeight(.semibold)
+                        }
+                        .font(.caption)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(item.isDone ? Color.gray.opacity(0.1) : Color.blue.opacity(0.1))
+                        .foregroundColor(item.isDone ? .secondary : .blue)
+                        .cornerRadius(6)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(item.isDone ? Color.clear : Color.blue.opacity(0.3), lineWidth: 1)
+                        )
                     }
                     
                     // Project badge
@@ -530,6 +682,22 @@ struct TaskRowView: View {
                             .background(Color.gray.opacity(0.1))
                             .foregroundColor(.secondary)
                             .cornerRadius(6)
+                    }
+                    
+                    // Difficulty indicator for ADHD cognitive load awareness
+                    if let difficulty = item.difficulty, !item.isDone {
+                        HStack(spacing: 2) {
+                            Image(systemName: difficultyIcon(for: difficulty))
+                                .font(.system(size: 10))
+                            Text(difficulty.rawValue)
+                                .fontWeight(.medium)
+                        }
+                        .font(.caption)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(difficultyColor(for: difficulty))
+                        .foregroundColor(difficultyTextColor(for: difficulty))
+                        .cornerRadius(4)
                     }
                     
                     Spacer()
@@ -547,88 +715,158 @@ struct TaskRowView: View {
     }
     
     private var expandedContent: some View {
-        VStack(alignment: .leading, spacing: 8) { 
-            // Category field (conditional)
-            if UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey) {
-                HStack {
-                    Text("Category:").font(.caption).foregroundColor(.gray).frame(width: 70, alignment: .leading)
-                    TextField("None", text: $editingCategory)
-                        .font(.caption)
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { saveEdits(item) }
-                }
-            }
-            
-            // Summary field
-            HStack {
-                Text("Summary:").font(.caption).foregroundColor(.gray).frame(width: 70, alignment: .leading)
-                TextField("Short summary for roadmap", text: Binding(
-                    get: { item.shortSummary ?? "" },
-                    set: { newValue in
-                        todoListStore.updateTaskSummary(taskId: item.id, summary: newValue.isEmpty ? nil : newValue)
-                    }
-                ))
-                .font(.caption)
-                .textFieldStyle(.roundedBorder)
-                .onSubmit { saveEdits(item) }
-            }
-            if item.needsSummary {
-                Text("Tip: Add a 3-5 word summary for better roadmap display")
-                    .font(.caption2)
-                    .foregroundColor(.orange)
-                    .padding(.leading, 75)
-            }
-            
-            // Project picker
-            HStack {
-                Text("Project/Path:")
-                    .font(.caption2)
-                    .foregroundColor(Color.theme.secondaryText)
-                    .frame(width: 80, alignment: .leading)
+        VStack(spacing: 12) {
+            // METADATA GRID - Compact 2x2 cards
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8)
+            ], spacing: 8) {
                 
-                Picker("Project/Path", selection: $editingProject) {
-                    Text("Unassigned").tag("")
-                    ForEach(existingProjectsForPicker, id: \.self) { project in
-                        Text(project).tag(project)
+                // Category Card
+                if UserDefaults.standard.bool(forKey: AppSettings.enableCategoriesKey) {
+                    MetadataCardView(
+                        icon: "folder.circle",
+                        title: "Category", 
+                        value: editingCategory.isEmpty ? "None" : editingCategory,
+                        color: .orange
+                    ) {
+                        TextField("Add category", text: $editingCategory)
+                            .font(.caption)
+                            .textFieldStyle(.plain)
+                            .onSubmit { saveEdits(item) }
                     }
                 }
-                .pickerStyle(.menu)
-                .font(.caption)
-                .tint(Color.theme.text)
                 
-                Button {
-                    showingNewProjectAlert = true
-                    newProjectName = ""
-                } label: {
-                    Image(systemName: "plus.circle")
+                // Project Card - clean picker only
+                MetadataCardView(
+                    icon: "rectangle.3.group",
+                    title: "Project",
+                    value: editingProject.isEmpty ? "Unassigned" : truncateText(editingProject, maxLength: 15),
+                    color: .purple
+                ) {
+                    Picker("Project", selection: $editingProject) {
+                        Text("Unassigned").tag("")
+                        ForEach(existingProjectsForPicker, id: \.self) { project in
+                            Text(project).tag(project)
+                        }
+                        Text("+ Add New Project").tag("__ADD_NEW__")
+                    }
+                    .pickerStyle(.menu)
+                    .font(.caption2)
+                    .onChange(of: editingProject) { _, newValue in 
+                        if newValue == "__ADD_NEW__" {
+                            // Reset to previous value and show alert
+                            editingProject = item.projectOrPath ?? ""
+                            showingNewProjectAlert = true
+                            newProjectName = ""
+                        } else {
+                            saveEdits(item)
+                        }
+                    }
                 }
-                .buttonStyle(.borderless)
-                .foregroundColor(Color.theme.accent)
-            }
-            .padding(.bottom, 10)
-            
-            // Metadata display
-            if let difficulty = item.difficulty {
-                HStack(spacing: 5) { 
-                    Image(systemName: "gauge.medium") 
-                    Text("Effort: \(difficulty.rawValue)")
+                
+                // Difficulty Card (if available)
+                if let difficulty = item.difficulty {
+                    MetadataCardView(
+                        icon: "gauge.medium.badge.plus",
+                        title: "Difficulty",
+                        value: difficulty.rawValue,
+                        color: difficultyDisplayColor(for: difficulty),
+                        isReadOnly: true
+                    )
                 }
-                .font(.caption)
-                .foregroundColor(Color.theme.secondaryText)
+                
+                // Created Date Card
+                MetadataCardView(
+                    icon: "calendar.badge.clock",
+                    title: "Created",
+                    value: formatCompactDate(item.dateCreated),
+                    color: .gray,
+                    isReadOnly: true
+                )
             }
             
-            HStack(spacing: 5) { 
-                Image(systemName: "calendar") 
-                Text("Created: \(item.dateCreated, formatter: dateFormatter)")
+            // SUMMARY SECTION - Only if needed, much more compact
+            if item.needsSummary || !(item.shortSummary?.isEmpty ?? true) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "text.bubble")
+                            .font(.system(size: 11))
+                            .foregroundColor(.blue)
+                        Text("Roadmap Summary")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                        
+                        if item.needsSummary {
+                            Text("• Recommended")
+                                .font(.caption2)
+                                .foregroundColor(.blue.opacity(0.7))
+                        }
+                        
+                        Spacer()
+                    }
+                    
+                    TextField("Add 3-5 word summary for roadmap", text: Binding(
+                        get: { item.shortSummary ?? "" },
+                        set: { newValue in
+                            todoListStore.updateTaskSummary(taskId: item.id, summary: newValue.isEmpty ? nil : newValue)
+                        }
+                    ))
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.04))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+                    )
+                    .onSubmit { saveEdits(item) }
+                }
+                .padding(.top, 4)
             }
-            .font(.caption)
-            .foregroundColor(Color.theme.secondaryText)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
-        .background(Color.gray.opacity(0.03))
-        .transition(.opacity.combined(with: .scale(scale: 0.95, anchor: .top)))
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(Color.gray.opacity(0.02))
+        .cornerRadius(8)
+        .transition(.opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+    }
+    
+    // Helper functions for the new design
+    private func truncateText(_ text: String, maxLength: Int) -> String {
+        if text.count <= maxLength {
+            return text
+        }
+        return String(text.prefix(maxLength - 1)) + "…"
+    }
+    
+    private func formatCompactDate(_ date: Date) -> String {
+        let now = Date()
+        let calendar = Calendar.current
+        
+        if calendar.isDateInToday(date) {
+            return "Today"
+        } else if calendar.isDateInYesterday(date) {
+            return "Yesterday"
+        } else if calendar.dateInterval(of: .weekOfYear, for: now)?.contains(date) == true {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "E" // Mon, Tue, etc.
+            return formatter.string(from: date)
+        } else {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "M/d"
+            return formatter.string(from: date)
+        }
+    }
+    
+    private func difficultyDisplayColor(for difficulty: Difficulty) -> Color {
+        switch difficulty {
+        case .low: return .green
+        case .medium: return .orange  
+        case .high: return .red
+        }
     }
     
     // Priority helper functions
@@ -659,6 +897,31 @@ struct TaskRowView: View {
         }
     }
     
+    // MARK: - Difficulty Helper Functions for ADHD Cognitive Load Awareness
+    private func difficultyIcon(for difficulty: Difficulty) -> String {
+        switch difficulty {
+        case .low: return "circle"
+        case .medium: return "circle.fill" 
+        case .high: return "exclamationmark.circle.fill"
+        }
+    }
+    
+    private func difficultyColor(for difficulty: Difficulty) -> Color {
+        switch difficulty {
+        case .low: return Color.green.opacity(0.15)
+        case .medium: return Color.orange.opacity(0.15)
+        case .high: return Color.red.opacity(0.15)
+        }
+    }
+    
+    private func difficultyTextColor(for difficulty: Difficulty) -> Color {
+        switch difficulty {
+        case .low: return Color.green.opacity(0.8)
+        case .medium: return Color.orange.opacity(0.8)
+        case .high: return Color.red.opacity(0.8)
+        }
+    }
+    
     private func handleTap() {
         // Save changes when collapsing
         if let currentlyExpanded = expandedItemId,
@@ -678,6 +941,150 @@ struct TaskRowView: View {
             editingCategory = item.category ?? ""
             editingProject = item.projectOrPath ?? ""
         }
+    }
+}
+
+// MARK: - Compact Task Row for Completed Items
+struct CompactTaskRowView: View {
+    let item: TodoItem
+    let dateFormatter: DateFormatter  
+    let todoListStore: TodoListStore
+    let playSound: (String) -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Small green checkmark
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.green)
+                .onTapGesture {
+                    todoListStore.toggleDone(item: item)
+                    playSound("task_completion")
+                }
+            
+            // Compact task text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.text)
+                    .font(.system(.subheadline, design: .rounded))
+                    .strikethrough(true, color: .gray)
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+                
+                // Show completion time if available
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray.opacity(0.7))
+                    
+                    Text("Completed \(item.dateCreated, formatter: RelativeDateTimeFormatter())")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundColor(.gray.opacity(0.7))
+                    
+                    // Show time estimate if available
+                    if let duration = item.estimatedDuration {
+                        Text("• \(duration)")
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundColor(.gray.opacity(0.7))
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Quick undo button
+            Button {
+                todoListStore.toggleDone(item: item)
+                playSound("task_undo")
+            } label: {
+                Image(systemName: "arrow.uturn.backward.circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.gray.opacity(0.05))
+        .cornerRadius(8)
+    }
+}
+
+// MARK: - MetadataCardView Component
+struct MetadataCardView<Content: View>: View {
+    let icon: String
+    let title: String
+    let value: String
+    let color: Color
+    let isReadOnly: Bool
+    let content: (() -> Content)?
+    
+    init(
+        icon: String,
+        title: String,
+        value: String,
+        color: Color,
+        isReadOnly: Bool = false,
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self.icon = icon
+        self.title = title
+        self.value = value
+        self.color = color
+        self.isReadOnly = isReadOnly
+        self.content = content
+    }
+    
+    init(
+        icon: String,
+        title: String,
+        value: String,
+        color: Color,
+        isReadOnly: Bool = true
+    ) where Content == EmptyView {
+        self.icon = icon
+        self.title = title
+        self.value = value
+        self.color = color
+        self.isReadOnly = isReadOnly
+        self.content = nil
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            // Header
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                    .foregroundColor(color)
+                
+                Text(title)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(color)
+                
+                Spacer()
+            }
+            
+            // Content
+            if let content = content {
+                content()
+            } else {
+                Text(value)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(color.opacity(0.08))
+        .cornerRadius(6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(color.opacity(0.2), lineWidth: 1)
+        )
     }
 }
 

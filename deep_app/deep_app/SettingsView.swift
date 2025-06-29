@@ -29,6 +29,10 @@ struct SettingsView: View {
     // Default to gpt-4o-mini
     @AppStorage(AppSettings.selectedModelKey) var selectedModel: String = AppSettings.gpt4oMini
     
+    // AI Agent Manager
+    @StateObject private var aiAgentManager = AIAgentManager.shared
+    @State private var showingInsights = false
+    
     // Add AppStorage for debug logging toggle
     @AppStorage(AppSettings.debugLogEnabledKey) var isDebugLoggingEnabled: Bool = false // Default to off
     
@@ -147,6 +151,60 @@ struct SettingsView: View {
                         .foregroundColor(.gray)
                 }
                 
+                Section("AI Agent Mode (NEW!) 🤖") {
+                    Toggle("Enable AI Agent Mode", isOn: $aiAgentManager.isEnabled)
+                        .onChange(of: aiAgentManager.isEnabled) { _, newValue in
+                            if newValue {
+                                aiAgentManager.enableAIAgentMode()
+                            } else {
+                                aiAgentManager.disableAIAgentMode()
+                            }
+                        }
+                    
+                    if aiAgentManager.isEnabled {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("✨ AI Time-Blocking Coach will:")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            
+                            Text("• Add realistic time estimates (with ADHD buffer)\n• Assess cognitive load and energy requirements\n• Suggest optimal scheduling based on context switching\n• Break down overwhelming tasks into manageable steps\n• Provide time-blocking strategies and quick wins\n• Generate comprehensive productivity insights")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                            
+                            if let lastDate = aiAgentManager.lastProcessingDate {
+                                HStack {
+                                    Text("Last processed: \(lastDate.formatted(.relative(presentation: .named)))")
+                                        .font(.caption2)
+                                        .foregroundColor(.green)
+                                    
+                                    if !aiAgentManager.latestInsights.isEmpty {
+                                        Button("View Analysis") {
+                                            showingInsights = true
+                                        }
+                                        .font(.caption2)
+                                        .buttonStyle(.borderless)
+                                        .foregroundColor(.blue)
+                                    }
+                                }
+                            }
+                            
+                            #if DEBUG
+                            Button("Test Time-Blocking Analysis (Debug)") {
+                                Task {
+                                    await aiAgentManager.processNow()
+                                }
+                            }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+                            #endif
+                        }
+                    }
+                    
+                    Text("Your AI time-blocking coach analyzes tasks with ADHD-specific insights: realistic time estimates, energy management, context switching costs, and optimal scheduling. Works entirely on-device!")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                
                 Section("Health Integration (Preview)") {
                     Toggle("Enable HealthKit", isOn: $healthKitEnabled)
                         .onChange(of: healthKitEnabled) { _, newValue in
@@ -197,6 +255,34 @@ struct SettingsView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {
                         dismiss() // Dismiss the sheet
+                    }
+                }
+            }
+            .sheet(isPresented: $showingInsights) {
+                NavigationView {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            if !aiAgentManager.latestInsights.isEmpty {
+                                Text(aiAgentManager.latestInsights)
+                                    .font(.system(.body, design: .monospaced))
+                                    .foregroundColor(.primary)
+                                    .textSelection(.enabled)
+                            } else {
+                                Text("No analysis available yet. Try running the 'Test Now' button to generate insights.")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        .padding()
+                    }
+                    .navigationTitle("AI Time-Blocking Analysis")
+                    .navigationBarTitleDisplayMode(.large)
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarTrailing) {
+                            Button("Done") {
+                                showingInsights = false
+                            }
+                        }
                     }
                 }
             }

@@ -35,6 +35,7 @@ struct ChatView: View {
     @State private var showingSettingsSheet = false // State to control settings sheet
     @State private var selectedImages: [UIImage] = [] // Selected images for upload
     @State private var showingImagePicker = false // Show image picker sheet
+    @ObservedObject private var aiAgentManager = AIAgentManager.shared
     // @State private var showScrollToBottomButton = false // <-- State for button visibility (COMMENTED OUT)
     // let sciFiFont = "Orbitron" // Font only used for title now
     // let bodyFontSize: CGFloat = 15 // No longer needed
@@ -249,10 +250,18 @@ struct ChatView: View {
             .foregroundColor(.primary) // Use primary color for main view text
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text("Bryan's Brain")
-                        .font(.custom(sciFiFont, size: titleFontSize))
-                        .fontWeight(.bold)
-                        .foregroundColor(Color.theme.titleText) // Use theme title color
+                    HStack(spacing: 4) {
+                        Text("Bryan's Brain")
+                            .font(.custom(sciFiFont, size: titleFontSize))
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.theme.titleText) // Use theme title color
+                        
+                        if aiAgentManager.isEnabled {
+                            Text("🤖")
+                                .font(.system(size: 16))
+                                .opacity(0.8)
+                        }
+                    }
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button {
