@@ -54,7 +54,7 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationView { // Embed in NavigationView for a title and potential buttons
-            Form { // Use a Form for standard settings layout
+            Form { // iOS 26 glass-enhanced Form
                 
                 // --- NEW: Google Account Section --- 
                 Section("Google Account") {
@@ -249,6 +249,7 @@ struct SettingsView: View {
                     Text("App Version: 1.0.0") // Example
                 }
             }
+            .conditionalFormStyle() // iOS 26 glass form styling
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

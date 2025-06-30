@@ -43,6 +43,48 @@ struct ChatView: View {
     // Reference to the theme font for the title
     let sciFiFont = "Orbitron" // Keep for title
     let titleFontSize: CGFloat = 22 // Keep for title
+    
+    // Computed property to break down complex filtering logic
+    private var visibleMessages: [ChatViewModel.ChatMessageItem] {
+        return viewModel.messages.filter { message in
+            // Filter out system and tool messages
+            if message.role == .system || message.role == .tool {
+                return false
+            }
+            
+            // Filter out assistant messages that only contain tool calls without content
+            if message.role == .assistant &&
+               message.toolCalls != nil &&
+               (message.content ?? "").isEmpty {
+                return false
+            }
+            
+            return true
+        }
+    }
+    
+    // Computed property for the last visible message ID
+    private var lastVisibleMessageId: UUID? {
+        return visibleMessages.last?.id
+    }
+    
+    // Computed property for toolbar background
+    private var toolbarBackgroundColor: Color {
+        if #available(iOS 26.0, *) {
+            return Color.clear
+        } else {
+            return .indigo.opacity(0.8)
+        }
+    }
+    
+    // Computed property for main background
+    private var mainBackgroundColor: Color {
+        if #available(iOS 26.0, *) {
+            return Color.clear
+        } else {
+            return Color(UIColor.systemBackground)
+        }
+    }
 
     var body: some View {
         NavigationView {
@@ -51,9 +93,9 @@ struct ChatView: View {
                 ZStack(alignment: .bottomTrailing) { // Align overlay to bottom trailing
                     ScrollViewReader { scrollView in
                         ScrollView {
-                            LazyVStack(spacing: 12) {
-                                // Filter out system, tool messages, AND assistant messages that ONLY contain tool calls w/o content
-                                ForEach(viewModel.messages.filter { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) }) { message in
+                            LazyVStack(spacing: 16) { // Increased spacing for more breathing room
+                                // Use the computed property for cleaner, faster compilation
+                                ForEach(visibleMessages) { message in
                                     MessageBubble(message: message)
                                         // --- Track visibility of the LAST message --- 
                                         /* // (COMMENTED OUT)
@@ -84,8 +126,8 @@ struct ChatView: View {
                                     .id("loading")
                                 }
                             }
-                            .padding(.horizontal)
-                            .padding(.top, 8)
+                            .padding(.horizontal, 20) // Increased for more breathing room
+                            .padding(.top, 12) // Slightly more top padding
                         }
                         .onAppear { // <-- Add onAppear for initial scroll
                             scrollToBottom(scrollView: scrollView, animated: false) // Scroll without animation initially
@@ -161,20 +203,27 @@ struct ChatView: View {
                 
                 // --- Suggested Prompts --- 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    HStack(spacing: 12) { // Increased spacing between prompts
                         ForEach(viewModel.suggestedPrompts, id: \.self) { prompt in
                             Text(prompt)
                                 .font(.system(.caption, design: .rounded))
                                 .fontWeight(.medium)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(.regularMaterial, in: Capsule())
-                                .foregroundColor(.primary)
-                                .overlay(
-                                    Capsule()
-                                        .stroke(.white.opacity(0.4), lineWidth: 0.5)
+                                .padding(.horizontal, 16) // More generous horizontal padding
+                                .padding(.vertical, 10) // More generous vertical padding
+                                .background(
+                                    Group {
+                                        if #available(iOS 26.0, *) {
+                                            Capsule()
+                                                .fill(.ultraThinMaterial) // More transparent suggested prompts
+                                                .glassEffect(in: Capsule())
+                                        } else {
+                                            Capsule()
+                                                .fill(.thinMaterial) // More transparent fallback
+                                        }
+                                    }
                                 )
-                                .shadow(color: .black.opacity(0.1), radius: 3, x: 0, y: 2)
+                                .foregroundColor(.primary)
+                                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
                                 .lineLimit(1) // Prevent wrapping
                                 .onTapGesture { viewModel.newMessageText = prompt }
                         }
@@ -184,69 +233,91 @@ struct ChatView: View {
                 }
                 // -------------------------
                 
-                // Input area at bottom
-                HStack {
-                    // Image picker button
-                    Button {
-                        showingImagePicker = true
-                    } label: {
-                        Image(systemName: "camera.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(selectedImages.isEmpty ? Color.theme.accent.opacity(0.6) : Color.theme.accent)
+                // Floating Input Area - More liquid glass style
+                VStack(spacing: 0) {
+                    // Subtle divider effect
+                    if #available(iOS 26.0, *) {
+                        // More minimal divider for iOS 26
+                        Rectangle()
+                            .fill(.ultraThinMaterial)
+                            .frame(height: 1)
+                            .opacity(0.3)
+                    } else {
+                        // Traditional divider for older iOS
+                        Rectangle()
+                            .fill(Color(UIColor.systemGray4))
+                            .frame(height: 0.5)
                     }
-                    .padding(.leading, 16)
                     
-                    // Message input field
-                    TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
-                        .font(.system(.body, design: .rounded))
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 16)
-                        .textFieldStyle(.plain)
-                        .foregroundColor(.primary)
-                    
-                    // Send button with enhanced glass styling
-                    Button {
-                        Task {
-                            await viewModel.processUserInput(with: selectedImages) 
-                            selectedImages.removeAll() // Clear images after sending
+                    HStack(spacing: 12) {
+                        // Image picker button - more minimal
+                        Button {
+                            showingImagePicker = true
+                        } label: {
+                            Image(systemName: selectedImages.isEmpty ? "camera" : "camera.fill")
+                                .font(.system(size: 20, weight: .medium))
+                                .foregroundColor(selectedImages.isEmpty ? .secondary : Color.theme.accent)
                         }
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(Color.theme.accent)
-                            .background(
-                                Circle()
-                                    .fill(.ultraThinMaterial)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(.white.opacity(0.5), lineWidth: 0.5)
-                                    )
-                                    .frame(width: 32, height: 32)
-                            )
+                        
+                        // Message input field - cleaner styling
+                        TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
+                            .font(.system(.body, design: .rounded))
+                            .textFieldStyle(.plain)
+                            .foregroundColor(.primary)
+                            .padding(.vertical, 12)
+                        
+                        // Send button - more minimal when not active
+                        Button {
+                            Task {
+                                await viewModel.processUserInput(with: selectedImages) 
+                                selectedImages.removeAll()
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    Group {
+                                        if (viewModel.newMessageText.isEmpty && selectedImages.isEmpty) || viewModel.isLoading {
+                                            Circle().fill(.secondary.opacity(0.3))
+                                        } else {
+                                            Circle().fill(Color.theme.accent)
+                                        }
+                                    }
+                                )
+                        }
+                        .disabled((viewModel.newMessageText.isEmpty && selectedImages.isEmpty) || viewModel.isLoading)
+                        .animation(.easeInOut(duration: 0.2), value: viewModel.newMessageText.isEmpty)
                     }
-                    .disabled((viewModel.newMessageText.isEmpty && selectedImages.isEmpty) || viewModel.isLoading)
-                    .padding(.trailing, 16)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(
+                        // Floating glass background - much more transparent
+                        Group {
+                            if #available(iOS 26.0, *) {
+                                Color.clear
+                                    .background(.ultraThinMaterial) // More transparent for stronger see-through effect
+                                    .glassEffect(in: Rectangle())
+                            } else {
+                                Color(UIColor.systemBackground).opacity(0.95) // Slightly transparent fallback
+                            }
+                        }
+                    )
                 }
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(.white.opacity(0.3), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.1), radius: 6, x: 0, y: 3)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color(UIColor.systemBackground)) // Use system background (adapts light/dark)
-                // Optional: Add a subtle top border
-                .overlay(Rectangle().frame(height: 0.5).foregroundColor(Color(UIColor.systemGray4)), alignment: .top)
             }
             // Title and toolbar setup
             .navigationBarTitleDisplayMode(.inline)
             // --- Apply background color and ensure visibility --- 
-            .toolbarBackground(.indigo, for: .navigationBar) // Set background color
-            .toolbarBackground(.visible, for: .navigationBar) // Make it always visible
+            .toolbarBackground(toolbarBackgroundColor, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             // -----------------------------------------------------
             .toolbarColorScheme(.dark, for: .navigationBar) // Keep this to suggest light status bar items
-            .background(Color(UIColor.systemGray6).ignoresSafeArea()) // Match new clean design
+            .background(
+                mainBackgroundColor
+                    .background(.ultraThinMaterial)
+                    .ignoresSafeArea()
+            )
             .foregroundColor(.primary) // Use primary color for main view text
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -296,7 +367,8 @@ struct ChatView: View {
     
     // --- Function to scroll to bottom (Helper - Moved Outside Body) ---
     private func scrollToBottom(scrollView: ScrollViewProxy, animated: Bool = true) {
-        let lastVisibleMessageId = viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id
+        // Use the computed property instead of complex inline filtering
+        let lastVisibleMessageId = self.lastVisibleMessageId
         
         if animated {
             withAnimation {
@@ -368,21 +440,35 @@ struct MessageBubble: View {
                     }
                 }
                 .background(
-                    message.role == .user ? 
-                    Color.theme.accent : 
-                    Color.white
+                    Group {
+                        if #available(iOS 26.0, *) {
+                            // iOS 26: More glass-like bubbles with modern corners
+                            if message.role == .user {
+                                RoundedRectangle(cornerRadius: 20) // More modern corner radius
+                                    .fill(Color.theme.accent)
+                                    .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                            } else {
+                                RoundedRectangle(cornerRadius: 20) // More modern corner radius
+                                    .fill(.ultraThinMaterial) // Much more transparent for stronger glass effect
+                                    .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                            }
+                        } else {
+                            // Pre-iOS 26: Traditional bubbles with slightly more modern corners
+                            RoundedRectangle(cornerRadius: 18)
+                                .fill(message.role == .user ? Color.theme.accent : Color.white)
+                        }
+                    }
                 )
                 .foregroundColor(
                     message.role == .user ? 
                     .white : 
                     .primary
                 )
-                .cornerRadius(12)
                 .shadow(
-                    color: .black.opacity(message.role == .user ? 0.1 : 0.05), 
-                    radius: 3, 
+                    color: .black.opacity(0.04), 
+                    radius: 12, // Increased blur radius for more floating effect
                     x: 0, 
-                    y: 1
+                    y: 4 // Slightly more vertical offset
                 )
                 
                 Text(formattedTime)

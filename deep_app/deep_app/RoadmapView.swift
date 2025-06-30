@@ -4,9 +4,10 @@ struct RoadmapView: View {
     // Access the shared store
     @ObservedObject private var todoListStore = TodoListStore.shared
     @State private var selectedProject: String? = nil
-    @State private var expandedProjects: Set<String> = []
     @State private var showLevelUpAnimation = false
     @State private var newlyCompletedTasks: Set<UUID> = []
+    @State private var showingQuestMap = false
+    @State private var questMapProject: ProjectData? = nil
     
     // Consistent title styling
     let titleFontSize: CGFloat = 22 
@@ -19,6 +20,7 @@ struct RoadmapView: View {
                 AnimatedGameBackground()
                 
                 ScrollView {
+                    // Consistent layout for all iOS versions - simplified for stability
                     VStack(spacing: 20) {
                         // Hero Stats Section
                         HeroStatsCard(projects: projectData)
@@ -29,16 +31,12 @@ struct RoadmapView: View {
                             ForEach(projectData.sorted(by: { $0.progress > $1.progress }), id: \.title) { project in
                                 QuestBoardCard(
                                     project: project,
-                                    isExpanded: expandedProjects.contains(project.title)
+                                    isExpanded: false // No longer using expand functionality
                                 )
                                 .onTapGesture {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                                        if expandedProjects.contains(project.title) {
-                                            expandedProjects.remove(project.title)
-                                        } else {
-                                            expandedProjects.insert(project.title)
-                                        }
-                                    }
+                                    // Open quest map for this project
+                                    questMapProject = project
+                                    showingQuestMap = true
                                 }
                                 .padding(.horizontal)
                             }
@@ -75,6 +73,11 @@ struct RoadmapView: View {
                 }
             }
         }
+        .sheet(isPresented: $showingQuestMap) {
+            if let project = questMapProject {
+                QuestMapView(project: project)
+            }
+        }
     }
     
     // Convert tasks into project data
@@ -86,7 +89,7 @@ struct RoadmapView: View {
         return groupedByProject.map { projectName, tasks in
             let completedTasks = tasks.filter { $0.isDone }.count
             let totalTasks = tasks.count
-            let progress = totalTasks > 0 ? Double(completedTasks) / Double(totalTasks) : 0.0
+            let progress = totalTasks > 0 ? max(0.0, min(1.0, Double(completedTasks) / Double(totalTasks))) : 0.0
             let level = min(15, max(1, (completedTasks / 2) + 1))
             let xp = completedTasks * 15
             let projectType = tasks.first?.projectType ?? .personal
@@ -346,9 +349,10 @@ struct HeroStatsCard: View {
     
     private var xpProgress: Double {
         let currentLevelXP = overallLevel * 75
-        let xpInCurrentLevel = totalXP - currentLevelXP
+        let xpInCurrentLevel = max(0, totalXP - currentLevelXP)
         let xpNeededForLevel = 75
-        return Double(xpInCurrentLevel) / Double(xpNeededForLevel)
+        guard xpNeededForLevel > 0 else { return 0.0 }
+        return max(0.0, min(1.0, Double(xpInCurrentLevel) / Double(xpNeededForLevel)))
     }
     
     var body: some View {
@@ -423,6 +427,9 @@ struct HeroStatsCard: View {
                 
                 // Animated progress bar
                 GeometryReader { geometry in
+                    // Ensure geometry has valid dimensions
+                    let safeWidth = max(1, geometry.size.width)
+                    let safeHeight = max(1, geometry.size.height)
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.gray.opacity(0.2))
@@ -439,7 +446,7 @@ struct HeroStatsCard: View {
                                     endPoint: .trailing
                                 )
                             )
-                            .frame(width: geometry.size.width * xpProgress, height: 12)
+                            .frame(width: max(0, safeWidth * max(0, min(1, xpProgress))), height: 12)
                             .overlay(
                                 // Shimmer effect
                                 RoundedRectangle(cornerRadius: 8)
@@ -469,28 +476,25 @@ struct HeroStatsCard: View {
             }
         }
         .padding(20)
-        .background(
-            ZStack {
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(Color.white)
-                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-                
-                // Border glow
-                RoundedRectangle(cornerRadius: 20)
-                    .stroke(
-                        LinearGradient(
-                            gradient: Gradient(colors: [
-                                Color.yellow.opacity(0.5),
-                                Color.orange.opacity(0.3),
-                                Color.clear
-                            ]),
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 2
-                    )
-            }
+        .conditionalGlassBackground(Color.white, opacity: 0.1, in: RoundedRectangle(cornerRadius: 20))
+        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            // Border glow
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.yellow.opacity(0.5),
+                            Color.orange.opacity(0.3),
+                            Color.clear
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 2
+                )
         )
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
 }
 
@@ -607,15 +611,22 @@ struct QuestBoardCard: View {
                             .foregroundColor(project.type.color)
                     }
                     
-                    // Expand chevron
-                    Image(systemName: isExpanded ? "chevron.up.circle.fill" : "chevron.down.circle")
-                        .font(.title3)
-                        .foregroundColor(project.type.color)
+                    // Quest Map indicator
+                    VStack(spacing: 2) {
+                        Image(systemName: "map")
+                            .font(.title3)
+                            .foregroundColor(project.type.color)
+                        Text("Quest Map")
+                            .font(.caption2)
+                            .foregroundColor(project.type.color)
+                    }
                 }
                 
                 // Epic progress bar
                 VStack(spacing: 10) {
                     GeometryReader { geometry in
+                        // Ensure geometry has valid dimensions
+                        let safeWidth = max(1, geometry.size.width)
                         ZStack(alignment: .leading) {
                             // Background track
                             RoundedRectangle(cornerRadius: 8)
@@ -635,7 +646,7 @@ struct QuestBoardCard: View {
                                         endPoint: .trailing
                                     )
                                 )
-                                .frame(width: geometry.size.width * project.progress, height: 16)
+                                .frame(width: max(0, safeWidth * max(0, min(1, project.progress))), height: 16)
                                 .overlay(
                                     // Animated shimmer
                                     RoundedRectangle(cornerRadius: 8)
@@ -650,7 +661,7 @@ struct QuestBoardCard: View {
                                                 endPoint: .trailing
                                             )
                                         )
-                                        .offset(x: pulseGlow ? geometry.size.width : -geometry.size.width)
+                                        .offset(x: pulseGlow ? safeWidth : -safeWidth)
                                         .mask(RoundedRectangle(cornerRadius: 8))
                                 )
                         }
@@ -696,12 +707,11 @@ struct QuestBoardCard: View {
                 }
             }
             .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color.white)
-                    
-                    // Glowing border for high progress
+            .conditionalGlassBackground(Color.white, opacity: 0.08, in: RoundedRectangle(cornerRadius: 20))
+            .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 20))
+            .overlay(
+                // Glowing border for high progress
+                Group {
                     if project.progress > 0.8 {
                         RoundedRectangle(cornerRadius: 20)
                             .stroke(
@@ -721,128 +731,10 @@ struct QuestBoardCard: View {
                 }
             )
             .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
-            
-            // Expanded quest list
-            if isExpanded {
-                QuestList(project: project)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
-            }
         }
     }
 }
 
-// MARK: - Quest List
-struct QuestList: View {
-    let project: ProjectData
-    
-    var body: some View {
-        VStack(spacing: 12) {
-            ForEach(project.tasks.sorted(by: { !$0.isDone && $1.isDone })) { task in
-                QuestRow(task: task, projectColor: project.type.color)
-            }
-        }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.white.opacity(0.7))
-        )
-        .padding(.horizontal, 4)
-        .padding(.top, -8)
-    }
-}
-
-// MARK: - Quest Row
-struct QuestRow: View {
-    let task: TodoItem
-    let projectColor: Color
-    @State private var completionGlow = false
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Epic completion indicator
-            ZStack {
-                Circle()
-                    .fill(task.isDone ? Color.green : Color.gray.opacity(0.3))
-                    .frame(width: 24, height: 24)
-                    .scaleEffect(completionGlow ? 1.2 : 1.0)
-                
-                Image(systemName: task.isDone ? "checkmark" : "circle")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundColor(task.isDone ? Color.theme.titleText : Color.theme.secondaryText)
-            }
-            .onAppear {
-                if task.isDone {
-                    withAnimation(.easeInOut(duration: 1).repeatForever(autoreverses: true)) {
-                        completionGlow = true
-                    }
-                }
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(task.text)
-                    .font(.subheadline)
-                    .fontWeight(task.isDone ? .regular : .medium)
-                    .foregroundColor(task.isDone ? .secondary : .primary)
-                    .strikethrough(task.isDone)
-                
-                HStack(spacing: 8) {
-                    if let difficulty = task.difficulty {
-                        HStack(spacing: 4) {
-                            Text(difficulty.icon)
-                                .font(.caption2)
-                            Text(difficulty.rawValue)
-                                .font(.caption2)
-                                .fontWeight(.semibold)
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(difficulty.color.opacity(0.2))
-                        .cornerRadius(8)
-                    }
-                    
-                    if let duration = task.estimatedDuration {
-                        HStack(spacing: 2) {
-                            Text("⏱️")
-                                .font(.caption2)
-                            Text(duration)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-            }
-            
-            Spacer()
-            
-            // Priority gems
-            if let priority = task.priority, priority <= 3 {
-                VStack(spacing: 2) {
-                    ForEach(0..<min(3, 4-priority), id: \.self) { _ in
-                        Circle()
-                            .fill(projectColor)
-                            .frame(width: 6, height: 6)
-                    }
-                }
-            }
-        }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 16)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(task.isDone ? Color.green.opacity(0.1) : Color.gray.opacity(0.05))
-        )
-        .overlay(
-            // Epic border for completed tasks
-            Group {
-                if task.isDone {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.green.opacity(0.5), lineWidth: 1)
-                }
-            }
-        )
-    }
-}
 
 // MARK: - Empty State
 struct EmptyQuestState: View {
@@ -892,6 +784,403 @@ extension Difficulty {
         case .medium: return "🟡"  
         case .high: return "🔴"
         }
+    }
+}
+
+// MARK: - Quest Map View (Adventure Game Style)
+struct QuestMapView: View {
+    let project: ProjectData
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedTaskId: UUID?
+    
+    // Sort tasks by priority to create logical progression (adventure game style)
+    private var questSequence: [TodoItem] {
+        project.tasks.sorted { task1, task2 in
+            // Sort by priority to show logical progression, regardless of completion
+            return (task1.priority ?? Int.max) < (task2.priority ?? Int.max)
+        }
+    }
+    
+    var body: some View {
+        NavigationView {
+            ZStack {
+                // Adventure map background
+                LinearGradient(
+                    colors: [
+                        Color.indigo.opacity(0.1),
+                        Color.purple.opacity(0.05),
+                        Color.blue.opacity(0.1)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+                
+                ScrollView {
+                    // Simple consistent layout for all iOS versions
+                    VStack(spacing: 32) {
+                        // Project header
+                        VStack(spacing: 16) {
+                            Text(project.title)
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                                .foregroundColor(.primary)
+                            
+                            Text("\(project.tasks.filter { $0.isDone }.count) of \(project.tasks.count) completed")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal)
+                        
+                        // Quest path - simple chronological list
+                        VStack(spacing: 16) {
+                            ForEach(Array(questSequence.enumerated()), id: \.element.id) { index, quest in
+                                HStack(spacing: 16) {
+                                    // Quest number
+                                    Text("\(index + 1)")
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .frame(width: 32, height: 32)
+                                        .background(
+                                            Circle()
+                                                .fill(quest.isDone ? .green : .blue)
+                                        )
+                                    
+                                    // Quest details
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(quest.text)
+                                            .font(.body)
+                                            .fontWeight(.medium)
+                                            .foregroundColor(.primary)
+                                            .strikethrough(quest.isDone)
+                                        
+                                        if let duration = quest.estimatedDuration {
+                                            Text("⏱️ \(duration)")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                    }
+                                    
+                                    Spacer()
+                                    
+                                    if quest.isDone {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                            .font(.title2)
+                                    }
+                                }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(.ultraThinMaterial)
+                                )
+                                .onTapGesture {
+                                    selectedTaskId = quest.id
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                        
+                        // Current focus
+                        if let nextQuest = questSequence.first(where: { !$0.isDone }) {
+                            VStack(spacing: 12) {
+                                Text("🎯 Current Quest")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.primary)
+                                
+                                Text(nextQuest.text)
+                                    .font(.title3)
+                                    .fontWeight(.semibold)
+                                    .multilineTextAlignment(.center)
+                                    .foregroundColor(.blue)
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .fill(.blue.opacity(0.1))
+                            )
+                            .padding(.horizontal)
+                        }
+                    }
+                    .padding(.vertical, 20)
+                }
+            }
+            .navigationTitle("Quest Map")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(.indigo)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Project Header
+struct ProjectHeader: View {
+    let project: ProjectData
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Project icon and title
+            HStack(spacing: 16) {
+                Text(project.emoji)
+                    .font(.largeTitle)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(project.title)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("Mission: [Add your end goal here]")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .italic()
+                }
+                
+                Spacer()
+            }
+            
+            // Progress overview
+            HStack(spacing: 24) {
+                StatPill(
+                    icon: "🎯",
+                    label: "Progress",
+                    value: "\(Int(project.progress * 100))%"
+                )
+                
+                StatPill(
+                    icon: "⚡",
+                    label: "Completed",
+                    value: "\(project.completedCount)/\(project.totalCount)"
+                )
+                
+                StatPill(
+                    icon: "🏆",
+                    label: "Level",
+                    value: "\(project.level)"
+                )
+            }
+        }
+        .padding(20)
+        .conditionalGlassBackground(Color.white, opacity: 0.1, in: RoundedRectangle(cornerRadius: 16))
+        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+    }
+}
+
+// MARK: - Stat Pill
+struct StatPill: View {
+    let icon: String
+    let label: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(icon)
+                .font(.title3)
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+// MARK: - Quest Path (Adventure Game Style)
+struct QuestPath: View {
+    let quests: [TodoItem]
+    @Binding var selectedTaskId: UUID?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text("🗺️ Quest Sequence")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            VStack(spacing: 16) {
+                ForEach(Array(quests.enumerated()), id: \.element.id) { index, quest in
+                    QuestStep(
+                        quest: quest,
+                        stepNumber: index + 1,
+                        isSelected: selectedTaskId == quest.id,
+                        isLast: index == quests.count - 1,
+                        allQuests: quests,
+                        onTap: { selectedTaskId = quest.id }
+                    )
+                }
+            }
+        }
+        .padding(20)
+        .conditionalGlassBackground(Color.white, opacity: 0.05, in: RoundedRectangle(cornerRadius: 16))
+        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+    }
+}
+
+// MARK: - Quest Step
+struct QuestStep: View {
+    let quest: TodoItem
+    let stepNumber: Int
+    let isSelected: Bool
+    let isLast: Bool
+    let allQuests: [TodoItem]
+    let onTap: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            // Quest node and info
+            Button(action: onTap) {
+                HStack(spacing: 16) {
+                    // Step number/status circle
+                    ZStack {
+                        Circle()
+                            .fill(quest.isDone ? Color.green : Color.indigo)
+                            .frame(width: 40, height: 40)
+                        
+                        if quest.isDone {
+                            Image(systemName: "checkmark")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        } else {
+                            Text("\(stepNumber)")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
+                    }
+                    .scaleEffect(isSelected ? 1.2 : 1.0)
+                    .shadow(color: isSelected ? Color.indigo.opacity(0.5) : .clear, radius: 8)
+                    
+                    // Quest details
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(quest.text)
+                            .font(.subheadline)
+                            .fontWeight(quest.isDone ? .regular : .semibold)
+                            .foregroundColor(quest.isDone ? .secondary : .primary)
+                            .strikethrough(quest.isDone)
+                            .multilineTextAlignment(.leading)
+                        
+                        // Metadata
+                        HStack(spacing: 12) {
+                            if let difficulty = quest.difficulty {
+                                Label(difficulty.rawValue, systemImage: "speedometer")
+                                    .font(.caption2)
+                                    .foregroundColor(difficulty.color)
+                            }
+                            
+                            if let duration = quest.estimatedDuration {
+                                Label(duration, systemImage: "clock")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Status indicator
+                    if quest.isDone {
+                        Text("✅ Complete")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.green)
+                    } else if !quest.isDone && allQuests.first(where: { !$0.isDone })?.id == quest.id {
+                        Text("🔥 Current")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.orange)
+                    } else {
+                        Text("⏳ Upcoming")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .padding(.vertical, 8)
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Connection line to next quest
+            if !isLast {
+                HStack {
+                    Spacer()
+                        .frame(width: 20) // Align with circle center
+                    
+                    VStack(spacing: 4) {
+                        Image(systemName: "arrow.down")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Rectangle()
+                            .fill(Color.secondary.opacity(0.3))
+                            .frame(width: 2, height: 20)
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+}
+
+// MARK: - Current Quest Focus
+struct CurrentQuestFocus: View {
+    let quest: TodoItem
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("🎯 Current Quest")
+                .font(.headline)
+                .foregroundColor(.primary)
+            
+            Text(quest.text)
+                .font(.title3)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+            
+            HStack(spacing: 16) {
+                if let difficulty = quest.difficulty {
+                    Label {
+                        Text(difficulty.rawValue)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    } icon: {
+                        Text(difficulty.icon)
+                    }
+                }
+                
+                if let duration = quest.estimatedDuration {
+                    Label {
+                        Text(duration)
+                            .font(.caption)
+                    } icon: {
+                        Image(systemName: "clock")
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
+            
+            Text("💡 Tip: Focus on this one quest. Complete it before moving to the next!")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.top, 8)
+        }
+        .padding(20)
+        .conditionalGlassBackground(Color.orange, opacity: 0.05, in: RoundedRectangle(cornerRadius: 16))
+        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.orange.opacity(0.4), lineWidth: 2)
+        )
     }
 }
 

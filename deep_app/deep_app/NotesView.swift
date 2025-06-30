@@ -10,24 +10,39 @@ struct NotesView: View {
     var body: some View {
         NavigationView {
             VStack(alignment: .leading, spacing: 16) {
-                // Use TextEditor for multi-line input
+                // iOS 26 glass-enhanced TextEditor
                 TextEditor(text: $notes)
                     .frame(maxWidth: .infinity, maxHeight: .infinity) // Allow it to expand
                     .padding(16) // More generous padding inside the editor
-                    .background(Color.white) // Clean white background
-                    .cornerRadius(12)
-                    .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
                     .font(.system(.body, design: .rounded)) // Use rounded system font
                     .foregroundColor(.primary) // Use primary text color
                     .accessibilityLabel("Notes editor") // Accessibility
+                    .scrollContentBackground(.hidden) // Hide default background for glass effect
+                    .conditionalGlassBackground(Color.white, opacity: 0.8, in: RoundedRectangle(cornerRadius: 12))
+                    .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 12))
 
-                // Add a small instruction or status if needed
+                // Glass-styled status text
                 Text("Notes are saved automatically.")
                     .font(.system(.caption, design: .rounded))
                     .foregroundColor(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .conditionalGlassBackground(Color.gray, opacity: 0.1, in: Capsule())
+                    .conditionalGlassEffect(in: Capsule())
             }
             .padding(16) // Padding around the VStack
-            .background(Color(UIColor.systemGray6).ignoresSafeArea()) // Clean light background
+            .background(
+                // iOS 26 glass background
+                Group {
+                    if #available(iOS 26.0, *) {
+                        Color.clear
+                            .background(.ultraThinMaterial)
+                    } else {
+                        Color(UIColor.systemGray6)
+                    }
+                }
+                .ignoresSafeArea()
+            )
             .onTapGesture {
                 hideKeyboard()
             }

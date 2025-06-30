@@ -8,6 +8,139 @@
 import SwiftUI
 import AVFoundation // <-- Import AVFoundation for audio
 
+// MARK: - iOS 26 UI Extensions
+extension View {
+    /// Conditionally applies iOS 26 tab bar styling
+    @ViewBuilder
+    func conditionalTabBarStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            // iOS 26: Liquid Glass tab bar
+            self.background(.clear)
+                .toolbarBackground(.visible, for: .tabBar)
+                .toolbarBackground(.thinMaterial, for: .tabBar)
+        } else {
+            // Pre-iOS 26: Ultra thin material
+            self.background(.ultraThinMaterial)
+        }
+    }
+    
+    /// iOS 26 glass input field style
+    @ViewBuilder
+    func glassInputStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12)) // More transparent
+                .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+        } else {
+            self
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12)) // More transparent fallback
+        }
+    }
+    
+    /// iOS 26 glass button style
+    @ViewBuilder
+    func glassButtonStyle(prominent: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    Group {
+                        if prominent {
+                            RoundedRectangle(cornerRadius: 12).fill(.tint)
+                        } else {
+                            RoundedRectangle(cornerRadius: 12).fill(.thinMaterial)
+                        }
+                    }
+                )
+                .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+                .foregroundStyle(prominent ? .white : .primary)
+        } else {
+            self
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+                .background(
+                    Group {
+                        if prominent {
+                            RoundedRectangle(cornerRadius: 12).fill(.tint)
+                        } else {
+                            RoundedRectangle(cornerRadius: 12).fill(.regularMaterial)
+                        }
+                    }
+                )
+                .foregroundStyle(prominent ? .white : .primary)
+        }
+    }
+    
+    /// iOS 26 glass form style
+    @ViewBuilder
+    func conditionalFormStyle() -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .scrollContentBackground(.hidden)
+                .background(.ultraThinMaterial)
+        } else {
+            self
+        }
+    }
+    
+    /// Conditionally applies glass effect for iOS 26+, falls back to ultra thin material for older versions
+    @ViewBuilder
+    func conditionalGlassEffect<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26.0, *) {
+            // iOS 26: Use new glass effect
+            self.glassEffect(in: shape)
+        } else {
+            // Pre-iOS 26: Use ultra thin material as fallback
+            self.background(.ultraThinMaterial, in: shape)
+        }
+    }
+    
+    /// Conditionally applies glass background for iOS 26+, falls back to more opaque background
+    @ViewBuilder
+    func conditionalGlassBackground<S: Shape>(_ color: Color, opacity: Double, in shape: S) -> some View {
+        if #available(iOS 26.0, *) {
+            // iOS 26: Much more transparent for stronger glass effect
+            self.background(shape.fill(color.opacity(opacity * 0.3))) // Even more transparent
+        } else {
+            // Pre-iOS 26: More opaque for better visibility without glass effect
+            self.background(shape.fill(color.opacity(opacity * 2)))
+        }
+    }
+    
+    /// Ultra-transparent glass effect for maximum see-through
+    @ViewBuilder
+    func ultraGlassEffect<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .background(.ultraThinMaterial, in: shape)
+                .background(Color.white.opacity(0.02), in: shape) // Tiny white tint
+                .modifier(SafeGlassEffectModifier(shape: shape))
+        } else {
+            self.background(.ultraThinMaterial, in: shape)
+        }
+    }
+}
+
+// Safe glass effect modifier to prevent console warnings
+@available(iOS 26.0, *)
+struct SafeGlassEffectModifier<S: Shape>: ViewModifier {
+    let shape: S
+    
+    func body(content: Content) -> some View {
+        // Try to apply glass effect, fall back gracefully if not available
+        if ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26 {
+            content.glassEffect(in: shape)
+        } else {
+            content
+        }
+    }
+}
+
 // --- ADDED: Difficulty Enum ---
 enum Difficulty: String, Codable, CaseIterable, Identifiable {
     case low = "Low"
@@ -168,7 +301,7 @@ struct ContentView: View {
     // ----------------------------
 
     var body: some View {
-        // --- Add selection binding --- 
+        // --- iOS 26 Liquid Glass TabView --- 
         TabView(selection: $selectedTab) {
             ChatView()
                 .tabItem {
@@ -210,9 +343,9 @@ struct ContentView: View {
         }
         // .font(.custom(sciFiFont, size: sciFiFontSize)) // <-- REMOVE Global Font
         .accentColor(Color.theme.accent) // Set global accent color (for tab items, etc.)
-        // --- Apply background material to the TabView bar --- 
-        .background(.ultraThinMaterial)
-        // -----------------------------------------------------
+        // --- iOS 26 Liquid Glass TabBar --- 
+        .conditionalTabBarStyle()
+        // ----------------------------------
         .environmentObject(authService) // <-- Inject the service into the environment
         // --- Add onChange to play sound --- 
         .onChange(of: selectedTab) { oldValue, newValue in
@@ -354,17 +487,12 @@ struct TodoListView: View {
                     .font(.system(.body, design: .rounded))
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 8)
-                    .background(Color.theme.accent)
-                    .cornerRadius(8)
+                    .glassButtonStyle(prominent: true)
             }
             .disabled(newItemText.isEmpty)
             .buttonStyle(.borderless)
         }
-        .background(Color.white)
-        .cornerRadius(12)
-        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+        .glassInputStyle() // Use the iOS 26 glass input styling from ContentView extensions
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }
@@ -384,7 +512,17 @@ struct TodoListView: View {
             .padding(.horizontal, 16)
             .padding(.top, 8)
         }
-        .background(Color(UIColor.systemGray6))
+        .background(
+            // iOS 26 glass background
+            Group {
+                if #available(iOS 26.0, *) {
+                    Color.clear
+                        .background(.ultraThinMaterial)
+                } else {
+                    Color(UIColor.systemGray6)
+                }
+            }
+        )
     }
     
     private var incompleteTasks: some View {
@@ -408,8 +546,18 @@ struct TodoListView: View {
                             .foregroundColor(.blue)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(6)
+                            .background(
+                                Group {
+                                    if #available(iOS 26.0, *) {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.blue.opacity(0.1))
+                                            .glassEffect(in: RoundedRectangle(cornerRadius: 6))
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(Color.blue.opacity(0.1))
+                                    }
+                                }
+                            )
                     }
                 }
                 .padding(.horizontal, 4)
@@ -429,8 +577,18 @@ struct TodoListView: View {
                         saveEdits: saveEdits,
                         playSound: playSound
                     )
-                    .background(Color.white)
-                    .cornerRadius(12)
+                    .background(
+                        Group {
+                            if #available(iOS 26.0, *) {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(.ultraThinMaterial)
+                                    .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+                            } else {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.white)
+                            }
+                        }
+                    )
                     .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
                 }
             } else {

@@ -48,7 +48,7 @@ struct TodayCalendarView: View {
         } else {
                         // --- Modern Timeline View ---
                         VStack(spacing: 0) {
-                            // Date Header with Navigation
+                            // Date Header with Navigation (iOS 26 Glass Enhanced)
                             VStack(spacing: 8) {
                                 HStack {
                                     Text(dayLabel())
@@ -76,12 +76,19 @@ struct TodayCalendarView: View {
                                         }
                                         .font(.system(.caption, design: .rounded))
                                         .foregroundColor(Color("Indigo500"))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .conditionalGlassBackground(Color("Indigo500"), opacity: 0.1, in: Capsule())
+                                        .conditionalGlassEffect(in: Capsule())
                                     }
                                 }
                             }
                             .padding(.horizontal)
                             .padding(.top, 8)
                             .padding(.bottom, 16)
+                            .conditionalGlassBackground(Color.white, opacity: 0.7, in: RoundedRectangle(cornerRadius: 12))
+                            .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal, 8)
                             
                             // Timeline with Swipe Gesture
                             ScrollView {
@@ -175,7 +182,18 @@ struct TodayCalendarView: View {
                     }
                 }
             }
-            .background(Color.white.ignoresSafeArea())
+            .background(
+                // iOS 26 glass background
+                Group {
+                    if #available(iOS 26.0, *) {
+                        Color.clear
+                            .background(.ultraThinMaterial)
+                    } else {
+                        Color.white
+                    }
+                }
+                .ignoresSafeArea()
+            )
             .navigationTitle(navigationTitle())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -427,11 +445,9 @@ struct ModernEventBlockView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(eventBackgroundColor)
-                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
-        )
+        .conditionalGlassBackground(eventBackgroundColor, opacity: 0.8, in: RoundedRectangle(cornerRadius: 12))
+        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 12))
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
     
     private var eventColor: Color {

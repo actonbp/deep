@@ -74,7 +74,8 @@ struct QuickTaskCountTool: Tool {
     
     @Generable
     struct Arguments {
-        // No arguments - always returns count
+        @Guide(description: "Set to true to get task count")
+        let getCount: Bool
     }
     
     func call(arguments: Arguments) async -> ToolOutput {

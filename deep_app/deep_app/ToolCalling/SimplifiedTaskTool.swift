@@ -22,7 +22,7 @@ struct SimplifiedTaskTool: Tool {
         let naturalLanguageQuery: String
     }
     
-    func call(arguments: Arguments) async throws -> ToolOutput {
+    func call(arguments: Arguments) async -> ToolOutput {
         Logging.general.log("🚨 SimplifiedTaskTool: Query: \(arguments.naturalLanguageQuery)")
         
         let tasks = await MainActor.run {
@@ -84,10 +84,11 @@ struct SimpleShowTasksTool: Tool {
     
     @Generable
     struct Arguments {
-        // No arguments - always shows all tasks
+        @Guide(description: "Set to true to show all tasks")
+        let showAllTasks: Bool
     }
     
-    func call(arguments: Arguments) async throws -> ToolOutput {
+    func call(arguments: Arguments) async -> ToolOutput {
         Logging.general.log("🚨 SimpleShowTasksTool: Showing all tasks (no params)")
         
         let tasks = await MainActor.run {

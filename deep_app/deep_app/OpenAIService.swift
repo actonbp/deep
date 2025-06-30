@@ -251,6 +251,11 @@ class OpenAIService {
         let subtasks: [String]
         let replaceOriginal: Bool?
     }
+    
+    // Arguments for analyzeProject function
+    struct AnalyzeProjectArguments: Decodable {
+        let projectName: String
+    }
 
     // --- Tool Definitions using Explicit Structs ---
     
@@ -510,6 +515,19 @@ class OpenAIService {
         )
     )
     // ----------------------------------------------
+    
+    // --- ADDED: Analyze Project Tool Definition ---
+    private let analyzeProjectToolDefinition = FunctionDefinition(
+        name: "analyzeProject",
+        description: "Analyzes a project's tasks to suggest mission statement, end goal, task dependencies, and logical ordering for better project visualization.",
+        parameters: .init(
+            properties: [
+                "projectName": .init(type: "string", description: "The name of the project to analyze.", items: nil)
+            ],
+            required: ["projectName"]
+        )
+    )
+    // ----------------------------------------------
 
     // Combined list of all available tools (now as Tool structs)
     private var allTools: [Tool] { 
@@ -534,7 +552,8 @@ class OpenAIService {
             .init(function: generateProjectEmojiToolDefinition), // <-- ADDED smart emoji tool
             .init(function: organizeAndCleanupToolDefinition), // <-- ADDED comprehensive cleanup tool
             .init(function: breakDownTaskToolDefinition), // <-- ADDED task breakdown tool for ADHD users
-            .init(function: getHealthSummaryToolDefinition) // <-- ADDED health summary tool for ADHD insights
+            .init(function: getHealthSummaryToolDefinition), // <-- ADDED health summary tool for ADHD insights
+            .init(function: analyzeProjectToolDefinition) // <-- ADDED project analysis tool for roadmap improvements
             // -------------------------
         ]
     }
