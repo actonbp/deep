@@ -6,37 +6,41 @@
 - Break down complex changes into small steps
 - Test after each change before proceeding
 
-## 🚦 Current Development Status (June 29, 2025)
+## 🚦 Current Development Status (June 30, 2025)
 
 ### Recently Completed ✅
-Major feature implementations just completed and pushed to GitHub:
+Major iOS 26 enhancements and stability improvements just completed:
 
 1. **✅ ChatGPT-Style Image Upload** - Full multimodal AI with photo analysis capability
 2. **✅ AI Agent Mode** - Background task refinement with ADHD time-blocking insights
 3. **✅ Enhanced To-Do UI** - Compact, elegant metadata cards with improved visual hierarchy
 4. **✅ Advanced Project Management** - Clean picker interface with hidden "Add New" functionality
+5. **✅ iOS 26 Liquid Glass Effects** - Complete app transformation with translucent glass materials
+6. **✅ Quest Map Functionality** - Working chronological task progression for projects
+7. **✅ Performance Optimizations** - Fixed type-checking timeouts and rendering issues
+8. **✅ Tool Protocol Compliance** - All Apple Foundation Models tools now working correctly
 
 ### Git Branch Structure
 ```
 main (stable)
-├── feature/image-upload      ← ✅ CURRENT: Major improvements just pushed
-└── feature/enhanced-roadmap  ← Pending: Visual roadmap enhancements
+├── feature/image-upload      ← ✅ CURRENT: iOS 26 liquid glass enhancements ready
+└── feature/enhanced-roadmap  ← Completed: Quest map functionality working
 ```
 
 **Important**: Always check which branch you're on before making changes!
 - `main`: Stable, production-ready code with all warnings fixed
-- `feature/image-upload`: ✅ **Active branch** with latest UI/AI improvements
+- `feature/image-upload`: ✅ **Active branch** with iOS 26 glass effects and fixes
 
-### Recent Checkpoint
-- **Latest Commit**: `8ef7e9f` - Major UI/UX improvements and AI Agent Mode (June 29, 2025)
-- **Previous**: `edb7e1f` - Implement ChatGPT-style image upload feature  
-- **Status**: ✅ **Stable build** with major feature additions, ready for next phase
-- **Safety**: All improvements tested and working in Xcode
+### Recent Checkpoint (June 30, 2025)
+- **Latest Session**: iOS 26 Liquid Glass transformation complete
+- **Status**: ✅ **Stable build** with modern glass UI, all compilation errors fixed
+- **Major Fixes**: Quest map rendering, tool protocol compliance, type-checking performance
+- **Safety**: All improvements tested in Xcode, no console warnings
 
 ### Next Steps
-1. **Enhanced Roadmap**: Add task dependency visualization and ADHD-specific path features
-2. **UI Polish**: Continue refinements based on user feedback
-3. **Performance**: Optimize background AI processing
+1. **Git Push**: Ready to commit iOS 26 enhancements and push to GitHub
+2. **Subway Map UI**: Future enhancement for task dependency visualization
+3. **Additional Polish**: Continue iOS 26 design refinements as needed
 
 ## 🤖 AI Agent Handoff Guide
 
@@ -44,22 +48,24 @@ main (stable)
 
 ### Essential First Steps
 1. **Check current state**: `git status` and `git branch` (should be on `feature/image-upload`)
-2. **Review latest commit**: `6475d03` - All major features working and documented
+2. **Review latest commit**: `72b9b87` - iOS 26 Liquid Glass transformation complete
 3. **Read this file**: CLAUDE.md contains all architecture and development guidelines
-4. **Review feature completeness**: See `feature_inventory.md` for critical component verification
+4. **Check compilation**: Open in Xcode and verify no errors (should compile clean)
 
 ### Current Branch Status ✅
 - **Branch**: `feature/image-upload` 
-- **Status**: Stable, all features working
-- **Last tested**: June 29, 2025 by Bryan in Xcode
-- **Ready for**: Additional refinements or roadmap enhancement development
+- **Status**: Stable with iOS 26 glass effects, all features working
+- **Last tested**: June 30, 2025 by Bryan in Xcode (compiles clean)
+- **Ready for**: Merge to main or additional refinements
 
 ### Key Files to Understand
-- `ContentView.swift` (~1100 lines) - Main to-do list with MetadataCardView
-- `ChatView.swift` - Image upload and AI chat interface  
+- `ContentView.swift` (~1400 lines) - Main to-do list with iOS 26 glass extensions
+- `ChatView.swift` - Enhanced with floating glass input and transparent bubbles
+- `RoadmapView.swift` - Gamified roadmap with working quest map (tap projects)
+- `QuestChainView.swift` - NEW: Quest chain visualization (chronological tasks)
+- `MinimalRoadmapView.swift` - NEW: Alternative roadmap view modes
 - `AIAgentManager.swift` - Background processing system
-- `ImagePicker.swift` - Photo selection component
-- `OpenAIService.swift` - API integration with Vision support
+- `OpenAIService.swift` - API integration with Vision support + analyzeProject tool
 
 ### Development Guidelines
 - **NEVER break existing functionality** - Test every change in Xcode
@@ -67,7 +73,7 @@ main (stable)
 - **Follow ADHD-first design** - Reduce cognitive load, minimize friction
 - **Use existing patterns** - Follow established code conventions
 
-### Current Status Summary ✅ **All Working as of June 29, 2025**
+### Current Status Summary ✅ **All Working as of June 30, 2025**
 - **Image Upload**: ✅ Working - Photo selection, Vision API, chat integration
 - **AI Agent Mode**: ✅ Working - Background processing, ADHD analysis, metadata enrichment  
 - **Enhanced UI**: ✅ Working - Metadata cards, compact completed tasks, time estimates
@@ -75,8 +81,17 @@ main (stable)
 - **CloudKit Sync**: ✅ Working - Cross-device task synchronization
 - **All AI Models**: ✅ Working - OpenAI (gpt-4o, gpt-4o-mini, o3) + Foundation Models
 - **Core Features**: ✅ Working - Chat, to-do list, calendar, scratchpad, roadmap
+- **iOS 26 Glass**: ✅ Working - Complete liquid glass UI throughout app
+- **Quest Map**: ✅ Working - Chronological task progression when tapping projects
 
 **Build Status**: ✅ Compiles cleanly, no warnings, tested on device by Bryan
+
+### ⚠️ Known Gotchas & Solutions
+1. **GlassEffectContainer doesn't exist** - Use standard VStack instead
+2. **Tool protocol conformance** - Foundation Models tools need `@Generable` with actual properties
+3. **Type-checking timeouts** - Break complex expressions into computed properties
+4. **Console warnings** - Use `SafeGlassEffectModifier` for iOS 26 glass effects
+5. **Blank quest map** - Was caused by missing GlassEffectContainer, now fixed
 
 ### Emergency Recovery
 If anything breaks, the `main` branch is always safe to return to. See "CRITICAL: Git Recovery Operations" section in this file for detailed recovery procedures.
@@ -174,6 +189,68 @@ If anything breaks, the `main` branch is always safe to return to. See "CRITICAL
   - **Dual AI Support**: Works with both OpenAI and Foundation Models
   - **Smart Recommendations**: "Your sleep was short, focus on easier tasks today"
   - **Settings Integration**: Respects HealthKit toggle in Settings
+
+## 🌟 iOS 26 Liquid Glass Implementation
+
+### Overview (June 30, 2025)
+Bryan's Brain now features complete iOS 26 Liquid Glass integration throughout the app, providing an ethereal, translucent UI that allows background content to show through interface elements.
+
+### Key Glass Effect Components
+#### Glass Extensions (`ContentView.swift`)
+```swift
+// Core glass effect helpers - available throughout app
+func glassInputStyle() -> some View // Input fields with glass background
+func glassButtonStyle(prominent: Bool) -> some View // Buttons with glass effects
+func conditionalGlassEffect<S: Shape>(in shape: S) -> some View // Safe glass application
+func conditionalGlassBackground<S: Shape>(_ color: Color, opacity: Double, in shape: S) -> some View
+```
+
+#### Enhanced Views with Glass Effects
+- **Chat Interface** (`ChatView.swift`):
+  - **Ultra-thin material bubbles** for maximum transparency
+  - **Floating input area** with glass background
+  - **Translucent suggested prompts** with glass capsules
+  - **Glass navigation bar** (transparent on iOS 26)
+
+- **Task Management** (`ContentView.swift`):
+  - **Glass input bar** for new task creation
+  - **Glass task cards** with ultra-thin material
+  - **Glass time estimate badges** with enhanced transparency
+  - **Glass backgrounds** throughout list views
+
+- **Settings & Forms** (`SettingsView.swift`):
+  - **Glass form styling** with hidden scroll backgrounds
+  - **Material-enhanced sections** for better depth
+
+#### Technical Implementation
+```swift
+// iOS 26 availability checking with graceful fallback
+if #available(iOS 26.0, *) {
+    self.background(.ultraThinMaterial, in: shape)
+        .glassEffect(in: shape) // Native iOS 26 glass
+} else {
+    self.background(.thinMaterial, in: shape) // Fallback for older iOS
+}
+```
+
+#### Safe Glass Effect System
+- **Console warning prevention** with `SafeGlassEffectModifier`
+- **Progressive transparency** (ultraThinMaterial > thinMaterial > regularMaterial)
+- **Automatic fallbacks** for unsupported configurations
+- **Performance optimized** with computed properties to prevent type-checking timeouts
+
+### Glass Effect Strength Levels
+1. **Ultra-transparent** (`.ultraThinMaterial`): Maximum see-through for dramatic effect
+2. **Enhanced transparency** (opacity multipliers reduced to 0.3x)
+3. **Layered glass** (multiple material layers for depth)
+4. **Conditional transparency** based on iOS version and device capabilities
+
+### User Experience Benefits
+- **Visual hierarchy** through varying transparency levels
+- **Contextual awareness** - always see what's behind UI elements
+- **Modern aesthetic** that feels native to iOS 26
+- **Reduced cognitive load** through visual lightness
+- **ADHD-friendly** minimal visual clutter
 
 ## ADHD-Focused Design Patterns
 
@@ -379,7 +456,26 @@ if useLocalModel && appleFoundationAvailable {
 
 ## AI Tool Development
 
-### Adding New Tools
+**⚠️ CRITICAL: Two Separate AI Pathways**
+
+Bryan's Brain has **two completely different AI systems** with **different tool calling approaches**:
+
+### 1. **OpenAI Tools** (Primary Path - Cloud-based)
+- **File**: `OpenAIService.swift`
+- **Structure**: Uses `FunctionDefinition` with JSON parameter schemas
+- **Robust**: More error-tolerant, handles complex tool calls well
+- **Usage**: Production-ready, main development path
+
+### 2. **Apple Foundation Models Tools** (On-device AI)
+- **Files**: `ToolCalling/*.swift` (CreateTaskTool, etc.)
+- **Structure**: Uses `Tool` protocol with `@Generable` and `@Guide` annotations
+- **Fragile**: iOS 26+ beta, more easily broken, content filters
+- **Usage**: Experimental, requires careful handling
+- **Important**: Arguments struct needs `@Generable` AND at least one `@Guide` property (no empty structs)
+
+**🚨 NEVER MIX THE TWO APPROACHES!** Each has its own completely different syntax and architecture.
+
+### Adding New OpenAI Tools (Recommended)
 1. **Define in OpenAIService** (`OpenAIService.swift:150+`)
 ```swift
 private let newToolDefinition = FunctionDefinition(
@@ -392,15 +488,52 @@ private let newToolDefinition = FunctionDefinition(
 )
 ```
 
-2. **Add to allTools array** (`OpenAIService.swift:326`)
-3. **Implement handler in ChatViewModel** (`ChatViewModel.swift:320+`)
-4. **Update system prompt** if needed (`ChatViewModel.swift:140+`)
+2. **Add to allTools array** (`OpenAIService.swift:540+`)
+```swift
+.init(function: newToolDefinition)
+```
+
+3. **Add argument structure** (`OpenAIService.swift:250+`)
+```swift
+struct NewToolArguments: Decodable {
+    let param: String
+}
+```
+
+4. **Implement handler in ChatViewModel** (`ChatViewModel.swift:600+`)
+5. **Update system prompt** if needed (`ChatViewModel.swift:140+`)
+
+### Adding Foundation Models Tools (Advanced Only)
+**⚠️ Use with extreme caution - Foundation Models are fragile!**
+
+1. **Create tool file** (`ToolCalling/NewTool.swift`)
+```swift
+@available(iOS 26.0, *)
+struct NewTool: Tool {
+    let name = "toolName"
+    let description = "What this tool does"
+    
+    @Generable
+    struct Arguments {
+        @Guide(description: "Parameter description")
+        let param: String
+    }
+    
+    func call(arguments: Arguments) async -> ToolOutput {
+        // Implementation
+        return ToolOutput("Result")
+    }
+}
+```
+
+2. **Register in ToolCollection** (`ToolCalling/ToolCollection.swift`)
 
 ### Tool Design Principles
 - **Specific over generic** - Better to have many focused tools than few complex ones
 - **Clear parameter validation** - Always validate and provide helpful error messages
 - **Async-friendly** - Use proper async/await patterns for UI responsiveness
 - **ADHD-optimized** - Minimize cognitive load in tool interactions
+- **Path consistency** - Never mix OpenAI and Foundation Models patterns
 
 ## State Management
 
