@@ -1,10 +1,10 @@
 # Bryan's Brain (deep_app)
 
 ## 🚦 Development Status
-- **Current Branch**: `feature/image-upload` ✅ **Major improvements just pushed** (June 29, 2025)
+- **Current Branch**: `feature/image-upload` ✅ **iOS 26 Liquid Glass ready** (June 30, 2025)
 - **Stable Branch**: `main` (warning-free, production-ready)  
-- **Latest Commit**: `8ef7e9f` - Major UI/UX improvements and AI Agent Mode
-- **Previous**: `edb7e1f` - ChatGPT-style image upload feature
+- **Latest Commit**: `9939df1` - iOS 26 Liquid Glass transformation and stability improvements
+- **Previous**: `72b9b87` - Complete iOS 26 glass effects and quest map fixes
 - **📖 Branch Guide**: See [BRANCH_GUIDE.md](BRANCH_GUIDE.md) for detailed git workflow
 
 An iOS app integrating an AI chat assistant (powered by OpenAI's `gpt-4o`, `gpt-4o-mini`, and `o3` models) with a functional to-do list and Google Calendar integration. The core motivation is to provide a **fluid, conversational interface for task management and planning**, specifically designed to reduce friction for users with ADHD.
@@ -38,14 +38,17 @@ This allows for a seamless experience where task capture, planning, and calendar
 *   **Tabbed Interface:** Separate views for Chat, To-Do List, Calendar, Scratchpad, and Roadmap.
 *   **AI Chat:**
     *   Connects to OpenAI models: `o3` (thinking model), `gpt-4o` (main), `gpt-4o-mini` (cost-effective).
-    *   🖼️ **NEW: Image Upload** - ChatGPT-style multimodal AI with photo analysis
-    *   🤖 **NEW: AI Agent Mode** - Background task processing and ADHD time-blocking insights
+    *   🖼️ **Image Upload** - ChatGPT-style multimodal AI with photo analysis
+    *   🤖 **AI Agent Mode** - Background task processing and ADHD time-blocking insights
+    *   ✨ **NEW: iOS 26 Liquid Glass** - Floating glass input area and transparent bubbles
+    *   💎 **NEW: Ultra-transparent UI** - See background through all interface elements
     *   Conversation starter prompts.
     *   Optional on-device Foundation Models (iOS 26+ beta).
 *   **To-Do List:**
-    *   🎨 **NEW: Enhanced UI** - Separate incomplete/completed sections with compact design
-    *   📝 **NEW: Metadata Cards** - Elegant expandable task view with card-based layout
-    *   ⏱️ **NEW: Time Estimates** - Total time calculations for incomplete tasks
+    *   ✨ **NEW: Complete Glass Transformation** - Ultra-thin material cards and glass effects
+    *   🎨 **Enhanced UI** - Separate incomplete/completed sections with compact design
+    *   📝 **Metadata Cards** - Elegant expandable task view with card-based layout
+    *   ⏱️ **Time Estimates** - Total time calculations for incomplete tasks
     *   Add, toggle completion, delete, prioritize, drag-reorder items.
     *   Display estimated task durations.
     *   Expandable task metadata (category, project/path, difficulty).

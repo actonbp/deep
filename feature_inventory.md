@@ -3,7 +3,7 @@
 
 This document provides a definitive list of features that MUST exist in each file. Use this to verify completeness after any recovery operation.
 
-## ContentView.swift (~1100+ lines) ✅ **UPDATED JUNE 2025**
+## ContentView.swift (~1400+ lines) ✅ **UPDATED JUNE 30, 2025 - iOS 26 GLASS**
 
 ### State Variables Required
 - `@StateObject private var store = TodoListStore()`
@@ -28,6 +28,13 @@ This document provides a definitive list of features that MUST exist in each fil
    - **Collapsible Completed**: Toggle button with animation
 
 3. **Expandable Task Metadata with MetadataCardView** ⚠️ **COMPLETELY REDESIGNED**
+
+4. **iOS 26 Liquid Glass Extensions** ✨ **NEW JUNE 30, 2025**
+   - `glassInputStyle()` - Glass input field styling
+   - `glassButtonStyle(prominent: Bool)` - Glass button effects
+   - `conditionalGlassEffect<S: Shape>(in shape: S)` - Safe glass application
+   - `conditionalGlassBackground<S: Shape>()` - Transparent backgrounds
+   - `SafeGlassEffectModifier` - Console warning prevention
    ```swift
    if expandedItemId == item.id {
        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())]) {
