@@ -8,6 +8,11 @@ struct RoadmapView: View {
     @State private var newlyCompletedTasks: Set<UUID> = []
     @State private var showingQuestMap = false
     @State private var questMapProject: ProjectData? = nil
+    // NEW: Advanced editing functionality
+    @AppStorage(AppSettings.advancedRoadmapEditingKey) private var advancedRoadmapEditing: Bool = false
+    @State private var showingProjectEditor = false
+    @State private var editingProject: ProjectData? = nil
+    @State private var showingProjectCreator = false
     
     // Consistent title styling
     let titleFontSize: CGFloat = 22 
@@ -37,6 +42,30 @@ struct RoadmapView: View {
                                     // Open quest map for this project
                                     questMapProject = project
                                     showingQuestMap = true
+                                }
+                                .onLongPressGesture {
+                                    // Long press to edit project (if advanced editing enabled)
+                                    if advancedRoadmapEditing {
+                                        editingProject = project
+                                        showingProjectEditor = true
+                                    }
+                                }
+                                .contextMenu {
+                                    if advancedRoadmapEditing {
+                                        Button {
+                                            editingProject = project
+                                            showingProjectEditor = true
+                                        } label: {
+                                            Label("Edit Project", systemImage: "pencil")
+                                        }
+                                        
+                                        Button {
+                                            questMapProject = project
+                                            showingQuestMap = true
+                                        } label: {
+                                            Label("View Quest Map", systemImage: "map")
+                                        }
+                                    }
                                 }
                                 .padding(.horizontal)
                             }
@@ -71,12 +100,31 @@ struct RoadmapView: View {
                             .foregroundColor(Color.theme.titleText)
                     }
                 }
+                
+                if advancedRoadmapEditing {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button {
+                            showingProjectCreator = true
+                        } label: {
+                            Image(systemName: "plus.circle")
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
             }
         }
         .sheet(isPresented: $showingQuestMap) {
             if let project = questMapProject {
                 QuestMapView(project: project)
             }
+        }
+        .sheet(isPresented: $showingProjectEditor) {
+            if let project = editingProject {
+                ProjectEditorView(project: project, todoListStore: todoListStore)
+            }
+        }
+        .sheet(isPresented: $showingProjectCreator) {
+            ProjectCreatorView(todoListStore: todoListStore)
         }
     }
     
@@ -1181,6 +1229,293 @@ struct CurrentQuestFocus: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.orange.opacity(0.4), lineWidth: 2)
         )
+    }
+}
+
+// MARK: - Project Editor View
+struct ProjectEditorView: View {
+    let project: ProjectData
+    let todoListStore: TodoListStore
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var projectName: String
+    @State private var projectDescription: String = ""
+    @State private var missionStatement: String = ""
+    @State private var selectedType: ProjectType
+    @State private var showingDeleteConfirmation = false
+    
+    init(project: ProjectData, todoListStore: TodoListStore) {
+        self.project = project
+        self.todoListStore = todoListStore
+        self._projectName = State(initialValue: project.title)
+        self._selectedType = State(initialValue: project.type)
+        // Initialize with placeholder values
+        self._projectDescription = State(initialValue: "")
+        self._missionStatement = State(initialValue: "")
+    }
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Project Details") {
+                    TextField("Project Name", text: $projectName)
+                        .autocapitalization(.words)
+                        .textInputAutocapitalization(.words)
+                    
+                    Picker("Type", selection: $selectedType) {
+                        ForEach(ProjectType.allCases) { type in
+                            HStack {
+                                Text(type.icon)
+                                Text(type.rawValue)
+                            }
+                            .tag(type)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+                
+                Section("Mission & Purpose") {
+                    TextField("Mission Statement", text: $missionStatement, axis: .vertical)
+                        .lineLimit(3...6)
+                    
+                    TextField("Project Description", text: $projectDescription, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+                
+                Section("Project Statistics") {
+                    HStack {
+                        Label("Tasks", systemImage: "checklist")
+                        Spacer()
+                        Text("\(project.completedCount) of \(project.totalCount) completed")
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack {
+                        Label("Progress", systemImage: "chart.bar")
+                        Spacer()
+                        Text("\(Int(project.progress * 100))%")
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    HStack {
+                        Label("Level", systemImage: "star")
+                        Spacer()
+                        Text("Level \(project.level)")
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Section("Advanced") {
+                    Button("Delete Project", role: .destructive) {
+                        showingDeleteConfirmation = true
+                    }
+                    
+                    Button("Rename Project Tasks", role: .destructive) {
+                        // TODO: Implement batch task renaming
+                    }
+                    .disabled(true) // Placeholder for future feature
+                    
+                    Button("Archive Completed Tasks", role: .destructive) {
+                        // TODO: Implement task archiving
+                    }
+                    .disabled(true) // Placeholder for future feature
+                }
+            }
+            .conditionalFormStyle()
+            .navigationTitle("Edit Project")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveChanges()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .alert("Delete Project", isPresented: $showingDeleteConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete", role: .destructive) {
+                    deleteProject()
+                    dismiss()
+                }
+            } message: {
+                Text("Are you sure you want to delete '\(project.title)'? This will remove all \(project.totalCount) tasks in this project. This action cannot be undone.")
+            }
+        }
+    }
+    
+    private func saveChanges() {
+        // Trim whitespace
+        let trimmedName = projectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // Only proceed if name is valid
+        guard !trimmedName.isEmpty && trimmedName.count <= 30 else { return }
+        
+        // Update all tasks in this project with new name and type
+        let tasksInProject = todoListStore.items.filter { 
+            $0.projectOrPath == project.title 
+        }
+        
+        for task in tasksInProject {
+            if trimmedName != project.title {
+                todoListStore.updateTaskProjectOrPath(
+                    description: task.text, 
+                    projectOrPath: trimmedName
+                )
+            }
+            
+            // Update project type if it changed
+            if selectedType != project.type {
+                let index = todoListStore.items.firstIndex { $0.id == task.id }
+                if let index = index {
+                    todoListStore.items[index].projectType = selectedType
+                }
+            }
+        }
+        
+        // Save changes
+        todoListStore.saveItems()
+        
+        // TODO: Save mission statement and description to UserDefaults with project key
+        // UserDefaults.standard.set(missionStatement, forKey: "projectMission_\(trimmedName)")
+        // UserDefaults.standard.set(projectDescription, forKey: "projectDescription_\(trimmedName)")
+        
+        print("DEBUG [ProjectEditor]: Updated project '\(project.title)' to '\(trimmedName)'")
+    }
+    
+    private func deleteProject() {
+        // Find all tasks in this project
+        let tasksToDelete = todoListStore.items.filter { 
+            $0.projectOrPath == project.title 
+        }
+        
+        // Remove tasks from the store
+        for task in tasksToDelete {
+            if let index = todoListStore.items.firstIndex(where: { $0.id == task.id }) {
+                todoListStore.items.remove(at: index)
+                
+                // Sync deletion to CloudKit
+                todoListStore.cloudKitManager.deleteTodoItem(task)
+            }
+        }
+        
+        // Save changes
+        todoListStore.saveItems()
+        
+        // TODO: Remove project metadata from UserDefaults
+        // UserDefaults.standard.removeObject(forKey: "projectMission_\(project.title)")
+        // UserDefaults.standard.removeObject(forKey: "projectDescription_\(project.title)")
+        
+        print("DEBUG [ProjectEditor]: Deleted project '\(project.title)' and \(tasksToDelete.count) tasks")
+    }
+}
+
+// MARK: - Project Creator View
+struct ProjectCreatorView: View {
+    let todoListStore: TodoListStore
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var projectName: String = ""
+    @State private var projectDescription: String = ""
+    @State private var missionStatement: String = ""
+    @State private var selectedType: ProjectType = .personal
+    @State private var createWithSampleTask: Bool = true
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section("Project Details") {
+                    TextField("Project Name", text: $projectName)
+                        .autocapitalization(.words)
+                        .textInputAutocapitalization(.words)
+                    
+                    Picker("Type", selection: $selectedType) {
+                        ForEach(ProjectType.allCases) { type in
+                            HStack {
+                                Text(type.icon)
+                                Text(type.rawValue)
+                            }
+                            .tag(type)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+                
+                Section("Mission & Purpose") {
+                    TextField("Mission Statement", text: $missionStatement, axis: .vertical)
+                        .lineLimit(3...6)
+                    
+                    TextField("Project Description", text: $projectDescription, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+                
+                Section("Initial Setup") {
+                    Toggle("Create sample task", isOn: $createWithSampleTask)
+                    
+                    if createWithSampleTask {
+                        Text("A sample task will be created to get you started with this project.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .conditionalFormStyle()
+            .navigationTitle("New Project")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Create") {
+                        createProject()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(projectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func createProject() {
+        let trimmedName = projectName.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        guard !trimmedName.isEmpty && trimmedName.count <= 30 else { return }
+        
+        // Create a sample task for the new project if requested
+        if createWithSampleTask {
+            let sampleTaskText = "First task for \(trimmedName)"
+            
+            // Add the task using the store's addItem method
+            let newTask = TodoItem(
+                text: sampleTaskText,
+                projectOrPath: trimmedName,
+                projectType: selectedType
+            )
+            
+            todoListStore.items.append(newTask)
+            todoListStore.saveItems()
+            
+            // Sync to CloudKit
+            todoListStore.cloudKitManager.saveTodoItem(newTask)
+        }
+        
+        // TODO: Save mission statement and description to UserDefaults
+        // UserDefaults.standard.set(missionStatement, forKey: "projectMission_\(trimmedName)")
+        // UserDefaults.standard.set(projectDescription, forKey: "projectDescription_\(trimmedName)")
+        
+        print("DEBUG [ProjectCreator]: Created new project '\(trimmedName)' of type \(selectedType.rawValue)")
     }
 }
 
