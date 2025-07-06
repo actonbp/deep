@@ -18,6 +18,10 @@ struct AppSettings {
     static let enableCategoriesKey = "enableCategories"
     // --- NEW Key: toggle for future on-device model ---
     static let useLocalModelKey = "useLocalModel"
+    // --- NEW Keys: Advanced Manual Editing ---
+    static let showDurationEditorKey = "showDurationEditor"
+    static let showDifficultyEditorKey = "showDifficultyEditor"
+    static let advancedRoadmapEditingKey = "advancedRoadmapEditing"
     // --------------------------------------------------
 }
 
@@ -45,6 +49,10 @@ struct SettingsView: View {
     @AppStorage(AppSettings.useLocalModelKey) var useLocalModel: Bool = false // Default to off
     @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true // Default to on
     @AppStorage("healthKitEnabled") var healthKitEnabled: Bool = false // Default to off
+    // --- NEW: Advanced Manual Editing Settings ---
+    @AppStorage(AppSettings.showDurationEditorKey) var showDurationEditor: Bool = false // Default to off
+    @AppStorage(AppSettings.showDifficultyEditorKey) var showDifficultyEditor: Bool = false // Default to off
+    @AppStorage(AppSettings.advancedRoadmapEditingKey) var advancedRoadmapEditing: Bool = false // Default to off
     // ---------------------
 
     // --- Use shared Authentication Service from Environment --- 
@@ -136,6 +144,25 @@ struct SettingsView: View {
                 Section("Roadmap Customization") {
                     Toggle("Enable Categories", isOn: $areCategoriesEnabled)
                     Text("Group roadmap items by category (e.g., Research, Teaching) in addition to specific projects/paths. If off, all projects/paths appear together.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+                // -----------------------------
+                
+                // --- NEW: Advanced Manual Editing Section ---
+                Section("Advanced Manual Editing") {
+                    Toggle("Show Duration Editor", isOn: $showDurationEditor)
+                    Text("Add time picker in task details for manual duration estimates (5min, 15min, 30min, etc.). Complements AI-set durations.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    Toggle("Show Difficulty Editor", isOn: $showDifficultyEditor)
+                    Text("Add difficulty picker in task details (Low/Medium/High). Useful for manual cognitive load planning.")
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                    
+                    Toggle("Advanced Roadmap Editing", isOn: $advancedRoadmapEditing)
+                    Text("Enable project information editing, task reordering, and advanced roadmap management features.")
                         .font(.caption)
                         .foregroundColor(.gray)
                 }

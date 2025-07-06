@@ -392,6 +392,13 @@ struct TodoListView: View {
     // --- ADDED: State for New Project Alert --- 
     @State private var showingNewProjectAlert = false
     @State private var newProjectName = ""
+    // --- NEW: Advanced Manual Editing Settings ---
+    @AppStorage(AppSettings.showDurationEditorKey) private var showDurationEditor: Bool = false
+    @AppStorage(AppSettings.showDifficultyEditorKey) private var showDifficultyEditor: Bool = false
+    @AppStorage(AppSettings.advancedRoadmapEditingKey) private var advancedRoadmapEditing: Bool = false
+    // --- State for manual editing ---
+    @State private var editingDuration: String = ""
+    @State private var editingDifficulty: Difficulty? = nil
     // --------------------------------------------
     let sciFiFont = "Orbitron"
     let titleFontSize: CGFloat = 22 // Match ChatView title size
@@ -458,14 +465,21 @@ struct TodoListView: View {
             .alert("New Project", isPresented: $showingNewProjectAlert) {
                 TextField("Project Name", text: $newProjectName)
                     .autocapitalization(.words)
-                Button("Cancel", role: .cancel) { }
+                    .textInputAutocapitalization(.words)
+                Button("Cancel", role: .cancel) { 
+                    newProjectName = ""
+                }
                 Button("Add") {
-                    if !newProjectName.isEmpty {
-                        editingProject = newProjectName 
+                    let trimmedName = newProjectName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmedName.isEmpty && trimmedName.count <= 30 {
+                        editingProject = trimmedName
+                        newProjectName = ""
                     }
                 }
+                .disabled(newProjectName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || 
+                         newProjectName.count > 30)
             } message: {
-                Text("Enter the name for the new project.")
+                Text("Enter a project name (max 30 characters). This will help organize your tasks on the roadmap.")
             }
         }
     }
@@ -721,10 +735,37 @@ struct TodoListView: View {
         
         if let expandedIndex = todoListStore.items.firstIndex(where: { $0.id == item.id }) {
             let currentItem = todoListStore.items[expandedIndex]
-            if currentItem.category ?? "" != editingCategory || currentItem.projectOrPath ?? "" != editingProject {
-                 print("DEBUG [TodoView]: Saving edits (via onSubmit) for \(item.text)")
+            var hasChanges = false
+            
+            // Check category changes
+            if currentItem.category ?? "" != editingCategory {
                 todoListStore.updateTaskCategory(description: item.text, category: editingCategory)
+                hasChanges = true
+            }
+            
+            // Check project changes
+            if currentItem.projectOrPath ?? "" != editingProject {
                 todoListStore.updateTaskProjectOrPath(description: item.text, projectOrPath: editingProject)
+                hasChanges = true
+            }
+            
+            // Check duration changes
+            if (currentItem.estimatedDuration ?? "") != editingDuration {
+                todoListStore.updateTaskDuration(
+                    description: item.text, 
+                    duration: editingDuration.isEmpty ? nil : editingDuration
+                )
+                hasChanges = true
+            }
+            
+            // Check difficulty changes
+            if currentItem.difficulty != editingDifficulty {
+                todoListStore.updateTaskDifficulty(description: item.text, difficulty: editingDifficulty)
+                hasChanges = true
+            }
+            
+            if hasChanges {
+                print("DEBUG [TodoView]: Saving edits (via onSubmit) for \(item.text)")
             }
         }
         // Optionally hide keyboard
@@ -885,13 +926,24 @@ struct TaskRowView: View {
                     MetadataCardView(
                         icon: "folder.circle",
                         title: "Category", 
-                        value: editingCategory.isEmpty ? "None" : editingCategory,
+                        value: editingCategory.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "None" : editingCategory,
                         color: .orange
                     ) {
                         TextField("Add category", text: $editingCategory)
                             .font(.caption)
                             .textFieldStyle(.plain)
-                            .onSubmit { saveEdits(item) }
+                            .autocapitalization(.words)
+                            .textInputAutocapitalization(.words)
+                            .onChange(of: editingCategory) { _, newValue in
+                                // Limit length and auto-save on changes
+                                if newValue.count > 20 {
+                                    editingCategory = String(newValue.prefix(20))
+                                }
+                            }
+                            .onSubmit { 
+                                editingCategory = editingCategory.trimmingCharacters(in: .whitespacesAndNewlines)
+                                saveEdits(for: item) 
+                            }
                     }
                 }
                 
@@ -918,20 +970,91 @@ struct TaskRowView: View {
                             showingNewProjectAlert = true
                             newProjectName = ""
                         } else {
-                            saveEdits(item)
+                            // Trim whitespace and save
+                            editingProject = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                            saveEdits(for: item)
                         }
                     }
                 }
                 
-                // Difficulty Card (if available)
-                if let difficulty = item.difficulty {
-                    MetadataCardView(
-                        icon: "gauge.medium.badge.plus",
-                        title: "Difficulty",
-                        value: difficulty.rawValue,
-                        color: difficultyDisplayColor(for: difficulty),
-                        isReadOnly: true
-                    )
+                // Duration Card - show if setting enabled or duration exists
+                if showDurationEditor || item.estimatedDuration != nil {
+                    if showDurationEditor {
+                        // Interactive duration picker
+                        MetadataCardView(
+                            icon: "clock.circle",
+                            title: "Duration",
+                            value: editingDuration.isEmpty ? "Not set" : editingDuration,
+                            color: .blue
+                        ) {
+                            Picker("Duration", selection: $editingDuration) {
+                                Text("Not set").tag("")
+                                Text("5 min").tag("5 min")
+                                Text("15 min").tag("15 min")
+                                Text("30 min").tag("30 min")
+                                Text("1 hour").tag("1 hour")
+                                Text("2 hours").tag("2 hours")
+                                Text("4 hours").tag("4 hours")
+                                Text("8 hours").tag("8 hours")
+                            }
+                            .pickerStyle(.menu)
+                            .font(.caption2)
+                            .onChange(of: editingDuration) { _, newValue in
+                                // Update the task duration using TodoListStore method
+                                todoListStore.updateTaskDuration(
+                                    description: item.text,
+                                    duration: newValue.isEmpty ? nil : newValue
+                                )
+                            }
+                        }
+                    } else {
+                        // Read-only duration display
+                        MetadataCardView(
+                            icon: "clock.circle",
+                            title: "Duration",
+                            value: item.estimatedDuration ?? "Not set",
+                            color: .blue,
+                            isReadOnly: true
+                        )
+                    }
+                }
+                
+                // Difficulty Card - show if setting enabled or difficulty exists
+                if showDifficultyEditor || item.difficulty != nil {
+                    if showDifficultyEditor {
+                        // Interactive difficulty picker
+                        MetadataCardView(
+                            icon: "gauge.medium.badge.plus",
+                            title: "Difficulty",
+                            value: editingDifficulty?.rawValue ?? "Not set",
+                            color: editingDifficulty != nil ? difficultyDisplayColor(for: editingDifficulty!) : .gray
+                        ) {
+                            Picker("Difficulty", selection: $editingDifficulty) {
+                                Text("Not set").tag(Difficulty?.none)
+                                Text("Low").tag(Difficulty?.some(.low))
+                                Text("Medium").tag(Difficulty?.some(.medium))
+                                Text("High").tag(Difficulty?.some(.high))
+                            }
+                            .pickerStyle(.menu)
+                            .font(.caption2)
+                            .onChange(of: editingDifficulty) { _, newValue in
+                                // Update the task difficulty using TodoListStore method
+                                todoListStore.updateTaskDifficulty(
+                                    description: item.text,
+                                    difficulty: newValue
+                                )
+                            }
+                        }
+                    } else if let difficulty = item.difficulty {
+                        // Read-only difficulty display
+                        MetadataCardView(
+                            icon: "gauge.medium.badge.plus",
+                            title: "Difficulty",
+                            value: difficulty.rawValue,
+                            color: difficultyDisplayColor(for: difficulty),
+                            isReadOnly: true
+                        )
+                    }
                 }
                 
                 // Created Date Card
@@ -1098,6 +1221,8 @@ struct TaskRowView: View {
             expandedItemId = item.id
             editingCategory = item.category ?? ""
             editingProject = item.projectOrPath ?? ""
+            editingDuration = item.estimatedDuration ?? ""
+            editingDifficulty = item.difficulty
         }
     }
 }
