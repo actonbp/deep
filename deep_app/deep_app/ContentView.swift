@@ -8,139 +8,6 @@
 import SwiftUI
 import AVFoundation // <-- Import AVFoundation for audio
 
-// MARK: - iOS 26 UI Extensions
-extension View {
-    /// Conditionally applies iOS 26 tab bar styling
-    @ViewBuilder
-    func conditionalTabBarStyle() -> some View {
-        if #available(iOS 26.0, *) {
-            // iOS 26: Liquid Glass tab bar
-            self.background(.clear)
-                .toolbarBackground(.visible, for: .tabBar)
-                .toolbarBackground(.thinMaterial, for: .tabBar)
-        } else {
-            // Pre-iOS 26: Ultra thin material
-            self.background(.ultraThinMaterial)
-        }
-    }
-    
-    /// iOS 26 glass input field style
-    @ViewBuilder
-    func glassInputStyle() -> some View {
-        if #available(iOS 26.0, *) {
-            self
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12)) // More transparent
-                .glassEffect(in: RoundedRectangle(cornerRadius: 12))
-        } else {
-            self
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12)) // More transparent fallback
-        }
-    }
-    
-    /// iOS 26 glass button style
-    @ViewBuilder
-    func glassButtonStyle(prominent: Bool = false) -> some View {
-        if #available(iOS 26.0, *) {
-            self
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(
-                    Group {
-                        if prominent {
-                            RoundedRectangle(cornerRadius: 12).fill(.tint)
-                        } else {
-                            RoundedRectangle(cornerRadius: 12).fill(.thinMaterial)
-                        }
-                    }
-                )
-                .glassEffect(in: RoundedRectangle(cornerRadius: 12))
-                .foregroundStyle(prominent ? .white : .primary)
-        } else {
-            self
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(
-                    Group {
-                        if prominent {
-                            RoundedRectangle(cornerRadius: 12).fill(.tint)
-                        } else {
-                            RoundedRectangle(cornerRadius: 12).fill(.regularMaterial)
-                        }
-                    }
-                )
-                .foregroundStyle(prominent ? .white : .primary)
-        }
-    }
-    
-    /// iOS 26 glass form style
-    @ViewBuilder
-    func conditionalFormStyle() -> some View {
-        if #available(iOS 26.0, *) {
-            self
-                .scrollContentBackground(.hidden)
-                .background(.ultraThinMaterial)
-        } else {
-            self
-        }
-    }
-    
-    /// Conditionally applies glass effect for iOS 26+, falls back to ultra thin material for older versions
-    @ViewBuilder
-    func conditionalGlassEffect<S: Shape>(in shape: S) -> some View {
-        if #available(iOS 26.0, *) {
-            // iOS 26: Use new glass effect
-            self.glassEffect(in: shape)
-        } else {
-            // Pre-iOS 26: Use ultra thin material as fallback
-            self.background(.ultraThinMaterial, in: shape)
-        }
-    }
-    
-    /// Conditionally applies glass background for iOS 26+, falls back to more opaque background
-    @ViewBuilder
-    func conditionalGlassBackground<S: Shape>(_ color: Color, opacity: Double, in shape: S) -> some View {
-        if #available(iOS 26.0, *) {
-            // iOS 26: Much more transparent for stronger glass effect
-            self.background(shape.fill(color.opacity(opacity * 0.3))) // Even more transparent
-        } else {
-            // Pre-iOS 26: More opaque for better visibility without glass effect
-            self.background(shape.fill(color.opacity(opacity * 2)))
-        }
-    }
-    
-    /// Ultra-transparent glass effect for maximum see-through
-    @ViewBuilder
-    func ultraGlassEffect<S: Shape>(in shape: S) -> some View {
-        if #available(iOS 26.0, *) {
-            self
-                .background(.ultraThinMaterial, in: shape)
-                .background(Color.white.opacity(0.02), in: shape) // Tiny white tint
-                .modifier(SafeGlassEffectModifier(shape: shape))
-        } else {
-            self.background(.ultraThinMaterial, in: shape)
-        }
-    }
-}
-
-// Safe glass effect modifier to prevent console warnings
-@available(iOS 26.0, *)
-struct SafeGlassEffectModifier<S: Shape>: ViewModifier {
-    let shape: S
-    
-    func body(content: Content) -> some View {
-        // Try to apply glass effect, fall back gracefully if not available
-        if ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 26 {
-            content.glassEffect(in: shape)
-        } else {
-            content
-        }
-    }
-}
-
 // --- ADDED: Difficulty Enum ---
 enum Difficulty: String, Codable, CaseIterable, Identifiable {
     case low = "Low"
@@ -585,10 +452,14 @@ struct TodoListView: View {
                         editingProject: $editingProject,
                         showingNewProjectAlert: $showingNewProjectAlert,
                         newProjectName: $newProjectName,
+                        editingDuration: $editingDuration,
+                        editingDifficulty: $editingDifficulty,
                         existingProjectsForPicker: existingProjectsForPicker,
                         dateFormatter: dateFormatter,
                         todoListStore: todoListStore,
-                        saveEdits: saveEdits,
+                        saveEdits: { item in saveEdits(for: item) },
+                        showDurationEditor: showDurationEditor,
+                        showDifficultyEditor: showDifficultyEditor,
                         playSound: playSound
                     )
                     .background(
@@ -793,10 +664,14 @@ struct TaskRowView: View {
     @Binding var editingProject: String
     @Binding var showingNewProjectAlert: Bool
     @Binding var newProjectName: String
+    @Binding var editingDuration: String
+    @Binding var editingDifficulty: Difficulty?
     let existingProjectsForPicker: [String]
     let dateFormatter: DateFormatter
     let todoListStore: TodoListStore
     let saveEdits: (TodoItem) -> Void
+    let showDurationEditor: Bool
+    let showDifficultyEditor: Bool
     let playSound: (String) -> Void
     
     var body: some View {
@@ -942,7 +817,7 @@ struct TaskRowView: View {
                             }
                             .onSubmit { 
                                 editingCategory = editingCategory.trimmingCharacters(in: .whitespacesAndNewlines)
-                                saveEdits(for: item) 
+                                saveEdits(item) 
                             }
                     }
                 }
@@ -972,7 +847,7 @@ struct TaskRowView: View {
                         } else {
                             // Trim whitespace and save
                             editingProject = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                            saveEdits(for: item)
+                            saveEdits(item)
                         }
                     }
                 }

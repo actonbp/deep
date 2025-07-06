@@ -477,7 +477,6 @@ struct HeroStatsCard: View {
                 GeometryReader { geometry in
                     // Ensure geometry has valid dimensions
                     let safeWidth = max(1, geometry.size.width)
-                    let safeHeight = max(1, geometry.size.height)
                     ZStack(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.gray.opacity(0.2))
@@ -755,8 +754,7 @@ struct QuestBoardCard: View {
                 }
             }
             .padding(20)
-            .conditionalGlassBackground(Color.white, opacity: 0.08, in: RoundedRectangle(cornerRadius: 20))
-            .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 20))
+            .glassCard(cornerRadius: 20)
             .overlay(
                 // Glowing border for high progress
                 Group {
@@ -919,10 +917,7 @@ struct QuestMapView: View {
                                     }
                                 }
                                 .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(.ultraThinMaterial)
-                                )
+                                .glassCard(cornerRadius: 12)
                                 .onTapGesture {
                                     selectedTaskId = quest.id
                                 }
@@ -945,10 +940,7 @@ struct QuestMapView: View {
                                     .foregroundColor(.blue)
                             }
                             .padding()
-                            .background(
-                                RoundedRectangle(cornerRadius: 16)
-                                    .fill(.blue.opacity(0.1))
-                            )
+                            .glassCard(cornerRadius: 16)
                             .padding(.horizontal)
                         }
                     }
@@ -1016,8 +1008,7 @@ struct ProjectHeader: View {
             }
         }
         .padding(20)
-        .conditionalGlassBackground(Color.white, opacity: 0.1, in: RoundedRectangle(cornerRadius: 16))
-        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 16))
+        .glassCard(cornerRadius: 16)
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
 }
@@ -1067,8 +1058,7 @@ struct QuestPath: View {
             }
         }
         .padding(20)
-        .conditionalGlassBackground(Color.white, opacity: 0.05, in: RoundedRectangle(cornerRadius: 16))
-        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 16))
+        .glassCard(cornerRadius: 16)
         .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
     }
 }
@@ -1223,8 +1213,7 @@ struct CurrentQuestFocus: View {
                 .padding(.top, 8)
         }
         .padding(20)
-        .conditionalGlassBackground(Color.orange, opacity: 0.05, in: RoundedRectangle(cornerRadius: 16))
-        .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 16))
+        .glassCard(cornerRadius: 16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .stroke(Color.orange.opacity(0.4), lineWidth: 2)
@@ -1321,7 +1310,7 @@ struct ProjectEditorView: View {
                     .disabled(true) // Placeholder for future feature
                 }
             }
-            .conditionalFormStyle()
+            .glassFormStyle()
             .navigationTitle("Edit Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1466,7 +1455,7 @@ struct ProjectCreatorView: View {
                     }
                 }
             }
-            .conditionalFormStyle()
+            .glassFormStyle()
             .navigationTitle("New Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1500,7 +1489,14 @@ struct ProjectCreatorView: View {
             // Add the task using the store's addItem method
             let newTask = TodoItem(
                 text: sampleTaskText,
+                isDone: false,
+                priority: nil,
+                estimatedDuration: nil,
+                dateCreated: Date(),
+                difficulty: nil,
+                category: nil,
                 projectOrPath: trimmedName,
+                shortSummary: nil,
                 projectType: selectedType
             )
             

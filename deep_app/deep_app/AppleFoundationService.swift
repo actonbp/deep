@@ -167,22 +167,8 @@ actor AppleFoundationService {
                     )
                     
                     // Try to prewarm the session
-                    do {
-                        try await session.prewarm()
-                        print("DEBUG [AppleFoundationService]: Session prewarmed successfully")
-                    } catch {
-                        print("DEBUG [AppleFoundationService]: Prewarm failed (non-fatal): \(error.localizedDescription)")
-                        print("DEBUG [AppleFoundationService]: This might indicate session corruption - creating new session...")
-                        
-                        // If prewarm fails, it might indicate the session is corrupted
-                        // Try creating a completely fresh session
-                        if attempt == 0 {
-                            print("DEBUG [AppleFoundationService]: Attempting session recreation due to prewarm failure")
-                            // Force a retry with a new session
-                            try await Task.sleep(nanoseconds: 500_000_000)
-                            continue
-                        }
-                    }
+                    session.prewarm()
+                    print("DEBUG [AppleFoundationService]: Session prewarmed successfully")
                     
                     // Add a small delay to let the session stabilize (iOS 26 beta issue)
                     if attempt > 0 {

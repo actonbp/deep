@@ -17,12 +17,12 @@ class TodoListStore: ObservableObject {
     @Published var items: [TodoItem] = []
     
     // CloudKit sync manager
-    private let __cloudKitManager = CloudKitManager.shared
+    private let ___cloudKitManager = CloudKitManager.shared
     private var hasLoadedFromCloud = false
     
     // Public accessor for CloudKit manager (needed for RoadmapView project operations)
-    var _cloudKitManager: CloudKitManager {
-        return __cloudKitManager
+    var cloudKitManager: CloudKitManager {
+        return ___cloudKitManager
     }
     
     // Notification observers
@@ -89,11 +89,11 @@ class TodoListStore: ObservableObject {
     }
     
     private func syncAllItemsToCloudKit() {
-        guard _cloudKitManager.iCloudAvailable else { return }
+        guard ___cloudKitManager.iCloudAvailable else { return }
         
         // Upload all items to ensure everything is synced
         for item in items {
-            _cloudKitManager.saveTodoItem(item)
+            ___cloudKitManager.saveTodoItem(item)
         }
     }
     
@@ -117,7 +117,7 @@ class TodoListStore: ObservableObject {
     }
     
     // Save items back to AppStorage asynchronously
-    private func saveItems() {
+    func saveItems() {
         // --- ADDED Guard --- 
         // Prevent saving if demo mode is active
         guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
@@ -171,7 +171,7 @@ class TodoListStore: ObservableObject {
         saveItems()
         
         // Sync to CloudKit
-        _cloudKitManager.saveTodoItem(newItem)
+        ___cloudKitManager.saveTodoItem(newItem)
         
         if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
             print("DEBUG [Store]: Added item: \(trimmedText) [Priority: \(defaultPriority)] [Category: \(category ?? "nil")] [Project: \(projectOrPath ?? "nil")]")
@@ -191,7 +191,7 @@ class TodoListStore: ObservableObject {
             saveItems()
             
             // Sync to CloudKit
-            _cloudKitManager.saveTodoItem(items[index])
+            ___cloudKitManager.saveTodoItem(items[index])
         }
     }
     
@@ -212,7 +212,7 @@ class TodoListStore: ObservableObject {
         
         // Sync deletions to CloudKit
         for item in itemsToDelete {
-            _cloudKitManager.deleteTodoItem(item)
+            ___cloudKitManager.deleteTodoItem(item)
         }
     }
     
@@ -243,7 +243,7 @@ class TodoListStore: ObservableObject {
             saveItems()
             
             // Sync deletion to CloudKit
-            _cloudKitManager.deleteTodoItem(item)
+            ___cloudKitManager.deleteTodoItem(item)
             
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Deleted single item '\(item.text)'")
@@ -268,7 +268,7 @@ class TodoListStore: ObservableObject {
             saveItems()
             
             // Sync deletion to CloudKit
-            _cloudKitManager.deleteTodoItem(itemToDelete)
+            ___cloudKitManager.deleteTodoItem(itemToDelete)
             
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Removed task '\(trimmedDescription)'")
@@ -320,7 +320,7 @@ class TodoListStore: ObservableObject {
             // Sync updated items to CloudKit
             for item in items {
                 if priorityMap[item.text.trimmingCharacters(in: .whitespacesAndNewlines)] != nil {
-                    _cloudKitManager.saveTodoItem(item)
+                    ___cloudKitManager.saveTodoItem(item)
                 }
             }
             
@@ -374,7 +374,7 @@ class TodoListStore: ObservableObject {
             
             // Sync all items with updated priorities to CloudKit
             for item in items {
-                _cloudKitManager.saveTodoItem(item)
+                ___cloudKitManager.saveTodoItem(item)
             }
             
             // No need to manually publish changes here, the @Published items array modification
@@ -396,7 +396,7 @@ class TodoListStore: ObservableObject {
             saveItems() // Save the change
             
             // Sync to CloudKit
-            _cloudKitManager.saveTodoItem(items[index])
+            ___cloudKitManager.saveTodoItem(items[index])
             
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Updated duration for '\(trimmedDescription)' to '\(duration ?? "nil")'")
@@ -422,7 +422,7 @@ class TodoListStore: ObservableObject {
             saveItems() // Save the change
             
             // Sync to CloudKit
-            _cloudKitManager.saveTodoItem(items[index])
+            ___cloudKitManager.saveTodoItem(items[index])
             
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Updated difficulty for '\(trimmedDescription)' to '\(difficulty?.rawValue ?? "nil")'")
@@ -447,7 +447,7 @@ class TodoListStore: ObservableObject {
             saveItems()
             
             // Sync to CloudKit
-            _cloudKitManager.saveTodoItem(items[index])
+            ___cloudKitManager.saveTodoItem(items[index])
             
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Updated summary for task to '\(summary ?? "nil")'")
@@ -468,7 +468,7 @@ class TodoListStore: ObservableObject {
             saveItems()
             
             // Sync to CloudKit
-            _cloudKitManager.saveTodoItem(items[index])
+            ___cloudKitManager.saveTodoItem(items[index])
             
             if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                 print("DEBUG [Store]: Updated summary for '\(trimmedDescription)' to '\(summary ?? "nil")'")
@@ -505,7 +505,7 @@ class TodoListStore: ObservableObject {
                     saveItems()
                     
                     // Sync to CloudKit
-                    _cloudKitManager.saveTodoItem(items[index])
+                    ___cloudKitManager.saveTodoItem(items[index])
                     
                     return true // Task found and marked done
                 } else {
@@ -543,7 +543,7 @@ class TodoListStore: ObservableObject {
                 saveItems() 
                 
                 // Sync to CloudKit
-                _cloudKitManager.saveTodoItem(items[index])
+                ___cloudKitManager.saveTodoItem(items[index])
                 
                 if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                     print("DEBUG [Store]: Updated category for '\(trimmedDescription)' to '\(categoryToSet ?? "nil")'")
@@ -573,7 +573,7 @@ class TodoListStore: ObservableObject {
                 saveItems() 
                 
                 // Sync to CloudKit
-                _cloudKitManager.saveTodoItem(items[index])
+                ___cloudKitManager.saveTodoItem(items[index])
                 
                 if UserDefaults.standard.bool(forKey: AppSettings.debugLogEnabledKey) {
                     print("DEBUG [Store]: Updated project/path for '\(trimmedDescription)' to '\(projectToSet ?? "nil")'")
@@ -621,13 +621,13 @@ class TodoListStore: ObservableObject {
     // MARK: - CloudKit Integration
     
     private func syncWithCloudKit() {
-        guard _cloudKitManager.iCloudAvailable else {
+        guard ___cloudKitManager.iCloudAvailable else {
             print("☁️ iCloud not available, using local storage only")
             return
         }
         
         // Fetch all items from CloudKit
-        _cloudKitManager.fetchAllTodoItems { [weak self] cloudItems in
+        ___cloudKitManager.fetchAllTodoItems { [weak self] cloudItems in
             guard let self = self else { return }
             
             if !self.hasLoadedFromCloud {
@@ -640,17 +640,17 @@ class TodoListStore: ObservableObject {
     // Public method for manual refresh
     @MainActor
     func manualRefreshFromCloudKit() async {
-        guard _cloudKitManager.iCloudAvailable else {
+        guard ___cloudKitManager.iCloudAvailable else {
             print("☁️ iCloud not available for manual refresh")
             return
         }
         
         // Set syncing status
-        _cloudKitManager.syncStatus = .syncing
+        ___cloudKitManager.syncStatus = .syncing
         
         // Use async/await wrapper for the completion handler
         await withCheckedContinuation { continuation in
-            _cloudKitManager.fetchAllTodoItems { [weak self] cloudItems in
+            ___cloudKitManager.fetchAllTodoItems { [weak self] cloudItems in
                 guard let self = self else {
                     continuation.resume()
                     return
@@ -660,12 +660,12 @@ class TodoListStore: ObservableObject {
                 self.mergeCloudItemsWithLocal(cloudItems)
                 
                 // Set success status briefly
-                self._cloudKitManager.syncStatus = .success
+                self.___cloudKitManager.syncStatus = .success
                 
                 // Reset to idle after a short delay
                 Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                    self._cloudKitManager.syncStatus = .idle
+                    self.___cloudKitManager.syncStatus = .idle
                 }
                 
                 continuation.resume()
@@ -674,7 +674,7 @@ class TodoListStore: ObservableObject {
     }
     
     private func setupCloudKitSubscriptions() {
-        _cloudKitManager.subscribeToChanges()
+        ___cloudKitManager.subscribeToChanges()
     }
     
     private func mergeCloudItemsWithLocal(_ cloudItems: [TodoItem]) {
@@ -696,7 +696,7 @@ class TodoListStore: ObservableObject {
         
         // Upload any local-only items to CloudKit
         for item in self.items {
-            _cloudKitManager.saveTodoItem(item)
+            ___cloudKitManager.saveTodoItem(item)
         }
     }
     
@@ -706,12 +706,12 @@ class TodoListStore: ObservableObject {
         saveItems()
         
         // Then sync to CloudKit if available
-        guard _cloudKitManager.iCloudAvailable else { return }
+        guard ___cloudKitManager.iCloudAvailable else { return }
         
         // Upload all items to CloudKit
         // In a production app, you'd want to track which items have changed
         for item in items {
-            _cloudKitManager.saveTodoItem(item)
+            ___cloudKitManager.saveTodoItem(item)
         }
     }
 } 

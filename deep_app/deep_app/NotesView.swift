@@ -18,8 +18,7 @@ struct NotesView: View {
                     .foregroundColor(.primary) // Use primary text color
                     .accessibilityLabel("Notes editor") // Accessibility
                     .scrollContentBackground(.hidden) // Hide default background for glass effect
-                    .conditionalGlassBackground(Color.white, opacity: 0.8, in: RoundedRectangle(cornerRadius: 12))
-                    .conditionalGlassEffect(in: RoundedRectangle(cornerRadius: 12))
+                    .glassCard(cornerRadius: 16)
 
                 // Glass-styled status text
                 Text("Notes are saved automatically.")
@@ -27,8 +26,7 @@ struct NotesView: View {
                     .foregroundColor(.secondary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .conditionalGlassBackground(Color.gray, opacity: 0.1, in: Capsule())
-                    .conditionalGlassEffect(in: Capsule())
+                    .glassCard(cornerRadius: 20)
             }
             .padding(16) // Padding around the VStack
             .background(

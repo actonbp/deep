@@ -93,41 +93,61 @@ struct ChatView: View {
                 ZStack(alignment: .bottomTrailing) { // Align overlay to bottom trailing
                     ScrollViewReader { scrollView in
                         ScrollView {
-                            LazyVStack(spacing: 16) { // Increased spacing for more breathing room
-                                // Use the computed property for cleaner, faster compilation
-                                ForEach(visibleMessages) { message in
-                                    MessageBubble(message: message)
-                                        // --- Track visibility of the LAST message --- 
-                                        /* // (COMMENTED OUT)
-                                        .if(message.id == viewModel.messages.last(where: { $0.role != .system && $0.role != .tool && !($0.role == .assistant && $0.toolCalls != nil && ($0.content ?? "").isEmpty) })?.id) { view in
-                                            view.onAppear { showScrollToBottomButton = false }
-                                               .onDisappear { showScrollToBottomButton = true }
+                            if #available(iOS 26.0, *) {
+                                // Wrap messages in GlassEffectContainer for morphing effects
+                                GlassEffectContainer(spacing: 16) {
+                                    LazyVStack(spacing: 16) {
+                                        ForEach(visibleMessages) { message in
+                                            MessageBubble(message: message)
                                         }
-                                        */
-                                        // ---------------------------------------------
-                                }
-                                
-                                // Loading indicator when waiting for API response
-                                if viewModel.isLoading {
-                                    HStack(spacing: 8) {
-                                        ProgressView()
-                                            .tint(.gray)
-                                        Text(viewModel.isThinking ? "🧠 Thinking deeply..." : "...")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
+                                        
+                                        // Loading indicator
+                                        if viewModel.isLoading {
+                                            HStack(spacing: 8) {
+                                                ProgressView()
+                                                    .tint(.gray)
+                                                Text(viewModel.isThinking ? "🧠 Thinking deeply..." : "...")
+                                                    .font(.caption)
+                                                    .foregroundColor(.gray)
+                                            }
+                                            .padding(12)
+                                            .glassEffect(.regular, in: Capsule())
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                            .id("loading")
+                                        }
                                     }
-                                    .padding(12)
-                                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 16)
-                                            .stroke(.white.opacity(0.2), lineWidth: 0.5)
-                                    )
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .id("loading")
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 12)
                                 }
+                            } else {
+                                // Fallback for older iOS versions
+                                LazyVStack(spacing: 16) {
+                                    ForEach(visibleMessages) { message in
+                                        MessageBubble(message: message)
+                                    }
+                                    
+                                    // Loading indicator
+                                    if viewModel.isLoading {
+                                        HStack(spacing: 8) {
+                                            ProgressView()
+                                                .tint(.gray)
+                                            Text(viewModel.isThinking ? "🧠 Thinking deeply..." : "...")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
+                                        .padding(12)
+                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .stroke(.white.opacity(0.2), lineWidth: 0.5)
+                                        )
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id("loading")
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 12)
                             }
-                            .padding(.horizontal, 20) // Increased for more breathing room
-                            .padding(.top, 12) // Slightly more top padding
                         }
                         .onAppear { // <-- Add onAppear for initial scroll
                             scrollToBottom(scrollView: scrollView, animated: false) // Scroll without animation initially
@@ -259,12 +279,14 @@ struct ChatView: View {
                                 .foregroundColor(selectedImages.isEmpty ? .secondary : Color.theme.accent)
                         }
                         
-                        // Message input field - cleaner styling
-                        TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
-                            .font(.system(.body, design: .rounded))
-                            .textFieldStyle(.plain)
-                            .foregroundColor(.primary)
-                            .padding(.vertical, 12)
+                        // Message input field with glass styling
+                        HStack {
+                            TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
+                                .font(.system(.body, design: .rounded))
+                                .textFieldStyle(.plain)
+                                .foregroundColor(.primary)
+                        }
+                        .glassInputStyle()
                         
                         // Send button - more minimal when not active
                         Button {
@@ -297,10 +319,10 @@ struct ChatView: View {
                         Group {
                             if #available(iOS 26.0, *) {
                                 Color.clear
-                                    .background(.ultraThinMaterial) // More transparent for stronger see-through effect
+                                    .background(.ultraThinMaterial)
                                     .glassEffect(in: Rectangle())
                             } else {
-                                Color(UIColor.systemBackground).opacity(0.95) // Slightly transparent fallback
+                                Color(UIColor.systemBackground).opacity(0.95)
                             }
                         }
                     )
@@ -444,13 +466,21 @@ struct MessageBubble: View {
                         if #available(iOS 26.0, *) {
                             // iOS 26: More glass-like bubbles with modern corners
                             if message.role == .user {
-                                RoundedRectangle(cornerRadius: 20) // More modern corner radius
-                                    .fill(Color.theme.accent)
-                                    .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(Color.theme.accent.opacity(0.8))
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 20)
+                                            .fill(.ultraThinMaterial)
+                                    )
+                                    .glassEffect(.regular.tint(Color.theme.accent), in: RoundedRectangle(cornerRadius: 20))
                             } else {
-                                RoundedRectangle(cornerRadius: 20) // More modern corner radius
-                                    .fill(.ultraThinMaterial) // Much more transparent for stronger glass effect
-                                    .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                RoundedRectangle(cornerRadius: 20)
+                                    .fill(.ultraThinMaterial)
+                                    .background(
+                                        Color.white.opacity(0.05),
+                                        in: RoundedRectangle(cornerRadius: 20)
+                                    )
+                                    .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 20))
                             }
                         } else {
                             // Pre-iOS 26: Traditional bubbles with slightly more modern corners

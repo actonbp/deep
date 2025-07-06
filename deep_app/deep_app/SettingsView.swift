@@ -1,30 +1,6 @@
 import SwiftUI
 import GoogleSignInSwift // <-- Import for GIDSignInButton
 
-// Define the available models
-struct AppSettings {
-    // Use constants for model names to avoid typos
-    static let gpt4oMini = "gpt-4o-mini"
-    static let gpt4o = "gpt-4o"
-    static let o3 = "o3"
-    
-    static let availableModels = [gpt4oMini, gpt4o, o3]
-    
-    // Key for UserDefaults
-    static let selectedModelKey = "selectedApiModel"
-    static let debugLogEnabledKey = "debugLogEnabled"
-    static let demonstrationModeEnabledKey = "demonstrationModeEnabled"
-    // --- ADDED Key ---
-    static let enableCategoriesKey = "enableCategories"
-    // --- NEW Key: toggle for future on-device model ---
-    static let useLocalModelKey = "useLocalModel"
-    // --- NEW Keys: Advanced Manual Editing ---
-    static let showDurationEditorKey = "showDurationEditor"
-    static let showDifficultyEditorKey = "showDifficultyEditor"
-    static let advancedRoadmapEditingKey = "advancedRoadmapEditing"
-    // --------------------------------------------------
-}
-
 struct SettingsView: View {
     // Environment variable to dismiss the sheet
     @Environment(\.dismiss) var dismiss
@@ -53,6 +29,12 @@ struct SettingsView: View {
     @AppStorage(AppSettings.showDurationEditorKey) var showDurationEditor: Bool = false // Default to off
     @AppStorage(AppSettings.showDifficultyEditorKey) var showDifficultyEditor: Bool = false // Default to off
     @AppStorage(AppSettings.advancedRoadmapEditingKey) var advancedRoadmapEditing: Bool = false // Default to off
+    // --- NEW: Glass strength setting ---
+    @AppStorage(AppSettings.glassStrengthKey) var glassStrengthRaw: String = GlassStrength.regular.rawValue
+    
+    private var glassStrength: GlassStrength {
+        GlassStrength(rawValue: glassStrengthRaw) ?? .regular
+    }
     // ---------------------
 
     // --- Use shared Authentication Service from Environment --- 
@@ -148,6 +130,29 @@ struct SettingsView: View {
                         .foregroundColor(.gray)
                 }
                 // -----------------------------
+                
+                // --- NEW: Glass Effect Settings ---
+                if #available(iOS 26.0, *) {
+                    Section("Liquid Glass Effects") {
+                        Picker("Glass Strength", selection: $glassStrengthRaw) {
+                            ForEach(GlassStrength.allCases, id: \.self) { strength in
+                                VStack(alignment: .leading) {
+                                    Text(strength.rawValue)
+                                    Text(strength.description)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                                .tag(strength.rawValue)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        Text("Adjust the visual style of the Liquid Glass interface. Regular provides adaptive tinting, Clear is ultra-transparent for media, and Off uses traditional materials.")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+                // ----------------------------------
                 
                 // --- NEW: Advanced Manual Editing Section ---
                 Section("Advanced Manual Editing") {

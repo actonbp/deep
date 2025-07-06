@@ -13,13 +13,42 @@ extension View {
     @ViewBuilder
     func conditionalTabBarStyle() -> some View {
         if #available(iOS 26.0, *) {
-            // iOS 26: Liquid Glass tab bar
+            // iOS 26: Liquid Glass tab bar with glass effect
             self.background(.clear)
                 .toolbarBackground(.visible, for: .tabBar)
-                .toolbarBackground(.thinMaterial, for: .tabBar)
+                .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+                .toolbarColorScheme(.none, for: .tabBar) // Let glass adapt to content
+                .onAppear {
+                    // Apply glass effect to tab bar if possible
+                    let appearance = UITabBarAppearance()
+                    appearance.configureWithTransparentBackground()
+                    appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+                    
+                    UITabBar.appearance().standardAppearance = appearance
+                    UITabBar.appearance().scrollEdgeAppearance = appearance
+                }
         } else {
             // Pre-iOS 26: Ultra thin material
             self.background(.ultraThinMaterial)
+        }
+    }
+    
+    /// iOS 26 glass card style for content cards
+    @ViewBuilder
+    func glassCard(cornerRadius: CGFloat = 16) -> some View {
+        if #available(iOS 26.0, *) {
+            self
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(.ultraThinMaterial)
+                        .background(Color.white.opacity(0.01), in: RoundedRectangle(cornerRadius: cornerRadius))
+                )
+                .glassEffect(in: RoundedRectangle(cornerRadius: cornerRadius))
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
+        } else {
+            self
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+                .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 4)
         }
     }
     

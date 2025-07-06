@@ -84,7 +84,7 @@ class HealthKitService: ObservableObject {
         
         return await withCheckedContinuation { continuation in
             let query = HKSampleQuery(sampleType: sleepType, predicate: predicate, limit: 100, sortDescriptors: nil) { _, samples, error in
-                if let error = error {
+                if error != nil {
                     continuation.resume(returning: "Error reading sleep data")
                     return
                 }
@@ -129,7 +129,7 @@ class HealthKitService: ObservableObject {
         
         return await withCheckedContinuation { continuation in
             let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, error in
-                if let error = error {
+                if error != nil {
                     continuation.resume(returning: "Error reading activity data")
                     return
                 }

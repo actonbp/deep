@@ -209,7 +209,7 @@ class AIAgentManager: ObservableObject {
         let taskSummary = tasks.map { task in
             """
             Task: \(task.text)
-            Priority: \(task.priority)
+            Priority: \(task.priority?.description ?? "Not set")
             Estimated Duration: \(task.estimatedDuration ?? "Not set")
             Difficulty: \(task.difficulty?.rawValue ?? "Not set")
             Category: \(task.category ?? "None")
@@ -471,8 +471,9 @@ class AIAgentManager: ObservableObject {
         }
         
         // Save comprehensive insights
+        let finalInsights = comprehensiveInsights
         await MainActor.run {
-            self.latestInsights = comprehensiveInsights
+            self.latestInsights = finalInsights
             self.lastProcessingDate = Date()
             self.saveProcessingInfo()
         }
