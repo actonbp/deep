@@ -94,31 +94,33 @@ struct ChatView: View {
                     ScrollViewReader { scrollView in
                         ScrollView {
                             if #available(iOS 26.0, *) {
-                                // Wrap messages in GlassEffectContainer for morphing effects
-                                GlassEffectContainer(spacing: 16) {
-                                    LazyVStack(spacing: 16) {
-                                        ForEach(visibleMessages) { message in
-                                            MessageBubble(message: message)
-                                        }
-                                        
-                                        // Loading indicator
-                                        if viewModel.isLoading {
-                                            HStack(spacing: 8) {
-                                                ProgressView()
-                                                    .tint(.gray)
-                                                Text(viewModel.isThinking ? "🧠 Thinking deeply..." : "...")
-                                                    .font(.caption)
-                                                    .foregroundColor(.gray)
-                                            }
-                                            .padding(12)
-                                            .glassEffect(.regular, in: Capsule())
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .id("loading")
-                                        }
+                                // iOS 26: Enhanced glass effects with proper layering
+                                LazyVStack(spacing: 16) {
+                                    ForEach(visibleMessages) { message in
+                                        MessageBubble(message: message)
                                     }
-                                    .padding(.horizontal, 20)
-                                    .padding(.top, 12)
+                                    
+                                    // Loading indicator
+                                    if viewModel.isLoading {
+                                        HStack(spacing: 8) {
+                                            ProgressView()
+                                                .tint(.gray)
+                                            Text(viewModel.isThinking ? "🧠 Thinking deeply..." : "...")
+                                                .font(.caption)
+                                                .foregroundColor(.gray)
+                                        }
+                                        .padding(12)
+                                        .background(.ultraThinMaterial, in: Capsule())
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                                        )
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id("loading")
+                                    }
                                 }
+                                .padding(.horizontal, 20)
+                                .padding(.top, 12)
                             } else {
                                 // Fallback for older iOS versions
                                 LazyVStack(spacing: 16) {
@@ -149,6 +151,8 @@ struct ChatView: View {
                                 .padding(.top, 12)
                             }
                         }
+                        .scrollContentBackground(.hidden) // Hide default background for transparency
+                        .background(Color.clear) // Ensure scroll view is transparent
                         .onAppear { // <-- Add onAppear for initial scroll
                             scrollToBottom(scrollView: scrollView, animated: false) // Scroll without animation initially
                         }
@@ -221,74 +225,127 @@ struct ChatView: View {
                 }
                 // -------------------------
                 
-                // --- Suggested Prompts --- 
+                // Enhanced Suggested Prompts with Glass 
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) { // Increased spacing between prompts
+                    HStack(spacing: 12) {
                         ForEach(viewModel.suggestedPrompts, id: \.self) { prompt in
                             Text(prompt)
                                 .font(.system(.caption, design: .rounded))
                                 .fontWeight(.medium)
-                                .padding(.horizontal, 16) // More generous horizontal padding
-                                .padding(.vertical, 10) // More generous vertical padding
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 10)
                                 .background(
-                                    Group {
+                                    ZStack {
                                         if #available(iOS 26.0, *) {
+                                            // iOS 26 Beta 3: More opaque glass for readability
                                             Capsule()
-                                                .fill(.ultraThinMaterial) // More transparent suggested prompts
+                                                .fill(.regularMaterial) // Changed to regularMaterial for better visibility
+                                            Capsule()
+                                                .fill(.white.opacity(0.1)) // Increased opacity
+                                            Capsule()
+                                                .fill(.clear)
                                                 .glassEffect(in: Capsule())
                                         } else {
                                             Capsule()
-                                                .fill(.thinMaterial) // More transparent fallback
+                                                .fill(.thinMaterial)
                                         }
                                     }
                                 )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [.white.opacity(0.2), .white.opacity(0.05)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 0.5
+                                        )
+                                )
                                 .foregroundColor(.primary)
-                                .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 3)
-                                .lineLimit(1) // Prevent wrapping
-                                .onTapGesture { viewModel.newMessageText = prompt }
+                                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+                                .shadow(color: .white.opacity(0.05), radius: 4, x: 0, y: -2) // Inner glow
+                                .lineLimit(1)
+                                .scaleEffect(1.0)
+                                .onTapGesture { 
+                                    withAnimation(.easeInOut(duration: 0.1)) {
+                                        viewModel.newMessageText = prompt 
+                                    }
+                                }
                         }
                     }
-                    .padding(.horizontal) // Padding for the HStack
-                    .padding(.bottom, 6) // Space below prompts
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
                 }
                 // -------------------------
                 
-                // Floating Input Area - More liquid glass style
+                // Enhanced Floating Input Area with iOS 26 Glass
                 VStack(spacing: 0) {
-                    // Subtle divider effect
+                    // Glass divider with subtle gradient
                     if #available(iOS 26.0, *) {
-                        // More minimal divider for iOS 26
-                        Rectangle()
-                            .fill(.ultraThinMaterial)
-                            .frame(height: 1)
-                            .opacity(0.3)
+                        LinearGradient(
+                            colors: [.white.opacity(0.05), .white.opacity(0.1), .white.opacity(0.05)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                        .frame(height: 0.5)
+                        .blur(radius: 0.5)
                     } else {
-                        // Traditional divider for older iOS
                         Rectangle()
                             .fill(Color(UIColor.systemGray4))
                             .frame(height: 0.5)
                     }
                     
                     HStack(spacing: 12) {
-                        // Image picker button - more minimal
+                        // Enhanced camera button with glass effect
                         Button {
                             showingImagePicker = true
                         } label: {
                             Image(systemName: selectedImages.isEmpty ? "camera" : "camera.fill")
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(selectedImages.isEmpty ? .secondary : Color.theme.accent)
+                                .frame(width: 36, height: 36)
+                                .background(
+                                    Circle()
+                                        .fill(.ultraThinMaterial)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                                        )
+                                )
                         }
                         
-                        // Message input field with glass styling
+                        // Enhanced input field with deeper glass effect
                         HStack {
                             TextField("Message Bryan's Brain...", text: $viewModel.newMessageText)
                                 .font(.system(.body, design: .rounded))
                                 .textFieldStyle(.plain)
                                 .foregroundColor(.primary)
                         }
-                        .glassInputStyle()
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(
+                            ZStack {
+                                if #available(iOS 26.0, *) {
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.ultraThinMaterial)
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.white.opacity(0.02))
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.clear)
+                                        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                } else {
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.thinMaterial)
+                                }
+                            }
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 20)
+                                .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                        )
                         
-                        // Send button - more minimal when not active
+                        // Enhanced send button with glass states
                         Button {
                             Task {
                                 await viewModel.processUserInput(with: selectedImages) 
@@ -302,9 +359,22 @@ struct ChatView: View {
                                 .background(
                                     Group {
                                         if (viewModel.newMessageText.isEmpty && selectedImages.isEmpty) || viewModel.isLoading {
-                                            Circle().fill(.secondary.opacity(0.3))
+                                            Circle()
+                                                .fill(.ultraThinMaterial)
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(.white.opacity(0.1), lineWidth: 0.5)
+                                                )
                                         } else {
-                                            Circle().fill(Color.theme.accent)
+                                            ZStack {
+                                                Circle()
+                                                    .fill(Color.theme.accent)
+                                                if #available(iOS 26.0, *) {
+                                                    Circle()
+                                                        .fill(.clear)
+                                                        .glassEffect(in: Circle())
+                                                }
+                                            }
                                         }
                                     }
                                 )
@@ -312,35 +382,84 @@ struct ChatView: View {
                         .disabled((viewModel.newMessageText.isEmpty && selectedImages.isEmpty) || viewModel.isLoading)
                         .animation(.easeInOut(duration: 0.2), value: viewModel.newMessageText.isEmpty)
                     }
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .background(
-                        // Floating glass background - much more transparent
-                        Group {
+                        // Enhanced floating glass background
+                        ZStack {
                             if #available(iOS 26.0, *) {
-                                Color.clear
-                                    .background(.ultraThinMaterial)
+                                // iOS 26 Beta 3: More substantial glass for better definition
+                                Rectangle()
+                                    .fill(.regularMaterial) // Changed from ultraThinMaterial
+                                
+                                // Stronger gradient overlay
+                                LinearGradient(
+                                    colors: [.white.opacity(0.08), .clear],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                                
+                                // Glass effect
+                                Rectangle()
+                                    .fill(.clear)
                                     .glassEffect(in: Rectangle())
                             } else {
                                 Color(UIColor.systemBackground).opacity(0.95)
                             }
                         }
                     )
+                    .shadow(color: .black.opacity(0.05), radius: 10, x: 0, y: -5) // Floating shadow
                 }
             }
-            // Title and toolbar setup
+            // Enhanced Navigation Bar with iOS 26 Glass
             .navigationBarTitleDisplayMode(.inline)
-            // --- Apply background color and ensure visibility --- 
-            .toolbarBackground(toolbarBackgroundColor, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            // -----------------------------------------------------
-            .toolbarColorScheme(.dark, for: .navigationBar) // Keep this to suggest light status bar items
+            .toolbarBackground(.hidden, for: .navigationBar) // Hide default background
+            .toolbarColorScheme(.none, for: .navigationBar) // Let glass adapt
             .background(
-                mainBackgroundColor
-                    .background(.ultraThinMaterial)
-                    .ignoresSafeArea()
+                ZStack {
+                    // Base background layer
+                    if #available(iOS 26.0, *) {
+                        Color.clear
+                            .background(.ultraThinMaterial)
+                    } else {
+                        Color(UIColor.systemBackground)
+                    }
+                    
+                    // Navigation bar glass effect
+                    VStack {
+                        if #available(iOS 26.0, *) {
+                            Rectangle()
+                                .fill(.ultraThinMaterial)
+                                .background(
+                                    LinearGradient(
+                                        colors: [.white.opacity(0.05), .clear],
+                                        startPoint: .top,
+                                        endPoint: .bottom
+                                    )
+                                )
+                                .glassEffect(in: Rectangle())
+                                .frame(height: 100) // Approximate nav bar height
+                                .ignoresSafeArea(edges: .top)
+                                .overlay(
+                                    Rectangle()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [.white.opacity(0.1), .clear],
+                                                startPoint: .top,
+                                                endPoint: .bottom
+                                            )
+                                        )
+                                        .frame(height: 1)
+                                        .offset(y: 50), // Position at bottom of nav bar
+                                    alignment: .bottom
+                                )
+                        }
+                        Spacer()
+                    }
+                }
+                .ignoresSafeArea()
             )
-            .foregroundColor(.primary) // Use primary color for main view text
+            .foregroundColor(.primary)
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 4) {
@@ -464,23 +583,47 @@ struct MessageBubble: View {
                 .background(
                     Group {
                         if #available(iOS 26.0, *) {
-                            // iOS 26: More glass-like bubbles with modern corners
+                            // iOS 26: Beta 3 frosted glass style with better contrast
                             if message.role == .user {
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(Color.theme.accent.opacity(0.8))
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 20)
-                                            .fill(.ultraThinMaterial)
-                                    )
-                                    .glassEffect(.regular.tint(Color.theme.accent), in: RoundedRectangle(cornerRadius: 20))
+                                ZStack {
+                                    // Base colored background (stronger for readability)
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(Color("MessageUserBackground", bundle: nil) ?? Color.theme.accent)
+                                    
+                                    // Frosted glass overlay (less transparent than before)
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.thinMaterial) // Changed from ultraThinMaterial
+                                        .opacity(0.3) // Reduced opacity for better color visibility
+                                    
+                                    // Glass effect
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.clear)
+                                        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(.white.opacity(0.2), lineWidth: 0.8) // More visible border
+                                )
                             } else {
-                                RoundedRectangle(cornerRadius: 20)
-                                    .fill(.ultraThinMaterial)
-                                    .background(
-                                        Color.white.opacity(0.05),
-                                        in: RoundedRectangle(cornerRadius: 20)
-                                    )
-                                    .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 20))
+                                ZStack {
+                                    // Light background for assistant messages
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(Color("MessageAssistantBackground", bundle: nil) ?? Color.white)
+                                    
+                                    // Frosted glass overlay
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.thinMaterial)
+                                        .opacity(0.4) // Slightly more opacity for definition
+                                    
+                                    // Glass effect
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(.clear)
+                                        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .stroke(.black.opacity(0.1), lineWidth: 0.5) // Subtle dark border
+                                )
                             }
                         } else {
                             // Pre-iOS 26: Traditional bubbles with slightly more modern corners
@@ -491,14 +634,20 @@ struct MessageBubble: View {
                 )
                 .foregroundColor(
                     message.role == .user ? 
-                    .white : 
-                    .primary
+                    Color("MessageUserText", bundle: nil) ?? .white : 
+                    Color("MessageAssistantText", bundle: nil) ?? .primary
                 )
                 .shadow(
-                    color: .black.opacity(0.04), 
-                    radius: 12, // Increased blur radius for more floating effect
+                    color: .black.opacity(0.08), 
+                    radius: 16, // Stronger shadow for better depth
                     x: 0, 
-                    y: 4 // Slightly more vertical offset
+                    y: 6 // More vertical offset for floating effect
+                )
+                .shadow(
+                    color: Color.theme.accent.opacity(message.role == .user ? 0.1 : 0), 
+                    radius: 20, // Colored glow for user messages
+                    x: 0, 
+                    y: 4
                 )
                 
                 Text(formattedTime)

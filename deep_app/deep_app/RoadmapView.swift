@@ -399,7 +399,6 @@ struct HeroStatsCard: View {
         let currentLevelXP = overallLevel * 75
         let xpInCurrentLevel = max(0, totalXP - currentLevelXP)
         let xpNeededForLevel = 75
-        guard xpNeededForLevel > 0 else { return 0.0 }
         return max(0.0, min(1.0, Double(xpInCurrentLevel) / Double(xpNeededForLevel)))
     }
     
@@ -1310,7 +1309,7 @@ struct ProjectEditorView: View {
                     .disabled(true) // Placeholder for future feature
                 }
             }
-            .glassFormStyle()
+            .conditionalFormStyle()
             .navigationTitle("Edit Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -1455,7 +1454,7 @@ struct ProjectCreatorView: View {
                     }
                 }
             }
-            .glassFormStyle()
+            .conditionalFormStyle()
             .navigationTitle("New Project")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
