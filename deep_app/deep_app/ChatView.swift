@@ -575,6 +575,7 @@ struct MessageBubble: View {
                             } else {
                                 Text(message.content ?? "")
                                     .font(.system(.callout, design: .rounded))
+                                    .textSelection(.enabled) // Enable text selection for user messages
                             }
                         }
                         .padding(message.images?.isEmpty ?? true ? 16 : 8)
@@ -586,29 +587,45 @@ struct MessageBubble: View {
                             // iOS 26: Beta 3 frosted glass style with better contrast
                             if message.role == .user {
                                 ZStack {
-                                    // Base colored background (stronger for readability)
+                                    // Base colored background with slight transparency
                                     RoundedRectangle(cornerRadius: 20)
-                                        .fill(Color("MessageUserBackground", bundle: nil) ?? Color.theme.accent)
+                                        .fill(Color.theme.accent.opacity(0.95)) // Very slight transparency
                                     
-                                    // Frosted glass overlay (less transparent than before)
+                                    // Subtle glass material overlay
                                     RoundedRectangle(cornerRadius: 20)
-                                        .fill(.thinMaterial) // Changed from ultraThinMaterial
-                                        .opacity(0.3) // Reduced opacity for better color visibility
+                                        .fill(.ultraThinMaterial)
+                                        .opacity(0.1) // Very low opacity for just a hint of glass
                                     
-                                    // Glass effect
+                                    // Gradient shimmer for depth
+                                    RoundedRectangle(cornerRadius: 20)
+                                        .fill(LinearGradient(
+                                            colors: [.white.opacity(0.12), .clear, .white.opacity(0.05)],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ))
+                                    
+                                    // Very subtle glass effect
                                     RoundedRectangle(cornerRadius: 20)
                                         .fill(.clear)
                                         .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                        .opacity(0.3) // Low opacity glass effect
                                 }
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20)
-                                        .stroke(.white.opacity(0.2), lineWidth: 0.8) // More visible border
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [.white.opacity(0.3), .white.opacity(0.1)],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 0.5
+                                        )
                                 )
                             } else {
                                 ZStack {
                                     // Light background for assistant messages
                                     RoundedRectangle(cornerRadius: 20)
-                                        .fill(Color("MessageAssistantBackground", bundle: nil) ?? Color.white)
+                                        .fill(Color.white)
                                     
                                     // Frosted glass overlay
                                     RoundedRectangle(cornerRadius: 20)
@@ -622,20 +639,42 @@ struct MessageBubble: View {
                                 }
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 20)
-                                        .stroke(.black.opacity(0.1), lineWidth: 0.5) // Subtle dark border
+                                        .stroke(.black.opacity(0.3), lineWidth: 1.0) // Stronger dark border for definition
                                 )
                             }
                         } else {
                             // Pre-iOS 26: Traditional bubbles with slightly more modern corners
                             RoundedRectangle(cornerRadius: 18)
-                                .fill(message.role == .user ? Color.theme.accent : Color.white)
+                                .fill(message.role == .user 
+                                    ? Color.theme.accent.opacity(0.92)  // Slight transparency for depth
+                                    : Color.white.opacity(0.95))          // Slightly transparent assistant messages
+                                .shadow(
+                                    color: Color.theme.accent.opacity(message.role == .user ? 0.1 : 0),
+                                    radius: 10,
+                                    x: 0,
+                                    y: 5
+                                )
+
+                            // Add subtle inner glow for depth
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 16)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [
+                                                Color.white.opacity(message.role == .user ? 0.3 : 0.2),
+                                                Color.clear
+                                            ],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        lineWidth: 0.5
+                                    )
+                            )
                         }
                     }
                 )
                 .foregroundColor(
-                    message.role == .user ? 
-                    Color("MessageUserText", bundle: nil) ?? .white : 
-                    Color("MessageAssistantText", bundle: nil) ?? .primary
+                    message.role == .user ? .white : .primary
                 )
                 .shadow(
                     color: .black.opacity(0.08), 

@@ -144,6 +144,36 @@ class TodoListStore: ObservableObject {
         }
     }
     
+    // Method to ensure all tasks have priorities assigned
+    func ensureAllTasksHavePriorities() {
+        guard !UserDefaults.standard.bool(forKey: AppSettings.demonstrationModeEnabledKey) else {
+            return
+        }
+        
+        var hasChanges = false
+        let tasksWithoutPriority = items.filter { $0.priority == nil }
+        
+        if !tasksWithoutPriority.isEmpty {
+            // Find the highest existing priority
+            let existingPriorities = items.compactMap { $0.priority }
+            var maxPriority = existingPriorities.max() ?? 0
+            
+            // Assign priorities to tasks without them
+            for i in 0..<items.count {
+                if items[i].priority == nil {
+                    maxPriority += 1
+                    items[i].priority = maxPriority
+                    hasChanges = true
+                }
+            }
+            
+            if hasChanges {
+                saveItems()
+                print("DEBUG [Store]: Assigned priorities to \(tasksWithoutPriority.count) tasks")
+            }
+        }
+    }
+    
     // Method to add a new item, now with optional metadata
     func addItem(text: String, category: String? = nil, projectOrPath: String? = nil) {
         // --- ADDED Guard ---

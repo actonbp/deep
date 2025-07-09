@@ -243,6 +243,71 @@ struct ContentView: View {
     // ----------------------------
 }
 
+// MARK: - Compact Task Row for Completed Items
+struct CompactTaskRowView: View {
+    let item: TodoItem
+    let dateFormatter: DateFormatter  
+    let todoListStore: TodoListStore
+    let playSound: (String) -> Void
+    
+    var body: some View {
+        HStack(spacing: 8) {
+            // Small green checkmark
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 16))
+                .foregroundColor(.green)
+                .onTapGesture {
+                    todoListStore.toggleDone(item: item)
+                    playSound("task_completion")
+                }
+            
+            // Compact task text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.text)
+                    .font(.system(.subheadline, design: .rounded))
+                    .strikethrough(true, color: .gray)
+                    .foregroundColor(.gray)
+                    .lineLimit(1)
+                
+                // Show completion time if available
+                HStack(spacing: 4) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 10))
+                        .foregroundColor(.gray.opacity(0.7))
+                    
+                    Text("Completed \(item.dateCreated, formatter: RelativeDateTimeFormatter())")
+                        .font(.system(.caption2, design: .rounded))
+                        .foregroundColor(.gray.opacity(0.7))
+                    
+                    // Show time estimate if available
+                    if let duration = item.estimatedDuration {
+                        Text("• \(duration)")
+                            .font(.system(.caption2, design: .rounded))
+                            .foregroundColor(.gray.opacity(0.7))
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Quick undo button
+            Button {
+                todoListStore.toggleDone(item: item)
+                playSound("task_undo")
+            } label: {
+                Image(systemName: "arrow.uturn.backward.circle")
+                    .font(.system(size: 14))
+                    .foregroundColor(.gray.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.gray.opacity(0.05))
+        .cornerRadius(8)
+    }
+}
+
 // View for displaying and managing the To-Do List
 struct TodoListView: View {
     // Use the shared singleton instance
@@ -311,6 +376,9 @@ struct TodoListView: View {
             .background(Color(UIColor.systemGray6).ignoresSafeArea())
             .foregroundColor(Color.theme.text)
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                todoListStore.ensureAllTasksHavePriorities()
+            }
             .toolbar { 
                 ToolbarItem(placement: .navigationBarLeading) {
                     SyncStatusView()
@@ -323,7 +391,9 @@ struct TodoListView: View {
                 }
                 ToolbarItemGroup(placement: .navigationBarTrailing) {
                     refreshButton
-                    EditButton().foregroundColor(Color.theme.accent)
+                    EditButton()
+                        .foregroundColor(Color.theme.accent)
+                        .font(.system(.body, design: .rounded, weight: .medium))
                 }
             }
             .toolbarBackground(.indigo, for: .navigationBar)
@@ -465,16 +535,56 @@ struct TodoListView: View {
                     .background(
                         Group {
                             if #available(iOS 26.0, *) {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(.ultraThinMaterial)
-                                    .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+                                ZStack {
+                                    // Base glass layer
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(.ultraThinMaterial)
+                                    
+                                    // Subtle color tint based on priority
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(priorityGlassTint(for: item.priority ?? 5))
+                                        .opacity(0.05)
+                                    
+                                    // Glass effect overlay
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(.clear)
+                                        .glassEffect(in: RoundedRectangle(cornerRadius: 12))
+                                }
+                                // Inner highlight for depth
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [
+                                                    Color.white.opacity(0.2),
+                                                    Color.clear
+                                                ],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            lineWidth: 0.5
+                                        )
+                                )
                             } else {
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.white)
+                                    .fill(Color.white.opacity(0.95))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.gray.opacity(0.1), lineWidth: 0.5)
+                                    )
                             }
                         }
                     )
-                    .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+                    .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+                    .shadow(color: priorityGlassTint(for: item.priority ?? 5).opacity(0.3), radius: 12, x: 0, y: 4)
+                }
+                .onMove(perform: moveTask)
+                .onDelete { indexSet in
+                    // Handle deletion if needed
+                    for index in indexSet {
+                        let item = incompleteItems[index]
+                        todoListStore.removeTask(description: item.text)
+                    }
                 }
             } else {
                 // Empty state
@@ -595,8 +705,25 @@ struct TodoListView: View {
         }
     }
     
-    // Note: Move functionality removed since we switched to card-based layout
-    // Users can still reorder by editing priority numbers in the expanded view
+    // --- ADDED: Move task functionality for drag-and-drop reordering ---
+    private func moveTask(from source: IndexSet, to destination: Int) {
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+            // Get the current incomplete tasks sorted by priority
+            var incompleteItems = sortedItems.filter { !$0.isDone }
+            
+            // Perform the move operation on the array
+            incompleteItems.move(fromOffsets: source, toOffset: destination)
+            
+            // Update the TodoListStore with the new order
+            todoListStore.updateOrder(itemsInNewOrder: incompleteItems)
+            
+            print("DEBUG [TodoView]: Moved task from \(source) to \(destination)")
+            
+            // Haptic feedback for drag completion
+            let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+            impactFeedback.impactOccurred()
+        }
+    }
     
     // --- ADDED: Helper function to save edits --- 
     private func saveEdits(for item: TodoItem) {
@@ -653,6 +780,16 @@ struct TodoListView: View {
     private func refreshFromCloudKit() async {
         await todoListStore.manualRefreshFromCloudKit()
     }
+    
+    // Helper function for priority-based glass tint
+    private func priorityGlassTint(for priority: Int) -> Color {
+        switch priority {
+        case 1...3: return Color.red
+        case 4...6: return Color.orange
+        case 7...10: return Color.blue
+        default: return Color.gray
+        }
+    }
     // ---------------------------------------------
 }
 
@@ -685,46 +822,45 @@ struct TaskRowView: View {
     }
     
     private var mainRowContent: some View {
-        HStack(spacing: 16) { 
-            // Tappable Done/Undone Icon
-            Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                .resizable()
-                .frame(width: 28, height: 28) 
-                .foregroundColor(item.isDone ? Color.green : Color.gray)
-                .onTapGesture { 
-                    todoListStore.toggleDone(item: item)
-                }
-            
-            // Main content area
-            VStack(alignment: .leading, spacing: 6) { 
-                // Task title
-                Text(item.text)
-                    .font(.system(.body, design: .rounded))
-                    .fontWeight(.medium)
-                    .strikethrough(item.isDone, color: .gray) 
-                    .foregroundColor(item.isDone ? Color.gray : Color.primary)
-                    .multilineTextAlignment(.leading)
-                
-                // Summary text (if available)
-                if let summary = item.shortSummary, !summary.isEmpty {
-                    Text(summary)
-                        .font(.system(.subheadline, design: .rounded))
-                        .foregroundColor(.secondary)
+        return ZStack(alignment: .bottomLeading) {
+            HStack(spacing: 16) { 
+                // Drag handle indicator (visible in edit mode)
+                if #available(iOS 26.0, *) {
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.secondary.opacity(0.5))
+                        .frame(width: 20)
+                        .opacity(todoListStore.items.filter { !$0.isDone }.count > 1 ? 1 : 0) // Only show if multiple incomplete tasks
                 }
                 
-                // Metadata badges
-                HStack(spacing: 8) {
-                    // Priority badge
-                    if let priority = item.priority {
-                        Text(priorityText(for: priority))
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(priorityColor(for: priority))
-                            .foregroundColor(priorityTextColor(for: priority))
-                            .cornerRadius(6)
+                // Tappable Done/Undone Icon
+                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                    .resizable()
+                    .frame(width: 28, height: 28) 
+                    .foregroundColor(item.isDone ? Color.green : Color.gray)
+                    .onTapGesture { 
+                        todoListStore.toggleDone(item: item)
                     }
+                
+                // Main content area
+                VStack(alignment: .leading, spacing: 6) { 
+                    // Task title
+                    Text(item.text)
+                        .font(.system(.body, design: .rounded))
+                        .fontWeight(.medium)
+                        .strikethrough(item.isDone, color: .gray) 
+                        .foregroundColor(item.isDone ? Color.gray : Color.primary)
+                        .multilineTextAlignment(.leading)
+                    
+                    // Summary text (if available)
+                    if let summary = item.shortSummary, !summary.isEmpty {
+                        Text(summary)
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    // Metadata badges (priority removed)
+                    HStack(spacing: 8) {
                     
                     // Duration badge - more prominent for ADHD time awareness
                     if let duration = item.estimatedDuration, !duration.isEmpty {
@@ -777,6 +913,24 @@ struct TaskRowView: View {
                     Spacer()
                 }
             }
+            
+            // Priority number in bottom left corner
+            if let priority = item.priority {
+                Text("\(priority)")
+                    .font(.system(.caption, design: .rounded))
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .frame(width: 20, height: 20)
+                    .background(
+                        Circle()
+                            .fill(priorityColor(for: priority))
+                            .overlay(
+                                Circle()
+                                    .stroke(.white.opacity(0.3), lineWidth: 1)
+                            )
+                    )
+                    .offset(x: 8, y: -8)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -786,6 +940,7 @@ struct TaskRowView: View {
                 handleTap()
             }
         }
+    }
     }
     
     private var expandedContent: some View {
@@ -1099,71 +1254,6 @@ struct TaskRowView: View {
             editingDuration = item.estimatedDuration ?? ""
             editingDifficulty = item.difficulty
         }
-    }
-}
-
-// MARK: - Compact Task Row for Completed Items
-struct CompactTaskRowView: View {
-    let item: TodoItem
-    let dateFormatter: DateFormatter  
-    let todoListStore: TodoListStore
-    let playSound: (String) -> Void
-    
-    var body: some View {
-        HStack(spacing: 8) {
-            // Small green checkmark
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.green)
-                .onTapGesture {
-                    todoListStore.toggleDone(item: item)
-                    playSound("task_completion")
-                }
-            
-            // Compact task text
-            VStack(alignment: .leading, spacing: 2) {
-                Text(item.text)
-                    .font(.system(.subheadline, design: .rounded))
-                    .strikethrough(true, color: .gray)
-                    .foregroundColor(.gray)
-                    .lineLimit(1)
-                
-                // Show completion time if available
-                HStack(spacing: 4) {
-                    Image(systemName: "clock")
-                        .font(.system(size: 10))
-                        .foregroundColor(.gray.opacity(0.7))
-                    
-                    Text("Completed \(item.dateCreated, formatter: RelativeDateTimeFormatter())")
-                        .font(.system(.caption2, design: .rounded))
-                        .foregroundColor(.gray.opacity(0.7))
-                    
-                    // Show time estimate if available
-                    if let duration = item.estimatedDuration {
-                        Text("• \(duration)")
-                            .font(.system(.caption2, design: .rounded))
-                            .foregroundColor(.gray.opacity(0.7))
-                    }
-                }
-            }
-            
-            Spacer()
-            
-            // Quick undo button
-            Button {
-                todoListStore.toggleDone(item: item)
-                playSound("task_undo")
-            } label: {
-                Image(systemName: "arrow.uturn.backward.circle")
-                    .font(.system(size: 14))
-                    .foregroundColor(.gray.opacity(0.6))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.gray.opacity(0.05))
-        .cornerRadius(8)
     }
 }
 
