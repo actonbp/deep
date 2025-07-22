@@ -32,6 +32,33 @@ Understanding this process is crucial for designing effective tools:
 - **Release Timeline**: General availability expected Fall 2025
 - **Stability**: Improving with each beta release
 
+### 🎉 iOS 26 Beta 4 Update (July 22, 2025)
+
+**Major JSON Schema Support Added!**
+
+- **`GenerationSchema` is now Codable**: Can serialize/deserialize tool schemas
+- **JSON Schema Export**: Convert `@Generable` models to industry-standard JSON Schema
+- **Cross-LLM Compatibility**: Use `@Generable` models with OpenAI, Claude, and other LLMs
+- **Bi-directional Integration**: Initialize `@Generable` models from external LLM responses
+
+**Implementation Example:**
+```swift
+// Define model once
+@Generable
+struct TaskModel {
+    @Guide(description: "Task description")
+    let title: String
+}
+
+// Export for OpenAI/Claude
+let schema = GenerationSchema(TaskModel.self)
+let jsonData = try JSONEncoder().encode(schema)
+
+// Now any LLM can use this schema!
+```
+
+This update fundamentally changes the integration story - Foundation Models tools are no longer isolated to Apple's ecosystem!
+
 ## Major Implementation Challenges
 
 ### 1. Tool Response Recognition Bug

@@ -327,13 +327,9 @@ struct ChatView: View {
                         .background(
                             ZStack {
                                 if #available(iOS 26.0, *) {
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(.ultraThinMaterial)
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(.white.opacity(0.02))
-                                    RoundedRectangle(cornerRadius: 20)
-                                        .fill(.clear)
-                                        .glassEffect(in: RoundedRectangle(cornerRadius: 20))
+                                    // True glass effect for floating prompts
+                                    UltraTransparentMaterial()
+                                        .clipShape(RoundedRectangle(cornerRadius: 20))
                                 } else {
                                     RoundedRectangle(cornerRadius: 20)
                                         .fill(.thinMaterial)
@@ -388,23 +384,14 @@ struct ChatView: View {
                         // Enhanced floating glass background
                         ZStack {
                             if #available(iOS 26.0, *) {
-                                // iOS 26 Beta 3: More substantial glass for better definition
-                                Rectangle()
-                                    .fill(.regularMaterial) // Changed from ultraThinMaterial
-                                
-                                // Stronger gradient overlay
-                                LinearGradient(
-                                    colors: [.white.opacity(0.08), .clear],
-                                    startPoint: .top,
-                                    endPoint: .bottom
-                                )
-                                
-                                // Glass effect
-                                Rectangle()
-                                    .fill(.clear)
-                                    .glassEffect(in: Rectangle())
+                                // iOS 26: Experimental true glass effect
+                                UltraTransparentMaterial()
+                                    .clipShape(Rectangle())
                             } else {
-                                Color(UIColor.systemBackground).opacity(0.95)
+                                // Fallback: More translucent material effect
+                                Rectangle()
+                                    .fill(.thinMaterial)
+                                    .opacity(0.8)
                             }
                         }
                     )
@@ -466,7 +453,7 @@ struct ChatView: View {
                         Text("Bryan's Brain")
                             .font(.custom(sciFiFont, size: titleFontSize))
                             .fontWeight(.bold)
-                            .foregroundColor(Color.theme.titleText) // Use theme title color
+                            .foregroundColor(Color.theme.accent) // Changed to accent color for better visibility
                         
                         if aiAgentManager.isEnabled {
                             Text("🤖")

@@ -143,6 +143,41 @@ This means we can offer Bryan's Brain **completely free on the App Store**, remo
 - Full transition from OpenAI
 - Free app on App Store!
 
+#### 🎉 BREAKING: iOS 26 Beta 4 Update (July 22, 2025)
+
+Apple just announced **game-changing updates** to Foundation Models in iOS 26 Beta 4:
+
+**JSON Schema Support for @Generable Models**
+- `GenerationSchema` is now **Codable** and exposes JSON Schema
+- This means `@Generable` models can work with **any LLM** (ChatGPT, Claude, etc.)
+- No longer locked to Apple Foundation Models only!
+
+**What This Enables:**
+1. **Unified Tool Definitions**: Define tools once with `@Generable`, use everywhere
+2. **Cross-LLM Compatibility**: Export schemas to JSON for OpenAI/Claude/etc.
+3. **Seamless Integration**: Initialize `@Generable` models from any LLM's JSON response
+4. **Reduced Complexity**: One tool system instead of maintaining two separate ones
+
+**Implementation Strategy Update:**
+```swift
+// New approach: Define once, use everywhere
+@Generable
+struct TodoTask {
+    @Guide(description: "Task description")
+    let title: String
+    @Guide(description: "Priority level")
+    let priority: Int
+}
+
+// Export to JSON Schema for OpenAI
+let schema = GenerationSchema(TodoTask.self)
+let jsonSchema = try JSONEncoder().encode(schema)
+
+// Use same model with both AI systems!
+```
+
+This dramatically simplifies our hybrid AI approach - we can now share tool definitions between on-device and cloud AI!
+
 #### Migration Strategy
 
 1. **Modular Architecture** (Do Now)

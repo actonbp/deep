@@ -6,10 +6,10 @@
 - Break down complex changes into small steps
 - Test after each change before proceeding
 
-## 🚦 Current Development Status (June 30, 2025)
+## 🚦 Current Development Status (July 22, 2025)
 
 ### Recently Completed ✅
-Major iOS 26 enhancements and stability improvements just completed:
+Major iOS 26 enhancements and stability improvements:
 
 1. **✅ ChatGPT-Style Image Upload** - Full multimodal AI with photo analysis capability
 2. **✅ AI Agent Mode** - Background task refinement with ADHD time-blocking insights
@@ -19,23 +19,30 @@ Major iOS 26 enhancements and stability improvements just completed:
 6. **✅ Quest Map Functionality** - Working chronological task progression for projects
 7. **✅ Performance Optimizations** - Fixed type-checking timeouts and rendering issues
 8. **✅ Tool Protocol Compliance** - All Apple Foundation Models tools now working correctly
+9. **✅ iOS 26 Beta 4 JSON Schema Support** - Foundation Models now support cross-LLM compatibility
+10. **✅ Liquid Glass UI Refinements** - Enhanced chat interface with improved visibility and transparency
 
 ### Git Branch Structure
 ```
-main (stable)
-├── feature/image-upload      ← ✅ CURRENT: iOS 26 liquid glass enhancements ready
-└── feature/enhanced-roadmap  ← Completed: Quest map functionality working
+main (stable) ← CURRENT
+├── feature/macos-compatibility  ← Cross-platform macOS support (experimental)
+├── feature/image-upload         ← Merged: iOS 26 liquid glass enhancements
+└── feature/enhanced-roadmap     ← Merged: Quest map functionality
 ```
 
 **Important**: Always check which branch you're on before making changes!
-- `main`: Stable, production-ready code with all warnings fixed
-- `feature/image-upload`: ✅ **Active branch** with iOS 26 glass effects and fixes
+- `main`: Stable, production-ready code with all features integrated
+- `feature/macos-compatibility`: Experimental cross-platform work
 
-### Recent Checkpoint (June 30, 2025)
-- **Latest Session**: iOS 26 Liquid Glass transformation complete
-- **Status**: ✅ **Stable build** with modern glass UI, all compilation errors fixed
-- **Major Fixes**: Quest map rendering, tool protocol compliance, type-checking performance
-- **Safety**: All improvements tested in Xcode, no console warnings
+### Recent Checkpoint (July 22, 2025)
+- **Latest Session**: iOS 26 Beta 4 updates and liquid glass UI improvements
+- **Status**: ✅ **Stable build** with enhanced glass UI, improved visibility
+- **Major Updates**: 
+  - Changed "Bryan's Brain" title to accent color for better visibility
+  - Enhanced chat input area with ultraThinMaterial for more transparency
+  - Documented iOS 26 Beta 4 JSON Schema support for @Generable models
+  - Discovered Apple's private API limitations for "true" liquid glass effects
+- **Safety**: All improvements tested, stable on main branch
 
 ### Next Steps
 1. **Git Push**: Ready to commit iOS 26 enhancements and push to GitHub
@@ -53,19 +60,20 @@ main (stable)
 4. **Check compilation**: Open in Xcode and verify no errors (should compile clean)
 
 ### Current Branch Status ✅
-- **Branch**: `feature/image-upload` 
-- **Status**: Stable with iOS 26 glass effects, all features working
-- **Last tested**: June 30, 2025 by Bryan in Xcode (compiles clean)
-- **Ready for**: Merge to main or additional refinements
+- **Branch**: `main` 
+- **Status**: Stable with all iOS 26 enhancements integrated
+- **Last tested**: July 22, 2025 - iOS 26 Beta 4 improvements (compiles clean)
+- **Ready for**: Production use and GitHub push
 
 ### Key Files to Understand
 - `ContentView.swift` (~1400 lines) - Main to-do list with iOS 26 glass extensions
-- `ChatView.swift` - Enhanced with floating glass input and transparent bubbles
+- `ChatView.swift` - Enhanced with floating glass input, transparent bubbles, accent-colored title
 - `RoadmapView.swift` - Gamified roadmap with working quest map (tap projects)
-- `QuestChainView.swift` - NEW: Quest chain visualization (chronological tasks)
-- `MinimalRoadmapView.swift` - NEW: Alternative roadmap view modes
+- `QuestChainView.swift` - Quest chain visualization (chronological tasks)
+- `MinimalRoadmapView.swift` - Alternative roadmap view modes
 - `AIAgentManager.swift` - Background processing system
 - `OpenAIService.swift` - API integration with Vision support + analyzeProject tool
+- `iOS26TrueGlassExtensions.swift` - NEW: Experimental liquid glass effects (pushing public API limits)
 
 ### Development Guidelines
 - **NEVER break existing functionality** - Test every change in Xcode
@@ -362,6 +370,40 @@ Bryan's Brain is planning to transition from OpenAI to Apple's Foundation Models
 
 For more information: https://developer.apple.com/documentation/foundationmodels
 
+### 🎉 iOS 26 Beta 4 Update: JSON Schema for @Generable Models (July 22, 2025)
+
+**Major breakthrough for cross-platform AI integration!**
+
+Apple just released iOS 26 Beta 4 with a game-changing update:
+- `GenerationSchema` is now **Codable** and exposes JSON Schema format
+- `@Generable` models can now work with **any LLM** (OpenAI, Claude, etc.), not just Apple Foundation Models
+- This enables truly unified tool definitions across all AI systems
+
+**What this means for Bryan's Brain:**
+1. **Single Tool Definition**: Define tools once using `@Generable`, use with both OpenAI and Apple
+2. **Seamless Migration**: Export Apple tool schemas as JSON for OpenAI compatibility
+3. **Reduced Complexity**: No more maintaining two separate tool systems
+4. **Future-Proof**: Ready for hybrid AI (local + cloud) without code duplication
+
+**Example Implementation:**
+```swift
+// Define once with @Generable
+@Generable
+struct CreateTaskModel {
+    @Guide(description: "Task title")
+    let title: String
+    @Guide(description: "Estimated duration in minutes")
+    let duration: Int?
+}
+
+// Export schema for OpenAI
+let schema = GenerationSchema(CreateTaskModel.self)
+let jsonSchema = try JSONEncoder().encode(schema)
+// Now OpenAI can use the exact same model structure!
+```
+
+This update dramatically simplifies our planned transition to a hybrid AI system where users can seamlessly switch between free on-device AI and premium cloud AI features.
+
 ### Foundation Models Best Practices (Based on Apple's Patterns)
 
 **Tool Design Patterns from Apple's Sample Code:**
@@ -628,6 +670,39 @@ cloudKitManager.saveTodoItem(item) // Non-blocking
 "☁️ No iCloud account" // User needs to sign in
 "☁️ Failed to save item: ..." // Network or permission issue
 ```
+
+## iOS 26 Liquid Glass Implementation
+
+### Overview
+Bryan's Brain features comprehensive iOS 26 Liquid Glass integration, providing a modern translucent UI that allows background content to show through interface elements.
+
+### Key Components
+- **Chat Interface** (`ChatView.swift`): Ultra-thin material bubbles with floating input area
+- **Extensions** (`iOS26Extensions.swift`): Reusable glass effect helpers
+- **Experimental** (`iOS26TrueGlassExtensions.swift`): Advanced transparency techniques
+
+### Implementation Details
+```swift
+// Safe glass effect application
+if #available(iOS 26.0, *) {
+    self.background(.ultraThinMaterial, in: shape)
+        .glassEffect(in: shape)
+} else {
+    self.background(.thinMaterial, in: shape)
+}
+```
+
+### Platform Limitations (Important!)
+Apple reserves the most advanced liquid glass effects for their own apps through private APIs:
+- **Private Methods**: `set_variant`, `set_scrimState`, `set_subduedState`
+- **Public Access**: Limited to tint color and corner radius customization
+- **Result**: Third-party apps cannot achieve Apple Music's "true floating" effect
+
+### Best Practices
+- Use `ultraThinMaterial` for maximum transparency
+- Apply `.glassEffect()` modifier where available
+- Implement graceful fallbacks for older iOS versions
+- Accept platform limitations - don't attempt to use private APIs
 
 ## Testing & Debugging
 

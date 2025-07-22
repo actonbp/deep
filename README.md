@@ -2,13 +2,23 @@
 
 An ADHD-focused productivity iOS app that combines conversational AI with task management, calendar integration, and visual roadmapping.
 
-## Current Status (June 2025) ✨
+## Current Status (July 2025) ✨
 
 ### Recent Updates
-- **iOS 26 Glass Effects**: Implemented subtle frosted glass effects on chat bubbles and UI elements
-- **Enhanced Task Management**: Added drag-to-reorder functionality with visual indicators
-- **Improved Visual Design**: Darker blue accent color for better contrast, priority-based visual cues
-- **Stable Architecture**: Fully functional with both OpenAI and Apple's on-device models
+
+#### July 22, 2025 - iOS 26 Beta 4 Integration
+- **iOS 26 Beta 4 Support**: JSON Schema integration for @Generable models enabling cross-LLM compatibility
+- **Enhanced Liquid Glass UI**: Improved transparency with ultraThinMaterial and better visibility
+- **Chat Interface Polish**: Bryan's Brain title now uses accent color for better readability
+- **Platform API Discovery**: Documented Apple's private liquid glass APIs and public limitations
+- **Stable Architecture**: Fully functional with OpenAI, Apple Foundation Models, and multimodal support
+
+#### June 30, 2025 - Major UI/UX Enhancements
+- **ChatGPT-Style Image Upload**: Full multimodal AI with photo analysis capability
+- **AI Agent Mode**: Background task refinement with ADHD time-blocking insights
+- **Enhanced To-Do UI**: Compact metadata cards with improved visual hierarchy
+- **Quest Map**: Working chronological task progression for projects
+- **Performance**: Fixed type-checking timeouts and rendering issues
 
 ### Core Features
 - 🤖 **Conversational AI Assistant** - Natural language task management with 22+ tool functions
