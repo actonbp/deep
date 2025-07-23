@@ -21,13 +21,13 @@ struct SystemVerificationTool: Tool {
         let message: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 SystemVerificationTool: Verifying with message: \(arguments.message)")
         
         let timestamp = Date().formatted(date: .abbreviated, time: .shortened)
         let output = "System verification successful. Message: '\(arguments.message)' at \(timestamp)"
         
         Logging.general.log("SystemVerificationTool: Verification complete")
-        return ToolOutput(output)
+        return output
     }
 }

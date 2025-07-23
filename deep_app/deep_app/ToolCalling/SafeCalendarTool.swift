@@ -22,7 +22,7 @@ struct SafeCalendarTool: Tool {
         let scheduleType: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 SafeCalendarTool: Getting schedule overview: \(arguments.scheduleType)")
         
         return await withCheckedContinuation { continuation in
@@ -30,14 +30,14 @@ struct SafeCalendarTool: Tool {
                 if let error = error {
                     Logging.general.log("SafeCalendarTool: Error fetching schedule: \(error.localizedDescription)")
                     let safeErrorResponse = "I'm having trouble accessing your schedule right now. Your calendar connection might need attention. You can check your Google Calendar directly or try refreshing the connection in Settings."
-                    continuation.resume(returning: ToolOutput(safeErrorResponse))
+                    continuation.resume(returning: safeErrorResponse)
                     return
                 }
                 
                 guard let events = events else {
                     Logging.general.log("SafeCalendarTool: No schedule data returned")
                     let emptyResponse = "Your schedule is completely open today! This is a great opportunity to focus on your important tasks or take some well-deserved personal time."
-                    continuation.resume(returning: ToolOutput(emptyResponse))
+                    continuation.resume(returning: emptyResponse)
                     return
                 }
                 
@@ -86,7 +86,7 @@ struct SafeCalendarTool: Tool {
                 }
                 
                 Logging.general.log("SafeCalendarTool: Returning positive schedule response")
-                continuation.resume(returning: ToolOutput(output))
+                continuation.resume(returning: output)
             }
         }
     }

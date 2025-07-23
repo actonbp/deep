@@ -22,7 +22,7 @@ struct SafeTaskRetrievalTool: Tool {
         let infoType: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 SafeTaskRetrievalTool: Retrieving productivity info: \(arguments.infoType)")
         
         let tasks = await MainActor.run {
@@ -65,6 +65,6 @@ struct SafeTaskRetrievalTool: Tool {
         }
         
         Logging.general.log("SafeTaskRetrievalTool: Returning positive productivity response")
-        return ToolOutput(output)
+        return output
     }
 }

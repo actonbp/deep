@@ -24,7 +24,7 @@ struct UpdateTaskProjectOrPathTool: Tool {
         let projectOrPath: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UpdateTaskProjectOrPathTool: Updating project/path for: \(arguments.taskDescription)")
         
         let projectValue = arguments.projectOrPath.isEmpty ? nil : arguments.projectOrPath
@@ -40,10 +40,10 @@ struct UpdateTaskProjectOrPathTool: Tool {
         if success {
             Logging.general.log("UpdateTaskProjectOrPathTool: Project/path updated successfully")
             let action = projectValue == nil ? "cleared" : "set to '\(arguments.projectOrPath)'"
-            return ToolOutput("Project/path \(action) for task: '\(arguments.taskDescription)'")
+            return "Project/path \(action) for task: '\(arguments.taskDescription)'"
         } else {
             Logging.general.log("UpdateTaskProjectOrPathTool: Task not found")
-            return ToolOutput("Could not find task with description: '\(arguments.taskDescription)'")
+            return "Could not find task with description: '\(arguments.taskDescription)'"
         }
     }
 }

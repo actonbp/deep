@@ -28,7 +28,7 @@ struct BreakDownTaskTool: Tool {
         let replaceOriginal: Bool?
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 BreakDownTaskTool: Breaking down task: \(arguments.originalTaskDescription)")
         
         let shouldReplace = arguments.replaceOriginal ?? true
@@ -52,11 +52,11 @@ struct BreakDownTaskTool: Tool {
         if result {
             let action = shouldReplace ? "replaced with" : "broken down into"
             Logging.general.log("BreakDownTaskTool: Task broken down successfully")
-            return ToolOutput("Task '\(arguments.originalTaskDescription)' \(action) \(arguments.subtasks.count) subtasks:\n\n" + 
-                            arguments.subtasks.enumerated().map { "• \($0.element)" }.joined(separator: "\n"))
+            return "Task '\(arguments.originalTaskDescription)' \(action) \(arguments.subtasks.count) subtasks:\n\n" + 
+                            arguments.subtasks.enumerated().map { "• \($0.element)" }.joined(separator: "\n")
         } else {
             Logging.general.log("BreakDownTaskTool: Original task not found")
-            return ToolOutput("Could not find the original task: '\(arguments.originalTaskDescription)'")
+            return "Could not find the original task: '\(arguments.originalTaskDescription)'"
         }
     }
 }

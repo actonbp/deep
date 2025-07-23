@@ -4,21 +4,42 @@ An ADHD-focused productivity iOS app that combines conversational AI with task m
 
 ## Current Status (July 2025) ✨
 
-### Recent Updates
+The app is stable and feature-complete with the latest iOS 26 Beta 4 improvements. All major features are working including multimodal AI, Foundation Models, and cross-device sync.
 
-#### July 22, 2025 - iOS 26 Beta 4 Integration
+## Changelog
+
+### July 23, 2025 - Markdown Rendering & Cleanup
+- **Fixed Markdown Rendering**: Chat messages now properly display formatted markdown from AI responses
+- **Repository Cleanup**: Removed duplicate files and organized documentation
+- **Foundation Models**: All 27 tools updated for iOS 26 Beta 4 PromptRepresentable API
+
+### July 22, 2025 - iOS 26 Beta 4 Integration
 - **iOS 26 Beta 4 Support**: JSON Schema integration for @Generable models enabling cross-LLM compatibility
 - **Enhanced Liquid Glass UI**: Improved transparency with ultraThinMaterial and better visibility
 - **Chat Interface Polish**: Bryan's Brain title now uses accent color for better readability
 - **Platform API Discovery**: Documented Apple's private liquid glass APIs and public limitations
 - **Stable Architecture**: Fully functional with OpenAI, Apple Foundation Models, and multimodal support
 
-#### June 30, 2025 - Major UI/UX Enhancements
+### July 9, 2025 - UI/UX Improvements
+- **Enhanced Chat Interface**: Implemented subtle iOS 26 glass effects with carefully balanced transparency
+- **Improved Color Contrast**: Changed accent color from light blue to dark blue (#142B8B) for better readability
+- **Task Reordering**: Added drag-to-reorder functionality with visual drag handles
+- **Glass Effects**: Added modern glass morphism to task rows with priority-based tinting
+- **Visual Polish**: Refined shadows, borders, and transparency levels throughout the app
+
+### June 30, 2025 - Major Feature Release
 - **ChatGPT-Style Image Upload**: Full multimodal AI with photo analysis capability
 - **AI Agent Mode**: Background task refinement with ADHD time-blocking insights
 - **Enhanced To-Do UI**: Compact metadata cards with improved visual hierarchy
 - **Quest Map**: Working chronological task progression for projects
 - **Performance**: Fixed type-checking timeouts and rendering issues
+
+### December 2024 - Foundation Features
+- ✅ Implemented iOS 26 glass effects throughout the app
+- ✅ Enhanced chat bubble design with better contrast
+- ✅ Added drag-to-reorder for tasks with visual feedback
+- ✅ Fixed all ContentView structural issues
+- ✅ Improved error handling and stability
 
 ### Core Features
 - 🤖 **Conversational AI Assistant** - Natural language task management with 22+ tool functions
@@ -83,13 +104,6 @@ deep/
    ```
 4. Build and run on iOS 17+ device/simulator
 
-## Recent Improvements (December 2024)
-
-- ✅ Implemented iOS 26 glass effects throughout the app
-- ✅ Enhanced chat bubble design with better contrast
-- ✅ Added drag-to-reorder for tasks with visual feedback
-- ✅ Fixed all ContentView structural issues
-- ✅ Improved error handling and stability
 
 ## Roadmap
 
@@ -128,26 +142,4 @@ Copyright © 2024 Bryan Acton. All rights reserved.
 
 ---
 
-*Built with ❤️ for the ADHD community* 
-## July 9th, 2025 Updates 🎨
-
-### UI/UX Improvements
-- **Enhanced Chat Interface**: Implemented subtle iOS 26 glass effects with carefully balanced transparency
-- **Improved Color Contrast**: Changed accent color from light blue to dark blue (#142B8B) for better readability
-- **Task Reordering**: Added drag-to-reorder functionality with visual drag handles
-- **Glass Effects**: Added modern glass morphism to task rows with priority-based tinting
-- **Visual Polish**: Refined shadows, borders, and transparency levels throughout the app
-
-### Technical Improvements
-- Fixed ContentView structural issues with proper Swift organization
-- Resolved all Xcode compilation errors
-- Improved error handling and stability
-- Enhanced CloudKit sync reliability
-
-### Design Philosophy
-- Balanced modern iOS aesthetics with ADHD-friendly clarity
-- Maintained high contrast for better focus
-- Subtle effects that enhance without distracting
-- Consistent visual language across all views
-
-These updates represent a significant step toward a more polished, professional app while maintaining the core ADHD-focused functionality.
+*Built with ❤️ for the ADHD community*

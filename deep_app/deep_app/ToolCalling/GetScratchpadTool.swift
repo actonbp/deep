@@ -20,17 +20,17 @@ struct GetScratchpadTool: Tool {
         let retrieve: Bool
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 GetScratchpadTool: Getting scratchpad contents")
         
         let notes = UserDefaults.standard.string(forKey: "userNotes") ?? ""
         
         if notes.isEmpty {
             Logging.general.log("GetScratchpadTool: Scratchpad is empty")
-            return ToolOutput("Your scratchpad is currently empty.")
+            return "Your scratchpad is currently empty."
         } else {
             Logging.general.log("GetScratchpadTool: Retrieved scratchpad contents")
-            return ToolOutput("Your scratchpad contents:\n\n\(notes)")
+            return "Your scratchpad contents:\n\n\(notes)"
         }
     }
 }

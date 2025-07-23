@@ -20,7 +20,7 @@ struct GetCurrentDateTimeTool: Tool {
         let getCurrentTime: Bool
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 GetCurrentDateTimeTool: Getting current date and time")
         
         let now = Date()
@@ -31,6 +31,6 @@ struct GetCurrentDateTimeTool: Tool {
         let dateTimeString = formatter.string(from: now)
         
         Logging.general.log("GetCurrentDateTimeTool: Current time retrieved successfully")
-        return ToolOutput("Current date and time: \(dateTimeString)")
+        return "Current date and time: \(dateTimeString)"
     }
 }

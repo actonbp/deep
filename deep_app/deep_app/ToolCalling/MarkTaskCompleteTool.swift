@@ -21,7 +21,7 @@ struct MarkTaskCompleteTool: Tool {
         let taskDescription: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 MarkTaskCompleteTool: Marking task complete: \(arguments.taskDescription)")
         
         let success = await MainActor.run {
@@ -37,10 +37,10 @@ struct MarkTaskCompleteTool: Tool {
         
         if success {
             Logging.general.log("MarkTaskCompleteTool: Task marked complete successfully")
-            return ToolOutput("Marked task as complete: '\(arguments.taskDescription)'")
+            return "Marked task as complete: '\(arguments.taskDescription)'"
         } else {
             Logging.general.log("MarkTaskCompleteTool: Task not found")
-            return ToolOutput("Could not find task with description: '\(arguments.taskDescription)'")
+            return "Could not find task with description: '\(arguments.taskDescription)'"
         }
     }
 }

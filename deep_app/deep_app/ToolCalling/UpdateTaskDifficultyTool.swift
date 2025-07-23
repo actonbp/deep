@@ -24,13 +24,13 @@ struct UpdateTaskDifficultyTool: Tool {
         let difficulty: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UpdateTaskDifficultyTool: Updating difficulty for: \(arguments.taskDescription)")
         
         // Convert string to Difficulty enum
         guard let difficultyEnum = Difficulty(rawValue: arguments.difficulty) else {
             Logging.general.log("UpdateTaskDifficultyTool: Invalid difficulty value: \(arguments.difficulty)")
-            return ToolOutput("Invalid difficulty level. Please use: Low, Medium, or High")
+            return "Invalid difficulty level. Please use: Low, Medium, or High"
         }
         
         let success = await MainActor.run {
@@ -43,10 +43,10 @@ struct UpdateTaskDifficultyTool: Tool {
         
         if success {
             Logging.general.log("UpdateTaskDifficultyTool: Difficulty updated successfully")
-            return ToolOutput("Updated difficulty for '\(arguments.taskDescription)' to '\(arguments.difficulty)'")
+            return "Updated difficulty for '\(arguments.taskDescription)' to '\(arguments.difficulty)'"
         } else {
             Logging.general.log("UpdateTaskDifficultyTool: Task not found")
-            return ToolOutput("Could not find task with description: '\(arguments.taskDescription)'")
+            return "Could not find task with description: '\(arguments.taskDescription)'"
         }
     }
 }

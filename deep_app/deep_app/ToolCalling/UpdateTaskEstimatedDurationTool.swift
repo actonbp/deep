@@ -24,7 +24,7 @@ struct UpdateTaskEstimatedDurationTool: Tool {
         let estimatedDuration: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UpdateTaskEstimatedDurationTool: Updating duration for: \(arguments.taskDescription)")
         
         let success = await MainActor.run {
@@ -37,10 +37,10 @@ struct UpdateTaskEstimatedDurationTool: Tool {
         
         if success {
             Logging.general.log("UpdateTaskEstimatedDurationTool: Duration updated successfully")
-            return ToolOutput("Updated duration for '\(arguments.taskDescription)' to '\(arguments.estimatedDuration)'")
+            return "Updated duration for '\(arguments.taskDescription)' to '\(arguments.estimatedDuration)'"
         } else {
             Logging.general.log("UpdateTaskEstimatedDurationTool: Task not found")
-            return ToolOutput("Could not find task with description: '\(arguments.taskDescription)'")
+            return "Could not find task with description: '\(arguments.taskDescription)'"
         }
     }
 }

@@ -24,7 +24,7 @@ struct DeleteCalendarEventTool: Tool {
         let startTimeToday: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 DeleteCalendarEventTool: Deleting event: \(arguments.summary)")
         
         return await withCheckedContinuation { continuation in
@@ -37,10 +37,10 @@ struct DeleteCalendarEventTool: Tool {
             ) { success, error in
                 if success {
                     Logging.general.log("DeleteCalendarEventTool: Event deleted successfully")
-                    continuation.resume(returning: ToolOutput("Deleted calendar event: '\(arguments.summary)' at \(arguments.startTimeToday)"))
+                    continuation.resume(returning: "Deleted calendar event: '\(arguments.summary)' at \(arguments.startTimeToday)")
                 } else {
                     Logging.general.log("DeleteCalendarEventTool: Error deleting event: \(error?.localizedDescription ?? "Unknown error")")
-                    continuation.resume(returning: ToolOutput("Sorry, I couldn't delete the calendar event. It may not exist or there was a connection issue."))
+                    continuation.resume(returning: "Sorry, I couldn't delete the calendar event. It may not exist or there was a connection issue.")
                 }
             }
         }

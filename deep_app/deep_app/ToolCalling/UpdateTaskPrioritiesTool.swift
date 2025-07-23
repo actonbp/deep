@@ -21,7 +21,7 @@ struct UpdateTaskPrioritiesTool: Tool {
         let orderedTaskDescriptions: [String]
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UpdateTaskPrioritiesTool: Updating priorities for \(arguments.orderedTaskDescriptions.count) tasks")
         
         let success = await MainActor.run {
@@ -31,10 +31,10 @@ struct UpdateTaskPrioritiesTool: Tool {
         
         if success {
             Logging.general.log("UpdateTaskPrioritiesTool: Priorities updated successfully")
-            return ToolOutput("Updated task priorities. New order: \(arguments.orderedTaskDescriptions.joined(separator: ", "))")
+            return "Updated task priorities. New order: \(arguments.orderedTaskDescriptions.joined(separator: ", "))"
         } else {
             Logging.general.log("UpdateTaskPrioritiesTool: Failed to update priorities")
-            return ToolOutput("Could not update task priorities. Some tasks may not have been found.")
+            return "Could not update task priorities. Some tasks may not have been found."
         }
     }
 }

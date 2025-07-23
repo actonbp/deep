@@ -21,7 +21,7 @@ struct RemoveTaskTool: Tool {
         let taskDescription: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 RemoveTaskTool: Removing task: \(arguments.taskDescription)")
         
         let success = await MainActor.run {
@@ -30,10 +30,10 @@ struct RemoveTaskTool: Tool {
         
         if success {
             Logging.general.log("RemoveTaskTool: Task removed successfully")
-            return ToolOutput("Removed task: '\(arguments.taskDescription)'")
+            return "Removed task: '\(arguments.taskDescription)'"
         } else {
             Logging.general.log("RemoveTaskTool: Task not found")
-            return ToolOutput("Could not find task with description: '\(arguments.taskDescription)'")
+            return "Could not find task with description: '\(arguments.taskDescription)'"
         }
     }
 }

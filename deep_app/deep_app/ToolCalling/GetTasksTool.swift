@@ -21,7 +21,7 @@ struct GetTasksTool: Tool {
         let retrieve: Bool
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 GetTasksTool: Tool called with retrieve: \(arguments.retrieve)")
         
         let tasks = await MainActor.run {
@@ -50,6 +50,6 @@ struct GetTasksTool: Tool {
         }
         
         Logging.general.log("GetTasksTool: Returning successful response")
-        return ToolOutput(output)
+        return output
     }
 }

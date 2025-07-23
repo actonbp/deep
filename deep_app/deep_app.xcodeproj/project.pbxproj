@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		24670EA52DB5781B000DD1AE /* GoogleAPIClientForRESTCore in Frameworks */ = {isa = PBXBuildFile; productRef = 24670EA42DB5781B000DD1AE /* GoogleAPIClientForRESTCore */; };
+		24B9743F2E307172002A0EF0 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 24B9743E2E307172002A0EF0 /* MarkdownUI */; };
 		24CDD2FD2DB45BE700979507 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 24CDD2FC2DB45BE700979507 /* GoogleSignIn */; };
 		24CDD2FF2DB45BE700979507 /* GoogleSignInSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 24CDD2FE2DB45BE700979507 /* GoogleSignInSwift */; };
 /* End PBXBuildFile section */
@@ -75,6 +76,7 @@
 				24CDD2FD2DB45BE700979507 /* GoogleSignIn in Frameworks */,
 				24670EA52DB5781B000DD1AE /* GoogleAPIClientForRESTCore in Frameworks */,
 				24CDD2FF2DB45BE700979507 /* GoogleSignInSwift in Frameworks */,
+				24B9743F2E307172002A0EF0 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -146,6 +148,7 @@
 				24CDD2FC2DB45BE700979507 /* GoogleSignIn */,
 				24CDD2FE2DB45BE700979507 /* GoogleSignInSwift */,
 				24670EA42DB5781B000DD1AE /* GoogleAPIClientForRESTCore */,
+				24B9743E2E307172002A0EF0 /* MarkdownUI */,
 			);
 			productName = deep_app;
 			productReference = 24DE0D8C2DAEF13900F569D0 /* Bryans_Brain.app */;
@@ -232,6 +235,7 @@
 			packageReferences = (
 				24CDD2FB2DB45BE700979507 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				24670EA32DB5781B000DD1AE /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */,
+				24B9743D2E307172002A0EF0 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 24DE0D8D2DAEF13900F569D0 /* Products */;
@@ -624,6 +628,14 @@
 				kind = branch;
 			};
 		};
+		24B9743D2E307172002A0EF0 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
 		24CDD2FB2DB45BE700979507 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
@@ -639,6 +651,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 24670EA32DB5781B000DD1AE /* XCRemoteSwiftPackageReference "google-api-objectivec-client-for-rest" */;
 			productName = GoogleAPIClientForRESTCore;
+		};
+		24B9743E2E307172002A0EF0 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 24B9743D2E307172002A0EF0 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
 		};
 		24CDD2FC2DB45BE700979507 /* GoogleSignIn */ = {
 			isa = XCSwiftPackageProductDependency;

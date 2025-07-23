@@ -30,13 +30,13 @@ struct CreateCalendarEventTool: Tool {
         let endTimeToday: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 CreateCalendarEventTool: Creating event: \(arguments.summary)")
         
         return await withCheckedContinuation { continuation in
             // For now, use a placeholder implementation since calendar integration needs proper time parsing
             Logging.general.log("CreateCalendarEventTool: Calendar creation not fully implemented - returning success message")
-            continuation.resume(returning: ToolOutput("Calendar event creation is not yet fully implemented with the local model. Event: '\(arguments.summary)' from \(arguments.startTimeToday) to \(arguments.endTimeToday)"))
+            continuation.resume(returning: "Calendar event creation is not yet fully implemented with the local model. Event: '\(arguments.summary)' from \(arguments.startTimeToday) to \(arguments.endTimeToday)")
         }
     }
 }

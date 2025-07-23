@@ -22,7 +22,7 @@ struct SimplifiedTaskTool: Tool {
         let naturalLanguageQuery: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 SimplifiedTaskTool: Query: \(arguments.naturalLanguageQuery)")
         
         let tasks = await MainActor.run {
@@ -33,9 +33,9 @@ struct SimplifiedTaskTool: Tool {
         
         // Simple pattern matching
         if query.contains("count") || query.contains("how many") {
-            return ToolOutput(generateCountResponse(tasks: tasks))
+            return generateCountResponse(tasks: tasks)
         } else {
-            return ToolOutput(generateTaskOverview(tasks: tasks))
+            return generateTaskOverview(tasks: tasks)
         }
     }
     
@@ -88,7 +88,7 @@ struct SimpleShowTasksTool: Tool {
         let showAllTasks: Bool
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 SimpleShowTasksTool: Showing all tasks (no params)")
         
         let tasks = await MainActor.run {
@@ -96,7 +96,7 @@ struct SimpleShowTasksTool: Tool {
         }
         
         if tasks.isEmpty {
-            return ToolOutput("Your task list is empty!")
+            return "Your task list is empty!"
         }
         
         // Limit to 10 tasks to avoid token limit issues
@@ -108,9 +108,9 @@ struct SimpleShowTasksTool: Tool {
         }.joined(separator: "\n")
         
         if tasks.count > maxTasksToShow {
-            return ToolOutput("Your tasks (showing \(maxTasksToShow) of \(tasks.count)):\n\n\(taskList)\n\n...and \(tasks.count - maxTasksToShow) more tasks.")
+            return "Your tasks (showing \(maxTasksToShow) of \(tasks.count)):\n\n\(taskList)\n\n...and \(tasks.count - maxTasksToShow) more tasks."
         } else {
-            return ToolOutput("Your tasks:\n\n\(taskList)")
+            return "Your tasks:\n\n\(taskList)"
         }
     }
 }

@@ -269,9 +269,9 @@ struct SettingsView: View {
                 }
                 
                 // --- NEW: Local Model Preview Section ---
-                Section("On-Device AI (Preview)") {
+                Section("On-Device AI (iOS 26 Beta)") {
                     Toggle("Use On-Device Model (Free)", isOn: $useLocalModel)
-                    Text("When enabled, Bryan's Brain will run the assistant entirely on your device using Apple's upcoming Foundation Models. This is a **preview toggle** – no functional change yet, but stay tuned!")
+                    Text("When enabled, Bryan's Brain will run the assistant entirely on your device using Apple's Foundation Models. **iOS 26 Beta 4 Compatible**: All tools updated to use the latest PromptRepresentable API for full local AI functionality.")
                         .font(.caption)
                         .foregroundColor(.gray)
                 }

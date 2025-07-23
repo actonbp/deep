@@ -25,7 +25,7 @@ struct SafeResponseTool: Tool {
         let context: String?
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 SafeResponseTool: Providing guidance: \(arguments.guidanceType)")
         
         let output: String
@@ -48,6 +48,6 @@ struct SafeResponseTool: Tool {
         }
         
         Logging.general.log("SafeResponseTool: Returning supportive guidance")
-        return ToolOutput(output)
+        return output
     }
 }

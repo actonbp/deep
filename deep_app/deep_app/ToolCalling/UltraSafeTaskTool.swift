@@ -22,7 +22,7 @@ struct UltraSafeTaskTool: Tool {
         let progressType: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UltraSafeTaskTool: Showing productivity progress: \(arguments.progressType)")
         
         let tasks = await MainActor.run {
@@ -74,6 +74,6 @@ struct UltraSafeTaskTool: Tool {
         }
         
         Logging.general.log("UltraSafeTaskTool: Returning ultra-positive response")
-        return ToolOutput(output)
+        return output
     }
 }

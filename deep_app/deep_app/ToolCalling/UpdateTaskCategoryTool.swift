@@ -24,7 +24,7 @@ struct UpdateTaskCategoryTool: Tool {
         let category: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UpdateTaskCategoryTool: Updating category for: \(arguments.taskDescription)")
         
         let categoryValue = arguments.category.isEmpty ? nil : arguments.category
@@ -40,10 +40,10 @@ struct UpdateTaskCategoryTool: Tool {
         if success {
             Logging.general.log("UpdateTaskCategoryTool: Category updated successfully")
             let action = categoryValue == nil ? "cleared" : "set to '\(arguments.category)'"
-            return ToolOutput("Category \(action) for task: '\(arguments.taskDescription)'")
+            return "Category \(action) for task: '\(arguments.taskDescription)'"
         } else {
             Logging.general.log("UpdateTaskCategoryTool: Task not found")
-            return ToolOutput("Could not find task with description: '\(arguments.taskDescription)'")
+            return "Could not find task with description: '\(arguments.taskDescription)'"
         }
     }
 }

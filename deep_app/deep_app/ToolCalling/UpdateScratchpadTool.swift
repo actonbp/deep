@@ -24,7 +24,7 @@ struct UpdateScratchpadTool: Tool {
         let append: Bool?
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UpdateScratchpadTool: Updating scratchpad")
         
         let shouldAppend = arguments.append ?? false
@@ -43,6 +43,6 @@ struct UpdateScratchpadTool: Tool {
         
         let action = shouldAppend ? "appended to" : "updated"
         Logging.general.log("UpdateScratchpadTool: Scratchpad \(action) successfully")
-        return ToolOutput("Scratchpad \(action) successfully.")
+        return "Scratchpad \(action) successfully."
     }
 }

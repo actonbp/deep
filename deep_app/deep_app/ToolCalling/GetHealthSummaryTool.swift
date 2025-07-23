@@ -56,24 +56,24 @@ struct GetHealthSummaryFoundationTool: Tool {
         let getHealthData: Bool
     }
     
-    func call(arguments: Arguments) async throws -> ToolOutput {
+    func call(arguments: Arguments) async throws -> String {
         // Check if HealthKit is enabled in settings
         let healthKitEnabled = UserDefaults.standard.bool(forKey: "healthKitEnabled")
         
         guard healthKitEnabled else {
             let message = "Health insights are disabled. Enable 'HealthKit' in Settings to get personalized ADHD recommendations based on your sleep and activity."
-            return ToolOutput(message)
+            return message
         }
         
         // Check if HealthKit is available
         let healthService = HealthKitService.shared
         guard healthService.isHealthDataAvailable else {
-            return ToolOutput("HealthKit is not available on this device.")
+            return "HealthKit is not available on this device."
         }
         
         // Get health summary
         let summary = await healthService.getHealthSummary()
-        return ToolOutput(summary)
+        return summary
     }
 }
 #endif

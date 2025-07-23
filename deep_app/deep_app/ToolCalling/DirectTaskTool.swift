@@ -22,7 +22,7 @@ struct DirectTaskTool: Tool {
         let showTasks: Bool
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 DirectTaskTool: Showing tasks immediately (no parameters)")
         
         let tasks = await MainActor.run {
@@ -62,7 +62,7 @@ struct DirectTaskTool: Tool {
         }
         
         Logging.general.log("DirectTaskTool: Returning immediate task overview")
-        return ToolOutput(output)
+        return output
     }
 }
 
@@ -78,7 +78,7 @@ struct QuickTaskCountTool: Tool {
         let getCount: Bool
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 QuickTaskCountTool: Getting task count")
         
         let tasks = await MainActor.run {
@@ -91,6 +91,6 @@ struct QuickTaskCountTool: Tool {
         let output = "You have \(totalCount) total goals: \(completedCount) completed, \(totalCount - completedCount) active."
         
         Logging.general.log("QuickTaskCountTool: Returning count")
-        return ToolOutput(output)
+        return output
     }
 }

@@ -18,12 +18,17 @@ struct MarkdownText: View {
     }
     
     var body: some View {
-        if let attributedString = try? AttributedString(markdown: text, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
-            Text(attributedString)
+        do {
+            let attributedString = try AttributedString(markdown: text, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .full))
+            print("DEBUG: Markdown parsed successfully for text: \(text.prefix(50))...")
+            print("DEBUG: AttributedString: \(attributedString)")
+            return Text(attributedString)
                 .textSelection(.enabled) // Make text selectable
-        } else {
+        } catch {
+            print("DEBUG: Markdown parsing failed with error: \(error)")
+            print("DEBUG: Original text: \(text.prefix(100))...")
             // Fallback to plain text if markdown parsing fails
-            Text(text)
+            return Text(text)
                 .textSelection(.enabled) // Make text selectable
         }
     }
@@ -553,10 +558,11 @@ struct MessageBubble: View {
                         .padding(8)
                     }
                     
-                    // Use markdown formatting for assistant messages, plain text for user
+                    // Use enhanced markdown formatting for assistant messages, plain text for user
                     if !(message.content?.isEmpty ?? true) {
                         Group {
                             if message.role == .assistant {
+                                // Use markdown rendering
                                 MarkdownText(message.content ?? "")
                                     .font(.system(.callout, design: .rounded))
                             } else {

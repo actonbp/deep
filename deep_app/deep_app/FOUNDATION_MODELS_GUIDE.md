@@ -34,30 +34,67 @@ Understanding this process is crucial for designing effective tools:
 
 ### 🎉 iOS 26 Beta 4 Update (July 22, 2025)
 
-**Major JSON Schema Support Added!**
+**Breaking Changes & New Features:**
 
-- **`GenerationSchema` is now Codable**: Can serialize/deserialize tool schemas
-- **JSON Schema Export**: Convert `@Generable` models to industry-standard JSON Schema
-- **Cross-LLM Compatibility**: Use `@Generable` models with OpenAI, Claude, and other LLMs
-- **Bi-directional Integration**: Initialize `@Generable` models from external LLM responses
+#### 1. ToolOutput Deprecated ❌
+- **Old**: `func call(arguments: Arguments) async -> ToolOutput`
+- **New**: `func call(arguments: Arguments) async -> any PromptRepresentable`
+- **Migration**: Simply return `String` instead of `ToolOutput("...")`
 
-**Implementation Example:**
 ```swift
-// Define model once
+// Before (Deprecated)
+func call(arguments: Arguments) async -> ToolOutput {
+    return ToolOutput("Task created")
+}
+
+// After (Beta 4)
+func call(arguments: Arguments) async -> String {
+    return "Task created"
+}
+```
+
+#### 2. JSON Schema Support Added! 🎊
+- **`GenerationSchema` is now Codable**: Can serialize/deserialize tool schemas
+- **Cross-LLM Compatibility**: Use `@Generable` models with OpenAI, Claude, and Gemini
+- **Bi-directional Integration**: Parse responses from any LLM
+
+```swift
+// Define once, use everywhere
 @Generable
-struct TaskModel {
+struct TaskModel: Codable {
     @Guide(description: "Task description")
     let title: String
+    @Guide(description: "Priority level")
+    let priority: Int
 }
 
 // Export for OpenAI/Claude
 let schema = GenerationSchema(TaskModel.self)
-let jsonData = try JSONEncoder().encode(schema)
+let jsonSchema = try JSONEncoder().encode(schema)
 
-// Now any LLM can use this schema!
+// Send to any LLM!
 ```
 
-This update fundamentally changes the integration story - Foundation Models tools are no longer isolated to Apple's ecosystem!
+#### 3. GeneratedContent(json:) for Structured Outputs
+- **New in Beta 3**: Parse JSON responses into structured models
+- **Use Case**: Handle complex tool responses with type safety
+
+```swift
+// Parse LLM JSON response
+let jsonData = response.data(using: .utf8)!
+let content = try GeneratedContent(json: jsonData)
+let task = try TaskModel(from: content)
+```
+
+#### 4. Feedback API Changes
+- **Deprecated**: `LanguageModelFeedbackAttachment`
+- **New**: `logFeedbackAttachment` for filing bug reports
+
+#### 5. Improved Tool Support
+- Better handling when creating `LanguageModelSession` with existing transcript
+- Tools can now return any `PromptRepresentable` type (String, @Generable models, etc.)
+
+**Bryan's Brain Status**: ✅ All 27 tools updated for Beta 4 compatibility!
 
 ## Major Implementation Challenges
 
@@ -364,6 +401,65 @@ struct Arguments {
 - Clear old sessions when creating new ones
 - Monitor memory usage with large tool sets
 - Use @MainActor properly for UI updates
+
+## Cross-LLM Compatibility (New in Beta 4!)
+
+### The Game-Changing Feature
+
+iOS 26 Beta 4's JSON Schema support transforms Foundation Models from an Apple-only solution to a universal tool format that works with any LLM.
+
+### Implementation Pattern
+
+```swift
+// 1. Define your tool with @Generable
+@available(iOS 26.0, *)
+protocol UniversalTool {
+    associatedtype Arguments: Generable & Codable
+    var name: String { get }
+    var description: String { get }
+    func call(arguments: Arguments) async throws -> any PromptRepresentable
+}
+
+// 2. Export schema for any LLM
+extension UniversalTool {
+    func exportForOpenAI() throws -> [String: Any] {
+        let schema = GenerationSchema(Arguments.self)
+        let jsonData = try JSONEncoder().encode(schema)
+        
+        return [
+            "name": name,
+            "description": description,
+            "parameters": try JSONSerialization.jsonObject(with: jsonData)
+        ]
+    }
+}
+
+// 3. Parse responses from any LLM
+func handleLLMResponse<T: Decodable>(_ json: String, as type: T.Type) throws -> T {
+    let data = json.data(using: .utf8)!
+    let content = try GeneratedContent(json: data)
+    return try JSONDecoder().decode(type, from: data)
+}
+```
+
+### Benefits
+
+1. **Write Once, Deploy Everywhere**: Same tool works with Apple, OpenAI, Claude, Gemini
+2. **Type Safety**: Maintain Swift's type safety across LLM boundaries
+3. **Seamless Migration**: Easy to switch between local and cloud models
+4. **Future-Proof**: Standards-based approach ensures longevity
+
+### Bryan's Brain Implementation
+
+We've created two key utilities:
+
+1. **JSONSchemaExporter.swift**: Converts Foundation Models tools to OpenAI format
+2. **StructuredOutputExample.swift**: Demonstrates structured responses with type safety
+
+This allows Bryan's Brain to:
+- Use local models when available (free, private, fast)
+- Fall back to OpenAI for advanced features (O3 reasoning)
+- Maintain consistent tool interfaces across all models
 
 ---
 

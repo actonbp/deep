@@ -27,7 +27,7 @@ struct CreateTaskTool: Tool {
         let projectOrPath: String?
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 CreateTaskTool: Creating task: \(arguments.taskDescription)")
         
         await MainActor.run {
@@ -39,6 +39,6 @@ struct CreateTaskTool: Tool {
         }
         
         Logging.general.log("CreateTaskTool: Task created successfully")
-        return ToolOutput("Created task: '\(arguments.taskDescription)'")
+        return "Created task: '\(arguments.taskDescription)'"
     }
 }

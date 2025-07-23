@@ -30,7 +30,7 @@ struct UpdateCalendarEventTimeTool: Tool {
         let newEndTimeToday: String
     }
     
-    func call(arguments: Arguments) async -> ToolOutput {
+    func call(arguments: Arguments) async -> String {
         Logging.general.log("🚨 UpdateCalendarEventTimeTool: Updating event time: \(arguments.summary)")
         
         return await withCheckedContinuation { continuation in
@@ -47,10 +47,10 @@ struct UpdateCalendarEventTimeTool: Tool {
             ) { success, error in
                 if success {
                     Logging.general.log("UpdateCalendarEventTimeTool: Event time updated successfully")
-                    continuation.resume(returning: ToolOutput("Updated '\(arguments.summary)' from \(arguments.originalStartTimeToday) to \(arguments.newStartTimeToday) - \(arguments.newEndTimeToday)"))
+                    continuation.resume(returning: "Updated '\(arguments.summary)' from \(arguments.originalStartTimeToday) to \(arguments.newStartTimeToday) - \(arguments.newEndTimeToday)")
                 } else {
                     Logging.general.log("UpdateCalendarEventTimeTool: Error updating event: \(error?.localizedDescription ?? "Unknown error")")
-                    continuation.resume(returning: ToolOutput("Sorry, I couldn't update the calendar event time. It may not exist or there was a connection issue."))
+                    continuation.resume(returning: "Sorry, I couldn't update the calendar event time. It may not exist or there was a connection issue.")
                 }
             }
         }
