@@ -130,7 +130,8 @@ struct StructuredResponseHandler {
         json: String,
         as type: T.Type
     ) throws -> T {
-        guard let jsonData = json.data(using: .utf8) else {
+        // Validate that the string can be converted to valid UTF-8 data
+        guard json.data(using: .utf8) != nil else {
             throw ParseError.invalidJSON
         }
         
