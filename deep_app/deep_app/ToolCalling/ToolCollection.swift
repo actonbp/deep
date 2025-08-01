@@ -16,22 +16,25 @@ enum FoundationModelTools {
     /// Essential tools for basic functionality (with safety-optimized alternatives)
     static func essential() -> [any Tool] {
         [
+            // ADHD-Focused Tools (prevent overwhelm)
+            NextActionTool(),         // NEW: Suggests ONE next action
+            MicroStepTool(),         // NEW: Breaks tasks into 5-min steps
+            
             // Direct Access Tools (no parameters, immediate response)
             DirectTaskTool(),         // CRITICAL: Shows tasks without asking for input
             QuickTaskCountTool(),     // CRITICAL: Returns count without parameters
             
-            // Task Management
-            CreateTaskTool(),
+            // Task Management (LIMITED to prevent loops)
+            // CreateTaskTool(),      // REMOVED: Causes task creation loops
             SafeTaskRetrievalTool(),  // Safer alternative to GetTasksTool
-            GetTasksTool(),           // Keep original as backup
             MarkTaskCompleteTool(),
-            RemoveTaskTool(),
+            // RemoveTaskTool(),      // REMOVED: Too destructive
             
             // Calendar Access (Essential for daily productivity)
             GetCurrentDateTimeTool(),
-            GetTodaysCalendarEventsTool(),  // MISSING: This is why calendar doesn't work!
-            SafeCalendarTool(),             // Safety-optimized calendar alternative
-            CreateCalendarEventTool(),
+            GetTodaysCalendarEventsTool(),  
+            SafeCalendarTool(),             
+            // CreateCalendarEventTool(),  // REMOVED: Prevent calendar spam
             
             // Notes & System
             GetScratchpadTool(),
@@ -43,6 +46,10 @@ enum FoundationModelTools {
     /// Ultra-minimal set using successful Foundation Models patterns
     static func minimal() -> [any Tool] {
         [
+            // ADHD-focused tools (prevent overwhelm)
+            NextActionTool(),         // Suggests ONE next action
+            MicroStepTool(),         // Breaks into 5-min steps
+            
             // Simple tools following proven patterns (like dad jokes example)
             SimplifiedTaskTool(),     // NEW: Single natural language parameter
             SimpleShowTasksTool(),    // NEW: No parameters, immediate response
@@ -56,6 +63,10 @@ enum FoundationModelTools {
     /// All available tools (for full functionality)
     static func all() -> [any Tool] {
         [
+            // ADHD-Focused Tools
+            NextActionTool(),
+            MicroStepTool(),
+            
             // Task Management
             CreateTaskTool(),
             GetTasksTool(),
@@ -87,7 +98,9 @@ enum FoundationModelTools {
             
             // Direct Tools (prevent infinite loops)
             DirectTaskTool(),
-            QuickTaskCountTool()
+            QuickTaskCountTool(),
+            SimplifiedTaskTool(),
+            SimpleShowTasksTool()
         ]
     }
 }
